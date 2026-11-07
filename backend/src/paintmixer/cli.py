@@ -112,5 +112,70 @@ def fit(
         typer.echo(f"wrote {out}")
 
 
+measure_app = typer.Typer(help="Measurement tools", no_args_is_help=True)
+app.add_typer(measure_app, name="measure")
+
+
+@measure_app.command("session")
+def measure_session(
+    worksheet: Path = typer.Option(..., help="Worksheet CSV skeleton (POST /worksheet/csv)"),
+    out: Path = typer.Option(..., help="Calibration CSV to write/append (resumable)"),
+    source: str = typer.Option("spotread", help="spotread | simulated | file"),
+    file: Path | None = typer.Option(None, help="Spectra CSV for --source file"),
+    readings: int = typer.Option(3, min=1, help="Readings per sample"),
+    max_de: float = typer.Option(0.5, help="Warn when repeat readings differ by more (dE2000)"),
+    ask_masses: bool = typer.Option(False, help="Prompt for actual weighed masses per drawdown"),
+    spotread: str = typer.Option("spotread", help="spotread executable"),
+    seed: int = typer.Option(0, help="Seed for the simulated source"),
+) -> None:
+    """Walk the worksheet, prompting the operator for each sample and background."""
+    from paintmixer.measurement.base import MeasurementSource
+    from paintmixer.measurement.session import MeasureSession, load_worksheet_csv
+    from paintmixer.measurement.sources import FileImportSource, SimulatedSource
+    from paintmixer.measurement.spotread import ArgyllSpotread
+
+    samples = load_worksheet_csv(worksheet.read_text())
+    src: MeasurementSource
+    if source == "spotread":
+
+        def operator(msg: str) -> None:
+            typer.prompt(msg + " [Enter]", default="", show_default=False)
+
+        src = ArgyllSpotread(spotread, prompt=operator)
+    elif source == "file":
+        if file is None:
+            raise typer.BadParameter("--file is required with --source file")
+        src = FileImportSource(file)
+    elif source == "simulated":
+        from paintmixer.calibration.synthetic import (
+            POOL_IDS,
+            SyntheticTruth,
+            synthetic_paints,
+            true_tau,
+        )
+
+        ids = sorted({p for s in samples for p in s.components_dict})
+        known = [i for i in POOL_IDS if i in ids]
+        truth = SyntheticTruth(synthetic_paints(known), true_tau(), 0.0, 0.5)
+        src = SimulatedSource(truth.model, truth.ids, seed=seed)
+    else:
+        raise typer.BadParameter("source must be spotread, simulated or file")
+    session = MeasureSession(
+        samples,
+        src,
+        out,
+        readings=readings,
+        max_de=max_de,
+        ask=lambda msg: typer.prompt(msg, default="", show_default=False),
+        say=typer.echo,
+        ask_masses=ask_masses,
+    )
+    summary = session.run()
+    typer.echo(
+        f"measured {len(summary.measured)}, skipped {len(summary.skipped)}, "
+        f"previously done {summary.already_done}; {len(summary.warnings)} repeatability warnings"
+    )
+
+
 def main() -> None:
     app()

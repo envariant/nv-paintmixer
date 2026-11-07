@@ -1,0 +1,44 @@
+Connecting to the instrument ..
+Set instrument sensor to calibration position,
+ and then hit any key to continue,
+ or hit Esc or Q to abort: 
+Calibration complete
+
+Place instrument on spot to be measured,
+and hit [A-Z] to read white and setup FWA compensation (keyed to letter)
+[a-z] to read and make FWA compensated reading from keyed reference
+'r' to set reference, 's' to save spectrum,
+'h' to toggle high res., 'k' to do a calibration
+Hit ESC or Q to exit, instrument switch or any other key to take a reading: 
+ Result is XYZ: 84.651218 87.817744 73.064377, D50 Lab: 95.093102 0.398281 -1.127663
+Spectrum from 380.000 to 730.000 nm in 36 steps
+  82.000,   83.978,   85.304,   86.193,   86.789,   87.188,   87.456,   87.635,   87.755,   87.836,   87.890,   87.926,   87.951,   87.967,   87.978,   87.985,   87.990,   87.993,   87.996,   87.997,   87.998,   87.999,   87.999,   87.999,   88.000,   88.000,   88.000,   88.000,   88.000,   88.000,   88.000,   88.000,   88.000,   88.000,   88.000,   88.000
+
+Place instrument on spot to be measured,
+and hit [A-Z] to read white and setup FWA compensation (keyed to letter)
+[a-z] to read and make FWA compensated reading from keyed reference
+'r' to set reference, 's' to save spectrum,
+'h' to toggle high res., 'k' to do a calibration
+Hit ESC or Q to exit, instrument switch or any other key to take a reading: 
+ Result is XYZ: 31.204411 22.117420 30.556010, D50 Lab: 54.148802 47.215507 -14.006313
+Spectrum from 380.000 to 730.000 nm in 36 steps
+  54.997,   54.990,   54.972,   54.927,   54.821,   54.590,   54.121,   53.243,   51.722,   49.296,   45.738,   40.967,   35.160,   28.827,   22.784,   17.998,   15.345,   15.345,   17.998,   22.784,   28.827,   35.160,   40.967,   45.738,   49.296,   51.722,   53.243,   54.121,   54.590,   54.821,   54.927,   54.972,   54.990,   54.997,   54.999,   55.000
+
+Place instrument on spot to be measured,
+and hit [A-Z] to read white and setup FWA compensation (keyed to letter)
+[a-z] to read and make FWA compensated reading from keyed reference
+'r' to set reference, 's' to save spectrum,
+'h' to toggle high res., 'k' to do a calibration
+Hit ESC or Q to exit, instrument switch or any other key to take a reading: 
+Spot read failed due to the sensor being in the wrong position
+Hit Esc or Q to give up, any other key to retry: 
+ Result is XYZ: 10.512210 9.807731 24.903310, D50 Lab: 37.509911 3.216671 -36.990201
+Spectrum from 380.000 to 730.000 nm in 36 steps
+   9.100,   10.201,   12.060,   14.902,   18.813,   23.614,   28.777,   33.481,   36.800,   38.000,   36.800,   33.481,   28.777,   23.614,   18.813,   14.902,   12.060,   10.201,    9.100,    8.506,    8.215,    8.084,    8.030,    8.010,    8.003,    8.001,    8.000,    8.000,    8.000,    8.000,    8.000,    8.000,    8.000,    8.000,    8.000,    8.000
+
+Place instrument on spot to be measured,
+and hit [A-Z] to read white and setup FWA compensation (keyed to letter)
+[a-z] to read and make FWA compensated reading from keyed reference
+'r' to set reference, 's' to save spectrum,
+'h' to toggle high res., 'k' to do a calibration
+Hit ESC or Q to exit, instrument switch or any other key to take a reading: 

@@ -66,3 +66,11 @@ introduced it.
   values, not a proprietary colour system.
 - **M5** The backend also serves a minimal printable worksheet (`POST /worksheet/html`) so the
   calibration workflow is usable before the M6 UI exists; it is a plain document, not app UI.
+- **M7** No spectrophotometer was available, so the spotread transcript fixture is
+  reconstructed from the exact format strings in the ArgyllCMS 3.1.0 binary (installed from
+  Debian in CI) with synthetic values; `no_instrument.txt` is real `spotread -?` output. Replace
+  the transcript with a real capture when hardware is available.
+- **M7** spotread reflective spectra are read as percent (ArgyllCMS documents reflective units
+  as %/nm) and divided by 100.
+- **M7** One "sample" in a session is one background of one drawdown; masses are asked once per
+  drawdown and written to both rows.

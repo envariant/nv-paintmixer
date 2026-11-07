@@ -48,7 +48,7 @@ dataclasses/arrays.
 | M4 | Solver + gamut + scaling tests | done |
 | M5 | Worksheet generator + full API | done |
 | M6 | Frontend from the Claude Design handoff | blocked until `design/handoff/` exists |
-| M7 | Measurement sources, spotread parser, `paintmixer measure session` | |
+| M7 | Measurement sources, spotread parser, `paintmixer measure session` | done |
 | M8 | Dispenser simulator, closed-loop correction, jobs | |
 | M9 | Hardening + docs | |
 
@@ -79,3 +79,8 @@ Progress notes per milestone are appended below as work completes.
   calibration validate/upload/samples, background fit with status, model versions (activate,
   spectra), `/solve`, `/predict`, `/gamut`; error envelope; OpenAPI exported to
   `backend/openapi.json` and the typed frontend client generated from it.
+- **M7** `MeasurementSource` protocol; FileImport, Simulated (noise + gain/offset bias), Camera
+  stub; ArgyllSpotread pexpect wrapper (calibration, retry and no-instrument handling) with a
+  pure parser; resumable `paintmixer measure session` (3 readings, mean + spread, 0.5 dE repeat
+  warning, optional weighed masses). Format strings were checked against the ArgyllCMS 3.1.0
+  binary; the wrapper is tested end-to-end against a pty fake (`tests/data/spotread`).
