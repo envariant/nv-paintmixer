@@ -45,7 +45,7 @@ dataclasses/arrays.
 | M1 | Colour science + K-M + tests | done |
 | M2 | Data model, calibration format + validator + JSON schema, synthetic data | done |
 | M3 | Calibration fit + report | done |
-| M4 | Solver + gamut + scaling tests | |
+| M4 | Solver + gamut + scaling tests | done |
 | M5 | Worksheet generator + full API | |
 | M6 | Frontend from the Claude Design handoff | blocked until `design/handoff/` exists |
 | M7 | Measurement sources, spotread parser, `paintmixer measure session` | |
@@ -68,3 +68,9 @@ Progress notes per milestone are appended below as work completes.
   flagged hold-out or k-fold CV; per-sample RMS/dE2000, RMS-based outlier flags, data-sufficiency
   warnings, and a measurement-noise floor so hold-out dE can be read in context. 9 paints / 234
   samples fit in ~1 s. `paintmixer fit` CLI prints the report.
+- **M4** `solver`: analytic Lab Jacobian; batched LM screening of all subsets (softmax-simplex
+  with min fraction; starts at equal fractions and K/S-space NNLS on the target spectrum, measured
+  or Jakob-2019 reconstructed); staged greedy-beam + swap search for pools > 14; multi-start
+  SLSQP on dE2000 + paints + cost + metamerism; quantisation by local integer search; dose
+  sensitivity; log-uniform sampled a*b* gamut slices. Measured: 12 paints ~0.7 s, 20 paints
+  ~0.8 s; staged within 0.15 dE of exhaustive over 200 targets (n=12).

@@ -40,3 +40,20 @@ introduced it.
   absorbed into `tau`.
 - **M3** Outliers are flagged on RMS reflectance residual (> max(0.006, 4× median)), not dE,
   because dE is dominated by noise on dark samples.
+- **M4** `include_white` is tri-state: unset = white allowed, `true` = every candidate contains a
+  white, `false` = white excluded.
+- **M4** Min fraction is enforced as a hard bound during optimisation (the objective's penalty
+  term only matters after quantisation, where a dose can fall below it).
+- **M4** dE2000 in the objective is smoothed as `sqrt(dE² + 0.05²) − 0.05` so gradient-based
+  refinement behaves at an exact match (dE is a cone at 0). Reported dE values are unsmoothed.
+- **M4** Metamerism = dE2000 between the mixture and the target's reference spectrum under A and
+  F11 (each with its own white). For Lab/sRGB targets the reference spectrum is reconstructed,
+  so the figure is indicative only; the API reports which.
+- **M4** Dose sensitivity = worst dE2000 when any one paint is over-dosed by 1 % of the batch.
+- **M4** "Black helps" is demonstrated through dose sensitivity: the synthetic CMY pigments
+  are strong enough to reach L* ≈ 5 without black, so the dE criterion alone does not separate
+  the pools; recipes with black are markedly less sensitive to dosing errors on neutrals/darks.
+- **M4** Multiprocessing: the staged-vs-exhaustive test parallelises across targets. Within one
+  solve the batched NumPy screening was fast enough (< 1 s at n=20) that process start-up
+  (~1 s with macOS `spawn`) would cost more than it saves, so `n_jobs` is reserved and unused.
+- **M4** Out-of-gamut threshold: best quantised dE2000 > 1.0 (configurable `out_of_gamut_de`).
