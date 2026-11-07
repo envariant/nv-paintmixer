@@ -710,6 +710,9 @@ def write_calibration_csv(
     header = list(BASE_COLUMNS)
     if include_masses:
         header.append("components_mass_g")
+    with_meta = any(s.n_readings or s.measured_at for s in samples)
+    if with_meta:
+        header += ["measured_at", "n_readings"]
     header += SPECTRUM_COLUMNS
     if include_spread:
         header += SPREAD_COLUMNS
@@ -733,6 +736,8 @@ def write_calibration_csv(
         ]
         if include_masses:
             row.append(format_components(s.masses_g or {}, 3))
+        if with_meta:
+            row += [s.measured_at or "", str(s.n_readings) if s.n_readings else ""]
         row += [f"{v:.{digits}f}" for v in s.reflectance]
         if include_spread:
             sp = s.spread if s.spread is not None else np.zeros(len(WAVELENGTHS))

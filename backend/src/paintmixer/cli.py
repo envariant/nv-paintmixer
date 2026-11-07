@@ -52,17 +52,8 @@ def validate(
 ) -> None:
     """Validate a calibration CSV and print row/column-precise issues."""
     from paintmixer.calibration.format import parse_calibration_csv
-    from paintmixer.domain import PaintInfo, PaintRole
 
-    paints = None
-    if paints_csv is not None:
-        import csv
-
-        with paints_csv.open() as fh:
-            paints = {
-                r["id"]: PaintInfo(r["id"], PaintRole(r["role"]), float(r["density_g_per_ml"]))
-                for r in csv.DictReader(fh)
-            }
+    paints = _read_paints(paints_csv) if paints_csv is not None else None
     report = parse_calibration_csv(csv_path.read_text(), paints)
     for i in report.issues:
         loc = f"line {i.row}" if i.row else "file"
@@ -74,6 +65,51 @@ def validate(
         f"{len(report.errors)} errors, {len(report.warnings)} warnings"
     )
     raise typer.Exit(code=0 if report.ok else 1)
+
+
+def _read_paints(paints_csv: Path):  # type: ignore[no-untyped-def]
+    import csv
+
+    from paintmixer.domain import PaintInfo, PaintRole
+
+    with paints_csv.open() as fh:
+        return {
+            r["id"]: PaintInfo(
+                r["id"],
+                PaintRole(r["role"]),
+                float(r["density_g_per_ml"]),
+                name=r.get("name", ""),
+                cost_per_ml=float(r.get("cost_per_ml") or 0),
+                min_dose_ml=float(r.get("min_dose_ml") or 0),
+            )
+            for r in csv.DictReader(fh)
+        }
+
+
+@app.command()
+def fit(
+    csv_path: Path,
+    paints_csv: Path = typer.Option(..., "--paints", help="paints.csv"),
+    out: Path | None = typer.Option(None, help="Write the fitted model as JSON"),
+    k2: float = typer.Option(0.5, help="Saunderson internal reflection k2"),
+    k1: float = typer.Option(0.0, help="Saunderson external reflection k1"),
+) -> None:
+    """Fit K/S from a calibration CSV and print the report."""
+    from paintmixer.calibration.fit import FitOptions, fit_calibration
+    from paintmixer.calibration.format import parse_calibration_csv
+    from paintmixer.calibration.report import fit_result_to_dict, fit_summary_text
+
+    paints = _read_paints(paints_csv)
+    report = parse_calibration_csv(csv_path.read_text(), paints)
+    if not report.ok:
+        for i in report.errors[:20]:
+            typer.echo(f"ERROR line {i.row}, {i.column}: {i.message}", err=True)
+        raise typer.Exit(1)
+    result = fit_calibration(report.samples, paints, FitOptions(k1=k1, k2=k2))
+    typer.echo(fit_summary_text(result))
+    if out is not None:
+        out.write_text(json.dumps(fit_result_to_dict(result), indent=1) + "\n")
+        typer.echo(f"wrote {out}")
 
 
 def main() -> None:

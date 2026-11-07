@@ -28,3 +28,15 @@ introduced it.
 - **M2** Calibration samples are keyed by `sample_id`; uploading a file with an existing id
   replaces that sample (upsert), so re-measuring a drawdown is a re-upload.
 - **M2** Costs in `sample_data/paints.csv` are invented SGD/ml figures for development.
+- **M3** Hold-out acceptance (< 0.5 dE2000) is tested against the **noise-free** synthetic
+  ground truth. Against the noisy synthetic measurements the hold-out mean is ~0.9 because
+  sigma 0.002 reflectance noise alone produces ~0.9 dE2000 on dark drawdowns (L* is steep near
+  black); the fit report therefore also prints the "measurement noise alone" dE estimated from
+  each sample's spread. With low noise (sigma 0.0003) the reported hold-out mean is < 0.5.
+- **M3** Fit residuals are weighted by `((0.52)/(R + 0.02))^(2/3)`, an approximation of L*
+  sensitivity, so dark samples are not under-weighted relative to their visual importance.
+- **M3** All drawdowns are modelled as finite layers over the measured substrate (thickness
+  `tau(λ)·gap_um`). The solver predicts opaque (hiding) films with R∞. Film shrinkage on drying is
+  absorbed into `tau`.
+- **M3** Outliers are flagged on RMS reflectance residual (> max(0.006, 4× median)), not dE,
+  because dE is dominated by noise on dark samples.

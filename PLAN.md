@@ -44,7 +44,7 @@ dataclasses/arrays.
 | M0 | Scaffold, make targets, docs skeleton | done |
 | M1 | Colour science + K-M + tests | done |
 | M2 | Data model, calibration format + validator + JSON schema, synthetic data | done |
-| M3 | Calibration fit + report | |
+| M3 | Calibration fit + report | done |
 | M4 | Solver + gamut + scaling tests | |
 | M5 | Worksheet generator + full API | |
 | M6 | Frontend from the Claude Design handoff | blocked until `design/handoff/` exists |
@@ -63,3 +63,8 @@ Progress notes per milestone are appended below as work completes.
 - **M2** SQLModel tables + Alembic `0001` (migrations verified against models in tests), calibration
   CSV parser/validator with line+column issues, JSON Schema (`docs/calibration_row.schema.json`),
   worksheet planner (pure), synthetic generator with known K/S, `sample_data/` (5- and 9-paint sets).
+- **M3** `calibration.fit`: joint TRF/soft_l1 fit of log K, log S, log τ (S_white = 1) with
+  second-difference smoothness and a sparse FD Jacobian; masstone + white-tint NNLS initialisation;
+  flagged hold-out or k-fold CV; per-sample RMS/dE2000, RMS-based outlier flags, data-sufficiency
+  warnings, and a measurement-noise floor so hold-out dE can be read in context. 9 paints / 234
+  samples fit in ~1 s. `paintmixer fit` CLI prints the report.
