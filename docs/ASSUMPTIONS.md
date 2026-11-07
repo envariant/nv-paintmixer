@@ -57,3 +57,12 @@ introduced it.
   solve the batched NumPy screening was fast enough (< 1 s at n=20) that process start-up
   (~1 s with macOS `spawn`) would cost more than it saves, so `n_jobs` is reserved and unused.
 - **M4** Out-of-gamut threshold: best quantised dE2000 > 1.0 (configurable `out_of_gamut_de`).
+- **M5** A new fit is activated by default (`activate: false` keeps the current model).
+- **M5** Paints referenced by calibration samples cannot be deleted (409); deactivate instead.
+- **M5** `predicted_lab` in solve results is under the matching illuminant; swatch hex values are
+  always rendered under D65. Lab/sRGB targets are always matched under D65 (an illuminant only
+  makes sense with a target spectrum).
+- **M5** The colour library sample (`sample_data/color_library.csv`) uses invented names and
+  values, not a proprietary colour system.
+- **M5** The backend also serves a minimal printable worksheet (`POST /worksheet/html`) so the
+  calibration workflow is usable before the M6 UI exists; it is a plain document, not app UI.

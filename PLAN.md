@@ -46,7 +46,7 @@ dataclasses/arrays.
 | M2 | Data model, calibration format + validator + JSON schema, synthetic data | done |
 | M3 | Calibration fit + report | done |
 | M4 | Solver + gamut + scaling tests | done |
-| M5 | Worksheet generator + full API | |
+| M5 | Worksheet generator + full API | done |
 | M6 | Frontend from the Claude Design handoff | blocked until `design/handoff/` exists |
 | M7 | Measurement sources, spotread parser, `paintmixer measure session` | |
 | M8 | Dispenser simulator, closed-loop correction, jobs | |
@@ -74,3 +74,8 @@ Progress notes per milestone are appended below as work completes.
   SLSQP on dE2000 + paints + cost + metamerism; quantisation by local integer search; dose
   sensitivity; log-uniform sampled a*b* gamut slices. Measured: 12 paints ~0.7 s, 20 paints
   ~0.8 s; staged within 0.15 dE of exhaustive over 200 targets (n=12).
+- **M5** Worksheet JSON / CSV skeleton / printable HTML; `/api/v1` with paints (loaded/channel
+  rules, diluted stocks, CSV import), settings, colour library (+CSV import), worksheet,
+  calibration validate/upload/samples, background fit with status, model versions (activate,
+  spectra), `/solve`, `/predict`, `/gamut`; error envelope; OpenAPI exported to
+  `backend/openapi.json` and the typed frontend client generated from it.

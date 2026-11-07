@@ -23,7 +23,12 @@ from typing import Any
 
 import numpy as np
 
-from paintmixer.colorsci.convert import lab_to_srgb, reflectance_to_lab, srgb_to_hex
+from paintmixer.colorsci.convert import (
+    lab_to_srgb,
+    reflectance_to_lab,
+    reflectance_to_srgb,
+    srgb_to_hex,
+)
 from paintmixer.colorsci.delta_e import delta_e_2000
 from paintmixer.colorsci.recovery import lab_to_reflectance
 from paintmixer.colorsci.spectral import Illuminant
@@ -32,7 +37,6 @@ from paintmixer.domain import PaintRole
 from paintmixer.solver.gamut import Gamut, compute_gamut
 from paintmixer.solver.model import PoolModel
 from paintmixer.solver.refine import (
-    META_ILLUMINANTS,
     Objective,
     Weights,
     dose_sensitivity,
@@ -157,6 +161,7 @@ def solve(
     else:
         ref = lab_to_reflectance(target_lab)
         ref_source = "reconstructed"
+    ill = opts.illuminant if target.spectrum is not None else Illuminant.D65
     if opts.illuminant != Illuminant.D65 and target.spectrum is None:
         warnings.append("Target has no spectrum: matching under D65; illuminant setting ignored.")
 
@@ -191,14 +196,14 @@ def solve(
     if mode == "staged":
         req = [whites[0]] if (opts.include_white is True and whites) else []
         top_subsets, n_eval = staged_subsets(
-            model, target_lab, max_k, opts.min_fraction, req, excluded, ref
+            model, target_lab, max_k, opts.min_fraction, req, excluded, ref, ill=ill
         )
-        sc = screen(model, top_subsets, target_lab, opts.min_fraction, ref)
+        sc = screen(model, top_subsets, target_lab, opts.min_fraction, ref, ill=ill)
     else:
-        sc = screen(model, subsets, target_lab, opts.min_fraction, ref)
+        sc = screen(model, subsets, target_lab, opts.min_fraction, ref, ill=ill)
         n_eval = len(subsets)
 
-    obj = Objective(model, target_lab, ref, opts.weights, opts.min_fraction)
+    obj = Objective(model, target_lab, ref, opts.weights, opts.min_fraction, ill)
     # rank screened subsets by the full objective at their Lab optimum
     pre = []
     sizes = (sc.idx >= 0).sum(axis=1)
@@ -224,9 +229,9 @@ def solve(
         de_q = float(terms["de"][0])
         de_c = float(obj.terms(idx[None, :], c[None, :])["de"][0])
         R = terms["R"][0]
-        lab = terms["lab"][0]
-        srgb = lab_to_srgb(lab)
-        meta = {ill.value: float(terms["meta"][0, j]) for j, ill in enumerate(META_ILLUMINANTS)}
+        lab = terms["lab"][0]  # under the matching illuminant
+        srgb = reflectance_to_srgb(R)  # swatches are always rendered under D65
+        meta = {x.value: float(terms["meta"][0, j]) for j, x in enumerate(obj.meta_illuminants)}
         cw: list[str] = []
         if de_q - de_c > 0.3:
             cw.append(
@@ -241,9 +246,9 @@ def solve(
         if max(meta.values()) > 2.0:
             cw.append(
                 f"Metamerism: the match shifts by up to {max(meta.values()):.1f} dE2000 under "
-                f"A/F11 ({ref_source} target spectrum)."
+                f"{'/'.join(meta)} ({ref_source} target spectrum)."
             )
-        sens = dose_sensitivity(model, idx, q.fractions)
+        sens = dose_sensitivity(model, idx, q.fractions, ill=ill)
         if sens > 2.0:
             cw.append(f"Dose-sensitive recipe: 1 % overdose of one paint moves it {sens:.1f} dE.")
         vols = q.volumes_ml

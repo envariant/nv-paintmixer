@@ -1,0 +1,5327 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PaintMixer API",
+    "description": "\nPaintMixer computes paint-mixing recipes with a Kubelka-Munk model fitted from\nspectrophotometer drawdowns.\n\n* **Paints**: library paints (calibrated) and loaded paints (on dispenser channels).\n* **Calibration**: worksheet \u2192 measure \u2192 upload CSV \u2192 validate \u2192 fit (background) \u2192 model versions.\n* **Mixing**: `POST /solve` ranked recipes, `POST /predict` forward model, `GET /gamut`.\n\nErrors use `{\"error\": {\"code\", \"message\", \"details\"}}`.\n",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get Settings",
+        "operationId": "get_settings_api_v1_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Update Settings",
+        "operationId": "update_settings_api_v1_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppSettings"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paints": {
+      "get": {
+        "tags": [
+          "paints"
+        ],
+        "summary": "List Paints",
+        "operationId": "list_paints_api_v1_paints_get",
+        "parameters": [
+          {
+            "name": "loaded",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Loaded"
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active"
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaintRead"
+                  },
+                  "title": "Response List Paints Api V1 Paints Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "paints"
+        ],
+        "summary": "Create Paint",
+        "operationId": "create_paint_api_v1_paints_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaintCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaintRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paints/{paint_id}": {
+      "get": {
+        "tags": [
+          "paints"
+        ],
+        "summary": "Get Paint",
+        "operationId": "get_paint_api_v1_paints__paint_id__get",
+        "parameters": [
+          {
+            "name": "paint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Paint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaintRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "paints"
+        ],
+        "summary": "Update Paint",
+        "operationId": "update_paint_api_v1_paints__paint_id__patch",
+        "parameters": [
+          {
+            "name": "paint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Paint Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaintUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaintRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "paints"
+        ],
+        "summary": "Delete Paint",
+        "operationId": "delete_paint_api_v1_paints__paint_id__delete",
+        "parameters": [
+          {
+            "name": "paint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Paint Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/paints/import": {
+      "post": {
+        "tags": [
+          "paints"
+        ],
+        "summary": "Import Paints",
+        "description": "Upsert paints from CSV (columns as in ``sample_data/paints.csv``).",
+        "operationId": "import_paints_api_v1_paints_import_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_paints_api_v1_paints_import_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaintImportResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/colors": {
+      "get": {
+        "tags": [
+          "color library"
+        ],
+        "summary": "List Colors",
+        "operationId": "list_colors_api_v1_colors_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive substring of the name",
+              "title": "Q"
+            },
+            "description": "Case-insensitive substring of the name"
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 1,
+              "default": 500,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ColorRead"
+                  },
+                  "title": "Response List Colors Api V1 Colors Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "color library"
+        ],
+        "summary": "Create Color",
+        "operationId": "create_color_api_v1_colors_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColorCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/colors/{color_id}": {
+      "get": {
+        "tags": [
+          "color library"
+        ],
+        "summary": "Get Color",
+        "operationId": "get_color_api_v1_colors__color_id__get",
+        "parameters": [
+          {
+            "name": "color_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Color Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "color library"
+        ],
+        "summary": "Update Color",
+        "operationId": "update_color_api_v1_colors__color_id__patch",
+        "parameters": [
+          {
+            "name": "color_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Color Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColorUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "color library"
+        ],
+        "summary": "Delete Color",
+        "operationId": "delete_color_api_v1_colors__color_id__delete",
+        "parameters": [
+          {
+            "name": "color_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Color Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/colors/import": {
+      "post": {
+        "tags": [
+          "color library"
+        ],
+        "summary": "Import Colors",
+        "description": "CSV columns: ``name``, ``source`` (optional) and one of ``hex`` | ``r,g,b`` (0-255) |\n``L,a,b`` (D65) | ``r400..r700``. Existing (source, name) pairs are updated.",
+        "operationId": "import_colors_api_v1_colors_import_post",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Override the source column",
+              "title": "Source"
+            },
+            "description": "Override the source column"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_colors_api_v1_colors_import_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorImportResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/worksheet": {
+      "post": {
+        "tags": [
+          "worksheet"
+        ],
+        "summary": "Generate Worksheet",
+        "operationId": "generate_worksheet_api_v1_worksheet_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorksheetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorksheetResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/worksheet/csv": {
+      "post": {
+        "tags": [
+          "worksheet"
+        ],
+        "summary": "Worksheet Csv",
+        "description": "Calibration CSV skeleton with blank spectra and weighed-mass columns.",
+        "operationId": "worksheet_csv_api_v1_worksheet_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorksheetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/worksheet/html": {
+      "post": {
+        "tags": [
+          "worksheet"
+        ],
+        "summary": "Worksheet Html",
+        "description": "Printable worksheet with blank actual-weight fields and reading tick boxes.",
+        "operationId": "worksheet_html_api_v1_worksheet_html_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorksheetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration/validate": {
+      "post": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Validate",
+        "description": "Validate a calibration CSV against the paint library without storing it.",
+        "operationId": "validate_api_v1_calibration_validate_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_validate_api_v1_calibration_validate_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationReportOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration/upload": {
+      "post": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Upload",
+        "operationId": "upload_api_v1_calibration_upload_post",
+        "parameters": [
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "append",
+                "replace"
+              ],
+              "type": "string",
+              "description": "append: upsert by sample_id; replace: delete all samples first",
+              "default": "append",
+              "title": "Mode"
+            },
+            "description": "append: upsert by sample_id; replace: delete all samples first"
+          },
+          {
+            "name": "allow_partial",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "store valid rows even if some rows fail",
+              "default": false,
+              "title": "Allow Partial"
+            },
+            "description": "store valid rows even if some rows fail"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_api_v1_calibration_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration/samples": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "List Samples",
+        "operationId": "list_samples_api_v1_calibration_samples_get",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "paint_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only samples containing this paint",
+              "title": "Paint Id"
+            },
+            "description": "Only samples containing this paint"
+          },
+          {
+            "name": "holdout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Holdout"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SampleRead"
+                  },
+                  "title": "Response List Samples Api V1 Calibration Samples Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Delete All Samples",
+        "operationId": "delete_all_samples_api_v1_calibration_samples_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration/samples/{sample_id}": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Get Sample",
+        "operationId": "get_sample_api_v1_calibration_samples__sample_id__get",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SampleRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Delete Sample",
+        "operationId": "delete_sample_api_v1_calibration_samples__sample_id__delete",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration/fit": {
+      "post": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Start Fit",
+        "description": "Start a fit in the background; poll ``GET /calibration/fits/{id}``.",
+        "operationId": "start_fit_api_v1_calibration_fit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FitRunRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration/fits": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "List Fits",
+        "operationId": "list_fits_api_v1_calibration_fits_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FitRunRead"
+                  },
+                  "title": "Response List Fits Api V1 Calibration Fits Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/calibration/fits/{run_id}": {
+      "get": {
+        "tags": [
+          "calibration"
+        ],
+        "summary": "Get Fit",
+        "operationId": "get_fit_api_v1_calibration_fits__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FitRunRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "List Models",
+        "operationId": "list_models_api_v1_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Models Api V1 Models Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models/active": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Get Active",
+        "operationId": "get_active_api_v1_models_active_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models/{version}": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Get Model",
+        "operationId": "get_model_api_v1_models__version__get",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models/{version}/activate": {
+      "post": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Activate Model",
+        "operationId": "activate_model_api_v1_models__version__activate_post",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models/{version}/spectra": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Model Spectra",
+        "operationId": "model_spectra_api_v1_models__version__spectra_get",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelSpectra"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/solve": {
+      "post": {
+        "tags": [
+          "mixing"
+        ],
+        "summary": "Solve Recipe",
+        "operationId": "solve_recipe_api_v1_solve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolveResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/predict": {
+      "post": {
+        "tags": [
+          "mixing"
+        ],
+        "summary": "Predict Mixture",
+        "description": "Forward model: predicted opaque-film spectrum and colour of a given mixture.",
+        "operationId": "predict_mixture_api_v1_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gamut": {
+      "get": {
+        "tags": [
+          "mixing"
+        ],
+        "summary": "Gamut",
+        "description": "a*b* boundary (max chroma per 10\u00b0 hue bin) at L* slices every 10 units.",
+        "operationId": "gamut_api_v1_gamut_get",
+        "parameters": [
+          {
+            "name": "pool",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated paint ids; default = loaded",
+              "title": "Pool"
+            },
+            "description": "Comma-separated paint ids; default = loaded"
+          },
+          {
+            "name": "max_paints",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 8,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Paints"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GamutResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AppSettings": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "SGD"
+          },
+          "dispenser_channels": {
+            "type": "integer",
+            "maximum": 64.0,
+            "minimum": 1.0,
+            "title": "Dispenser Channels",
+            "default": 10
+          },
+          "batch_volume_ml": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Batch Volume Ml",
+            "default": 100.0
+          },
+          "dispenser_resolution_ml": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Dispenser Resolution Ml",
+            "default": 0.05
+          },
+          "saunderson_k1": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "minimum": 0.0,
+            "title": "Saunderson K1",
+            "default": 0.0
+          },
+          "saunderson_k2": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "minimum": 0.0,
+            "title": "Saunderson K2",
+            "default": 0.5
+          },
+          "illuminant": {
+            "$ref": "#/components/schemas/Illuminant",
+            "default": "D65"
+          },
+          "max_paints": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Max Paints",
+            "default": 5
+          },
+          "min_fraction": {
+            "type": "number",
+            "exclusiveMaximum": 0.5,
+            "minimum": 0.0,
+            "title": "Min Fraction",
+            "default": 0.02
+          },
+          "top_n": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top N",
+            "default": 5
+          },
+          "weights": {
+            "$ref": "#/components/schemas/SolverWeights"
+          },
+          "out_of_gamut_de": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Out Of Gamut De",
+            "default": 1.0
+          },
+          "worksheet_batch_g": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Worksheet Batch G",
+            "default": 10.0
+          },
+          "worksheet_scale_resolution_g": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Worksheet Scale Resolution G",
+            "default": 0.01
+          },
+          "worksheet_gap_um": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Worksheet Gap Um",
+            "default": 150.0
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 1234
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AppSettings"
+      },
+      "AppSettingsUpdate": {
+        "properties": {
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "dispenser_channels": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 64.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispenser Channels"
+          },
+          "batch_volume_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Volume Ml"
+          },
+          "dispenser_resolution_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispenser Resolution Ml"
+          },
+          "saunderson_k1": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saunderson K1"
+          },
+          "saunderson_k2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saunderson K2"
+          },
+          "illuminant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Illuminant"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_paints": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 8.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Paints"
+          },
+          "min_fraction": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 0.5,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Fraction"
+          },
+          "top_n": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 20.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top N"
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SolverWeights"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "out_of_gamut_de": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Out Of Gamut De"
+          },
+          "worksheet_batch_g": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worksheet Batch G"
+          },
+          "worksheet_scale_resolution_g": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worksheet Scale Resolution G"
+          },
+          "worksheet_gap_um": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worksheet Gap Um"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AppSettingsUpdate"
+      },
+      "Body_import_colors_api_v1_colors_import_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_colors_api_v1_colors_import_post"
+      },
+      "Body_import_paints_api_v1_paints_import_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_paints_api_v1_paints_import_post"
+      },
+      "Body_upload_api_v1_calibration_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_api_v1_calibration_upload_post"
+      },
+      "Body_validate_api_v1_calibration_validate_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_validate_api_v1_calibration_validate_post"
+      },
+      "CandidateOut": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ComponentOut"
+            },
+            "type": "array",
+            "title": "Components"
+          },
+          "predicted_spectrum": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Predicted Spectrum"
+          },
+          "predicted_lab": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Predicted Lab"
+          },
+          "predicted_hex": {
+            "type": "string",
+            "title": "Predicted Hex"
+          },
+          "de2000": {
+            "type": "number",
+            "title": "De2000"
+          },
+          "de2000_continuous": {
+            "type": "number",
+            "title": "De2000 Continuous"
+          },
+          "cost": {
+            "type": "number",
+            "title": "Cost"
+          },
+          "cost_per_ml": {
+            "type": "number",
+            "title": "Cost Per Ml"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "metamerism": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Metamerism"
+          },
+          "dose_sensitivity": {
+            "type": "number",
+            "title": "Dose Sensitivity"
+          },
+          "objective": {
+            "type": "number",
+            "title": "Objective"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "components",
+          "predicted_spectrum",
+          "predicted_lab",
+          "predicted_hex",
+          "de2000",
+          "de2000_continuous",
+          "cost",
+          "cost_per_ml",
+          "currency",
+          "metamerism",
+          "dose_sensitivity",
+          "objective",
+          "warnings"
+        ],
+        "title": "CandidateOut"
+      },
+      "ColorCreate": {
+        "properties": {
+          "hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hex"
+          },
+          "srgb": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Srgb"
+          },
+          "lab": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab"
+          },
+          "spectrum": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array",
+                "maxItems": 31,
+                "minItems": 31
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spectrum"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ColorCreate"
+      },
+      "ColorImportResult": {
+        "properties": {
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "updated": {
+            "type": "integer",
+            "title": "Updated"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created",
+          "updated",
+          "errors"
+        ],
+        "title": "ColorImportResult"
+      },
+      "ColorRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "hex": {
+            "type": "string",
+            "title": "Hex"
+          },
+          "srgb": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Srgb"
+          },
+          "lab": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Lab"
+          },
+          "spectrum": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spectrum"
+          },
+          "in_srgb_gamut": {
+            "type": "boolean",
+            "title": "In Srgb Gamut"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "source",
+          "hex",
+          "srgb",
+          "lab",
+          "spectrum",
+          "in_srgb_gamut",
+          "notes"
+        ],
+        "title": "ColorRead"
+      },
+      "ColorUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hex"
+          },
+          "lab": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab"
+          },
+          "spectrum": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array",
+                "maxItems": 31,
+                "minItems": 31
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spectrum"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ColorUpdate"
+      },
+      "ComponentOut": {
+        "properties": {
+          "paint_id": {
+            "type": "string",
+            "title": "Paint Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "fraction": {
+            "type": "number",
+            "title": "Fraction"
+          },
+          "fraction_continuous": {
+            "type": "number",
+            "title": "Fraction Continuous"
+          },
+          "volume_ml": {
+            "type": "number",
+            "title": "Volume Ml"
+          },
+          "mass_g": {
+            "type": "number",
+            "title": "Mass G"
+          },
+          "cost": {
+            "type": "number",
+            "title": "Cost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paint_id",
+          "name",
+          "fraction",
+          "fraction_continuous",
+          "volume_ml",
+          "mass_g",
+          "cost"
+        ],
+        "title": "ComponentOut"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "FitRequest": {
+        "properties": {
+          "k1": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "K1"
+          },
+          "k2": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "K2"
+          },
+          "smoothness": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Smoothness",
+            "default": 0.003
+          },
+          "k_folds": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 2.0,
+            "title": "K Folds",
+            "default": 5
+          },
+          "activate": {
+            "type": "boolean",
+            "title": "Activate",
+            "default": true
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "FitRequest"
+      },
+      "FitRunRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "progress",
+          "message",
+          "error",
+          "model_id",
+          "created_at",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "FitRunRead"
+      },
+      "GamutResponse": {
+        "properties": {
+          "pool": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pool"
+          },
+          "L_min": {
+            "type": "number",
+            "title": "L Min"
+          },
+          "L_max": {
+            "type": "number",
+            "title": "L Max"
+          },
+          "n_samples": {
+            "type": "integer",
+            "title": "N Samples"
+          },
+          "slices": {
+            "items": {
+              "$ref": "#/components/schemas/GamutSliceOut"
+            },
+            "type": "array",
+            "title": "Slices"
+          },
+          "model_version": {
+            "type": "integer",
+            "title": "Model Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pool",
+          "L_min",
+          "L_max",
+          "n_samples",
+          "slices",
+          "model_version"
+        ],
+        "title": "GamutResponse"
+      },
+      "GamutSliceOut": {
+        "properties": {
+          "L": {
+            "type": "number",
+            "title": "L"
+          },
+          "hue_deg": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Hue Deg"
+          },
+          "chroma": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Chroma"
+          },
+          "a": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "A"
+          },
+          "b": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "B"
+          }
+        },
+        "type": "object",
+        "required": [
+          "L",
+          "hue_deg",
+          "chroma",
+          "a",
+          "b"
+        ],
+        "title": "GamutSliceOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "active_model_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Model Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "active_model_version"
+        ],
+        "title": "Health"
+      },
+      "HoldoutOut": {
+        "properties": {
+          "method": {
+            "type": "string",
+            "title": "Method"
+          },
+          "n_samples": {
+            "type": "integer",
+            "title": "N Samples"
+          },
+          "mean_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean De"
+          },
+          "median_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median De"
+          },
+          "p95_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95 De"
+          },
+          "max_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max De"
+          },
+          "mean_rms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Rms"
+          },
+          "noise_floor_mean_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Noise Floor Mean De"
+          }
+        },
+        "type": "object",
+        "required": [
+          "method",
+          "n_samples",
+          "mean_de",
+          "median_de",
+          "p95_de",
+          "max_de",
+          "mean_rms",
+          "noise_floor_mean_de"
+        ],
+        "title": "HoldoutOut"
+      },
+      "Illuminant": {
+        "type": "string",
+        "enum": [
+          "D65",
+          "D50",
+          "A",
+          "F11"
+        ],
+        "title": "Illuminant"
+      },
+      "LowMassOut": {
+        "properties": {
+          "drawdown_id": {
+            "type": "string",
+            "title": "Drawdown Id"
+          },
+          "paint_id": {
+            "type": "string",
+            "title": "Paint Id"
+          },
+          "mass_g": {
+            "type": "number",
+            "title": "Mass G"
+          },
+          "suggested_batch_g": {
+            "type": "number",
+            "title": "Suggested Batch G"
+          },
+          "suggest_dilution": {
+            "type": "boolean",
+            "title": "Suggest Dilution"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "drawdown_id",
+          "paint_id",
+          "mass_g",
+          "suggested_batch_g",
+          "suggest_dilution",
+          "message"
+        ],
+        "title": "LowMassOut"
+      },
+      "ModelDetail": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "paint_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Paint Ids"
+          },
+          "n_samples": {
+            "type": "integer",
+            "title": "N Samples"
+          },
+          "k1": {
+            "type": "number",
+            "title": "K1"
+          },
+          "k2": {
+            "type": "number",
+            "title": "K2"
+          },
+          "illuminant": {
+            "type": "string",
+            "title": "Illuminant"
+          },
+          "observer": {
+            "type": "string",
+            "title": "Observer"
+          },
+          "holdout": {
+            "$ref": "#/components/schemas/HoldoutOut"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes"
+          },
+          "diagnostics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Diagnostics"
+          },
+          "residuals": {
+            "items": {
+              "$ref": "#/components/schemas/ResidualOut"
+            },
+            "type": "array",
+            "title": "Residuals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "active",
+          "created_at",
+          "paint_ids",
+          "n_samples",
+          "k1",
+          "k2",
+          "illuminant",
+          "observer",
+          "holdout",
+          "warnings",
+          "notes",
+          "diagnostics",
+          "residuals"
+        ],
+        "title": "ModelDetail"
+      },
+      "ModelSpectra": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "wavelengths": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Wavelengths"
+          },
+          "paints": {
+            "items": {
+              "$ref": "#/components/schemas/PaintSpectra"
+            },
+            "type": "array",
+            "title": "Paints"
+          },
+          "tau": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Tau"
+          },
+          "substrate_white": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Substrate White"
+          },
+          "substrate_black": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Substrate Black"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "wavelengths",
+          "paints",
+          "tau",
+          "substrate_white",
+          "substrate_black"
+        ],
+        "title": "ModelSpectra"
+      },
+      "ModelSummary": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "paint_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Paint Ids"
+          },
+          "n_samples": {
+            "type": "integer",
+            "title": "N Samples"
+          },
+          "k1": {
+            "type": "number",
+            "title": "K1"
+          },
+          "k2": {
+            "type": "number",
+            "title": "K2"
+          },
+          "illuminant": {
+            "type": "string",
+            "title": "Illuminant"
+          },
+          "observer": {
+            "type": "string",
+            "title": "Observer"
+          },
+          "holdout": {
+            "$ref": "#/components/schemas/HoldoutOut"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "active",
+          "created_at",
+          "paint_ids",
+          "n_samples",
+          "k1",
+          "k2",
+          "illuminant",
+          "observer",
+          "holdout",
+          "warnings",
+          "notes"
+        ],
+        "title": "ModelSummary"
+      },
+      "PaintCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "brand": {
+            "type": "string",
+            "title": "Brand",
+            "default": ""
+          },
+          "pigment_code": {
+            "type": "string",
+            "title": "Pigment Code",
+            "default": ""
+          },
+          "role": {
+            "$ref": "#/components/schemas/PaintRole",
+            "default": "chromatic"
+          },
+          "density_g_per_ml": {
+            "type": "number",
+            "maximum": 10.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Density G Per Ml",
+            "default": 1.0
+          },
+          "cost_per_ml": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Cost Per Ml",
+            "description": "Cost per ml in the configured currency",
+            "default": 0.0
+          },
+          "min_dose_ml": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Min Dose Ml",
+            "default": 0.0
+          },
+          "dispenser_channel": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispenser Channel"
+          },
+          "loaded": {
+            "type": "boolean",
+            "title": "Loaded",
+            "description": "Currently on the dispensing machine",
+            "default": false
+          },
+          "parent_paint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Paint Id",
+            "description": "Parent paint for a diluted stock"
+          },
+          "dilution": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dilution",
+            "description": "Fraction of parent in the stock"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+            "title": "Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "id"
+        ],
+        "title": "PaintCreate"
+      },
+      "PaintImportResult": {
+        "properties": {
+          "created": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Created"
+          },
+          "updated": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Updated"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created",
+          "updated",
+          "errors"
+        ],
+        "title": "PaintImportResult"
+      },
+      "PaintRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "brand": {
+            "type": "string",
+            "title": "Brand",
+            "default": ""
+          },
+          "pigment_code": {
+            "type": "string",
+            "title": "Pigment Code",
+            "default": ""
+          },
+          "role": {
+            "$ref": "#/components/schemas/PaintRole",
+            "default": "chromatic"
+          },
+          "density_g_per_ml": {
+            "type": "number",
+            "maximum": 10.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Density G Per Ml",
+            "default": 1.0
+          },
+          "cost_per_ml": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Cost Per Ml",
+            "description": "Cost per ml in the configured currency",
+            "default": 0.0
+          },
+          "min_dose_ml": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Min Dose Ml",
+            "default": 0.0
+          },
+          "dispenser_channel": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispenser Channel"
+          },
+          "loaded": {
+            "type": "boolean",
+            "title": "Loaded",
+            "description": "Currently on the dispensing machine",
+            "default": false
+          },
+          "parent_paint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Paint Id",
+            "description": "Parent paint for a diluted stock"
+          },
+          "dilution": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dilution",
+            "description": "Fraction of parent in the stock"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "default": true
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "calibrated": {
+            "type": "boolean",
+            "title": "Calibrated",
+            "description": "Present in the active fitted model",
+            "default": false
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PaintRead"
+      },
+      "PaintRole": {
+        "type": "string",
+        "enum": [
+          "white",
+          "black",
+          "chromatic"
+        ],
+        "title": "PaintRole"
+      },
+      "PaintSpectra": {
+        "properties": {
+          "paint_id": {
+            "type": "string",
+            "title": "Paint Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "K": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "K"
+          },
+          "S": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "S"
+          },
+          "ks": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Ks"
+          },
+          "masstone": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Masstone"
+          },
+          "masstone_hex": {
+            "type": "string",
+            "title": "Masstone Hex"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paint_id",
+          "name",
+          "K",
+          "S",
+          "ks",
+          "masstone",
+          "masstone_hex"
+        ],
+        "title": "PaintSpectra"
+      },
+      "PaintUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "pigment_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pigment Code"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaintRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "density_g_per_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 10.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Density G Per Ml"
+          },
+          "cost_per_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Per Ml"
+          },
+          "min_dose_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Dose Ml"
+          },
+          "dispenser_channel": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispenser Channel"
+          },
+          "loaded": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loaded"
+          },
+          "parent_paint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Paint Id"
+          },
+          "dilution": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dilution"
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PaintUpdate"
+      },
+      "PredictRequest": {
+        "properties": {
+          "components": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "minProperties": 1,
+            "title": "Components"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "components"
+        ],
+        "title": "PredictRequest"
+      },
+      "PredictResponse": {
+        "properties": {
+          "wavelengths": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Wavelengths"
+          },
+          "spectrum": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Spectrum"
+          },
+          "lab": {
+            "additionalProperties": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Lab"
+          },
+          "hex": {
+            "type": "string",
+            "title": "Hex"
+          },
+          "out_of_srgb_gamut": {
+            "type": "boolean",
+            "title": "Out Of Srgb Gamut"
+          },
+          "model_version": {
+            "type": "integer",
+            "title": "Model Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wavelengths",
+          "spectrum",
+          "lab",
+          "hex",
+          "out_of_srgb_gamut",
+          "model_version"
+        ],
+        "title": "PredictResponse"
+      },
+      "ResidualOut": {
+        "properties": {
+          "sample_id": {
+            "type": "string",
+            "title": "Sample Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "substrate": {
+            "type": "string",
+            "title": "Substrate"
+          },
+          "holdout": {
+            "type": "boolean",
+            "title": "Holdout"
+          },
+          "rms": {
+            "type": "number",
+            "title": "Rms"
+          },
+          "de2000": {
+            "type": "number",
+            "title": "De2000"
+          },
+          "outlier": {
+            "type": "boolean",
+            "title": "Outlier"
+          },
+          "noise_floor_de": {
+            "type": "number",
+            "title": "Noise Floor De"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample_id",
+          "type",
+          "substrate",
+          "holdout",
+          "rms",
+          "de2000",
+          "outlier",
+          "noise_floor_de"
+        ],
+        "title": "ResidualOut"
+      },
+      "SampleRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "substrate": {
+            "type": "string",
+            "title": "Substrate"
+          },
+          "components": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Components"
+          },
+          "planned_components": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Components"
+          },
+          "masses_g": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Masses G"
+          },
+          "gap_um": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Um"
+          },
+          "holdout": {
+            "type": "boolean",
+            "title": "Holdout"
+          },
+          "reflectance": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Reflectance"
+          },
+          "spread": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spread"
+          },
+          "n_readings": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Readings"
+          },
+          "measured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measured At"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes"
+          },
+          "hex": {
+            "type": "string",
+            "title": "Hex"
+          },
+          "upload_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "substrate",
+          "components",
+          "planned_components",
+          "masses_g",
+          "gap_um",
+          "holdout",
+          "reflectance",
+          "spread",
+          "n_readings",
+          "measured_at",
+          "notes",
+          "hex",
+          "upload_id"
+        ],
+        "title": "SampleRead"
+      },
+      "SolveRequest": {
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/TargetIn"
+          },
+          "pool": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pool",
+            "description": "Paint ids; default = loaded paints"
+          },
+          "max_paints": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 8.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Paints"
+          },
+          "min_fraction": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 0.5,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Fraction"
+          },
+          "include_white": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include White",
+            "description": "null: allowed, true: required in every recipe, false: excluded"
+          },
+          "illuminant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Illuminant"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "batch_volume_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Volume Ml"
+          },
+          "resolution_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Ml"
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SolverWeights"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "top_n": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 20.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top N"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "search": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "exhaustive",
+              "staged"
+            ],
+            "title": "Search",
+            "default": "auto"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "target"
+        ],
+        "title": "SolveRequest"
+      },
+      "SolveResponse": {
+        "properties": {
+          "target_name": {
+            "type": "string",
+            "title": "Target Name"
+          },
+          "target_lab": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Target Lab"
+          },
+          "target_hex": {
+            "type": "string",
+            "title": "Target Hex"
+          },
+          "target_in_srgb_gamut": {
+            "type": "boolean",
+            "title": "Target In Srgb Gamut"
+          },
+          "reference_spectrum": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Reference Spectrum"
+          },
+          "reference_spectrum_source": {
+            "type": "string",
+            "enum": [
+              "measured",
+              "reconstructed"
+            ],
+            "title": "Reference Spectrum Source"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateOut"
+            },
+            "type": "array",
+            "title": "Candidates"
+          },
+          "in_gamut": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In Gamut"
+          },
+          "nearest_de": {
+            "type": "number",
+            "title": "Nearest De"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "search": {
+            "type": "string",
+            "title": "Search"
+          },
+          "n_subsets": {
+            "type": "integer",
+            "title": "N Subsets"
+          },
+          "duration_s": {
+            "type": "number",
+            "title": "Duration S"
+          },
+          "model_version": {
+            "type": "integer",
+            "title": "Model Version"
+          },
+          "pool": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pool"
+          },
+          "batch_volume_ml": {
+            "type": "number",
+            "title": "Batch Volume Ml"
+          },
+          "illuminant": {
+            "type": "string",
+            "title": "Illuminant"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_name",
+          "target_lab",
+          "target_hex",
+          "target_in_srgb_gamut",
+          "reference_spectrum",
+          "reference_spectrum_source",
+          "candidates",
+          "in_gamut",
+          "nearest_de",
+          "warnings",
+          "search",
+          "n_subsets",
+          "duration_s",
+          "model_version",
+          "pool",
+          "batch_volume_ml",
+          "illuminant"
+        ],
+        "title": "SolveResponse"
+      },
+      "SolverWeights": {
+        "properties": {
+          "de": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "De",
+            "default": 1.0
+          },
+          "n_paints": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "N Paints",
+            "default": 0.05
+          },
+          "cost": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Cost",
+            "default": 0.5
+          },
+          "metamerism": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Metamerism",
+            "default": 0.05
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SolverWeights"
+      },
+      "TargetIn": {
+        "properties": {
+          "lab": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab"
+          },
+          "srgb": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array",
+                "maxItems": 3,
+                "minItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Srgb"
+          },
+          "hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hex"
+          },
+          "library_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Library Id"
+          },
+          "spectrum": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array",
+                "maxItems": 31,
+                "minItems": 31
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spectrum"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TargetIn",
+        "description": "One of ``lab``, ``srgb`` (0-1), ``hex``, ``library_id`` or ``spectrum``."
+      },
+      "UploadResult": {
+        "properties": {
+          "report": {
+            "$ref": "#/components/schemas/ValidationReportOut"
+          },
+          "upload_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upload Id"
+          },
+          "stored": {
+            "type": "integer",
+            "title": "Stored"
+          },
+          "replaced": {
+            "type": "integer",
+            "title": "Replaced"
+          }
+        },
+        "type": "object",
+        "required": [
+          "report",
+          "upload_id",
+          "stored",
+          "replaced"
+        ],
+        "title": "UploadResult"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValidationIssueOut": {
+        "properties": {
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warning"
+            ],
+            "title": "Severity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "column",
+          "code",
+          "message",
+          "severity"
+        ],
+        "title": "ValidationIssueOut"
+      },
+      "ValidationReportOut": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "n_rows": {
+            "type": "integer",
+            "title": "N Rows"
+          },
+          "n_valid": {
+            "type": "integer",
+            "title": "N Valid"
+          },
+          "n_errors": {
+            "type": "integer",
+            "title": "N Errors"
+          },
+          "n_warnings": {
+            "type": "integer",
+            "title": "N Warnings"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationIssueOut"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "wavelengths_in": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Wavelengths In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "n_rows",
+          "n_valid",
+          "n_errors",
+          "n_warnings",
+          "issues",
+          "wavelengths_in"
+        ],
+        "title": "ValidationReportOut"
+      },
+      "WorksheetDrawdown": {
+        "properties": {
+          "drawdown_id": {
+            "type": "string",
+            "title": "Drawdown Id"
+          },
+          "group": {
+            "type": "string",
+            "title": "Group"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "components": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Components"
+          },
+          "masses_g": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Masses G"
+          },
+          "masses_rounded_g": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Masses Rounded G"
+          },
+          "gap_um": {
+            "type": "number",
+            "title": "Gap Um"
+          },
+          "holdout": {
+            "type": "boolean",
+            "title": "Holdout"
+          },
+          "low_mass": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Low Mass"
+          },
+          "sample_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sample Ids"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "drawdown_id",
+          "group",
+          "type",
+          "components",
+          "masses_g",
+          "masses_rounded_g",
+          "gap_um",
+          "holdout",
+          "low_mass",
+          "sample_ids",
+          "notes"
+        ],
+        "title": "WorksheetDrawdown"
+      },
+      "WorksheetOptionsIn": {
+        "properties": {
+          "batch_g": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch G"
+          },
+          "scale_resolution_g": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scale Resolution G"
+          },
+          "standard_gap_um": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Gap Um"
+          },
+          "white_gaps_um": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "White Gaps Um"
+          },
+          "holdout_every": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Holdout Every",
+            "default": 3
+          },
+          "n_neutral_per_level": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "N Neutral Per Level",
+            "default": 2
+          },
+          "n_dark": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 0.0,
+            "title": "N Dark",
+            "default": 6
+          },
+          "n_random": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 0.0,
+            "title": "N Random",
+            "default": 12
+          },
+          "max_paints": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 3.0,
+            "title": "Max Paints",
+            "default": 5
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 42
+          },
+          "spare_fraction": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Spare Fraction",
+            "default": 0.2
+          },
+          "include_pairs": {
+            "type": "boolean",
+            "title": "Include Pairs",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WorksheetOptionsIn"
+      },
+      "WorksheetPaint": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "density_g_per_ml": {
+            "type": "number",
+            "title": "Density G Per Ml"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "role",
+          "density_g_per_ml"
+        ],
+        "title": "WorksheetPaint"
+      },
+      "WorksheetRequest": {
+        "properties": {
+          "paint_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paint Ids",
+            "description": "Default: all active paints"
+          },
+          "options": {
+            "$ref": "#/components/schemas/WorksheetOptionsIn"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": "Calibration worksheet"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WorksheetRequest"
+      },
+      "WorksheetResponse": {
+        "properties": {
+          "options": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Options"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "n_drawdowns": {
+            "type": "integer",
+            "title": "N Drawdowns"
+          },
+          "n_rows": {
+            "type": "integer",
+            "title": "N Rows"
+          },
+          "n_holdout": {
+            "type": "integer",
+            "title": "N Holdout"
+          },
+          "drawdowns": {
+            "items": {
+              "$ref": "#/components/schemas/WorksheetDrawdown"
+            },
+            "type": "array",
+            "title": "Drawdowns"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/WorksheetRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "totals_g": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Totals G"
+          },
+          "low_mass": {
+            "items": {
+              "$ref": "#/components/schemas/LowMassOut"
+            },
+            "type": "array",
+            "title": "Low Mass"
+          },
+          "paints": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/WorksheetPaint"
+            },
+            "type": "object",
+            "title": "Paints"
+          }
+        },
+        "type": "object",
+        "required": [
+          "options",
+          "warnings",
+          "n_drawdowns",
+          "n_rows",
+          "n_holdout",
+          "drawdowns",
+          "rows",
+          "totals_g",
+          "low_mass",
+          "paints"
+        ],
+        "title": "WorksheetResponse"
+      },
+      "WorksheetRow": {
+        "properties": {
+          "sample_id": {
+            "type": "string",
+            "title": "Sample Id"
+          },
+          "drawdown_id": {
+            "type": "string",
+            "title": "Drawdown Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "substrate": {
+            "type": "string",
+            "title": "Substrate"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample_id",
+          "drawdown_id",
+          "type",
+          "substrate",
+          "notes"
+        ],
+        "title": "WorksheetRow"
+      }
+    }
+  }
+}

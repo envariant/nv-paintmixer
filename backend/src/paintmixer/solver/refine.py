@@ -15,6 +15,7 @@ from paintmixer.colorsci.types import FloatArray, IntArray
 from paintmixer.solver.model import PoolModel
 
 META_ILLUMINANTS = (Illuminant.A, Illuminant.F11)
+REPORT_ILLUMINANTS = (Illuminant.D65, Illuminant.A, Illuminant.F11)
 _SMOOTH = 0.05
 
 
@@ -36,20 +37,23 @@ class Objective:
     reference_spectrum: FloatArray  # measured or reconstructed target spectrum
     weights: Weights
     min_fraction: float
+    illuminant: Illuminant = Illuminant.D65
 
     def __post_init__(self) -> None:
+        self.meta_illuminants = tuple(i for i in REPORT_ILLUMINANTS if i != self.illuminant)
         self._ref_lab = {
             ill: xyz_to_lab(self.reference_spectrum @ self.model.W(ill).T, white_point(ill))
-            for ill in META_ILLUMINANTS
+            for ill in self.meta_illuminants
         }
 
     def terms(self, idx: IntArray, c: FloatArray) -> dict[str, FloatArray]:
         """All objective terms for a batch ``idx (m,k)``, ``c (m,k)``."""
         R = self.model.reflectance(idx, c)
         m = R.shape[0]
-        labs = [xyz_to_lab(R @ self.model.W(Illuminant.D65).T, white_point(Illuminant.D65))]
+        primary = self.illuminant
+        labs = [xyz_to_lab(R @ self.model.W(primary).T, white_point(primary))]
         refs = [np.broadcast_to(self.target_lab, (m, 3))]
-        for ill in META_ILLUMINANTS:
+        for ill in self.meta_illuminants:
             labs.append(xyz_to_lab(R @ self.model.W(ill).T, white_point(ill)))
             refs.append(np.broadcast_to(self._ref_lab[ill], (m, 3)))
         all_de = delta_e_2000(np.concatenate(labs), np.concatenate(refs)).reshape(-1, m)
@@ -194,10 +198,16 @@ def quantise(
     return Quantised(vol, vol / vol.sum(), best, n_moves)
 
 
-def dose_sensitivity(model: PoolModel, idx: IntArray, c: FloatArray, pct: float = 1.0) -> float:
+def dose_sensitivity(
+    model: PoolModel,
+    idx: IntArray,
+    c: FloatArray,
+    pct: float = 1.0,
+    ill: Illuminant = Illuminant.D65,
+) -> float:
     """Worst-case dE2000 when any one paint is over-dosed by ``pct`` % of the batch volume."""
-    base = model.lab(idx[None, :], c[None, :])
+    base = model.lab(idx[None, :], c[None, :], ill)
     pert = np.tile(c, (idx.size, 1)) + np.eye(idx.size) * (pct / 100.0)
     pert = pert / pert.sum(axis=1, keepdims=True)
-    lab = model.lab(np.tile(idx, (idx.size, 1)), pert)
+    lab = model.lab(np.tile(idx, (idx.size, 1)), pert, ill)
     return float(delta_e_2000(lab, base).max())

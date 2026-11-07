@@ -17,6 +17,7 @@ from scipy.optimize import nnls
 
 from paintmixer.colorsci.delta_e import delta_e_2000
 from paintmixer.colorsci.km import inverse_saunderson, ks_from_r
+from paintmixer.colorsci.spectral import Illuminant
 from paintmixer.colorsci.types import FloatArray, IntArray
 from paintmixer.solver.model import PoolModel
 
@@ -78,20 +79,21 @@ def lm_batch(
     z0: FloatArray,
     lo: float,
     iters: int = 30,
+    ill: Illuminant = Illuminant.D65,
 ) -> tuple[FloatArray, FloatArray]:
     """Minimise ||Lab(c) - target||^2 for each row of ``idx``. Returns (c, lab)."""
     m, k = idx.shape
     z = z0.copy()
     mu = np.full(m, 1e-2)
     c = to_c(z, lo)
-    lab = model.lab(idx, c)
+    lab = model.lab(idx, c, ill)
     cost = np.sum((lab - target_lab) ** 2, axis=1)
     if k == 1:
         return c, lab
     eye = np.eye(k)[None]
     span = 1.0 - k * lo
     for _ in range(iters):
-        lab, jc = model.lab_jac(idx, c)
+        lab, jc = model.lab_jac(idx, c, ill)
         r = lab - target_lab
         s = (c - lo) / span
         dcdz = span * (s[:, :, None] * eye - s[:, :, None] * s[:, None, :])
@@ -104,7 +106,7 @@ def lm_batch(
         step = np.clip(step, -4.0, 4.0)
         z_new = z + step
         c_new = to_c(z_new, lo)
-        lab_new = model.lab(idx, c_new)
+        lab_new = model.lab(idx, c_new, ill)
         cost_new = np.sum((lab_new - target_lab) ** 2, axis=1)
         ok = cost_new < cost
         z = np.where(ok[:, None], z_new, z)
@@ -112,7 +114,7 @@ def lm_batch(
         cost = np.where(ok, cost_new, cost)
         mu = np.where(ok, mu / 3.0, mu * 4.0)
         mu = np.clip(mu, 1e-7, 1e7)
-    lab = model.lab(idx, c)
+    lab = model.lab(idx, c, ill)
     return c, lab
 
 
@@ -123,6 +125,7 @@ def screen(
     lo: float,
     target_spectrum: FloatArray | None = None,
     iters: int = 30,
+    ill: Illuminant = Illuminant.D65,
 ) -> Screened:
     """Optimise every subset (grouped by size) from two starts; keep the better per subset."""
     idx_out, c_out, lab_out = [], [], []
@@ -135,10 +138,10 @@ def screen(
         starts = [np.zeros((len(idx), k))]
         if target_spectrum is not None and k > 1:
             starts.append(to_z(nnls_init(model, idx, target_spectrum, lo), lo))
-        best_c, best_lab = lm_batch(model, idx, target_lab, starts[0], lo, iters)
+        best_c, best_lab = lm_batch(model, idx, target_lab, starts[0], lo, iters, ill)
         best_cost = np.sum((best_lab - target_lab) ** 2, axis=1)
         for z0 in starts[1:]:
-            c, lab = lm_batch(model, idx, target_lab, z0, lo, iters)
+            c, lab = lm_batch(model, idx, target_lab, z0, lo, iters, ill)
             cost = np.sum((lab - target_lab) ** 2, axis=1)
             better = cost < best_cost
             best_c = np.where(better[:, None], c, best_c)
@@ -188,6 +191,7 @@ def staged_subsets(
     target_spectrum: FloatArray | None = None,
     keep: int = 40,
     min_prefilter: int = 8,
+    ill: Illuminant = Illuminant.D65,
 ) -> tuple[list[tuple[int, ...]], int]:
     """Greedy forward selection + swap refinement for large pools.
 
@@ -223,7 +227,7 @@ def staged_subsets(
         subs = [s for s in {tuple(sorted(x)) for x in subs} if s not in seen]
         if not subs:
             return
-        sc = screen(model, subs, target_lab, lo, target_spectrum)
+        sc = screen(model, subs, target_lab, lo, target_spectrum, ill=ill)
         for row in range(len(sc.de)):
             key = tuple(int(i) for i in sc.idx[row] if i >= 0)
             seen[key] = float(sc.de[row])

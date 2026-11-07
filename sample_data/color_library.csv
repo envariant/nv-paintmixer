@@ -1,0 +1,21 @@
+name,source,hex,L,a,b,notes
+Harbour Mist,PaintMixer Basics,#b8c4c8,,,,cool pale grey
+Kopi Brown,PaintMixer Basics,#6f4e37,,,,
+Pandan Leaf,PaintMixer Basics,#4a7c3f,,,,
+Chili Padi,PaintMixer Basics,#c8102e,,,,may be outside a CMYK-only gamut
+Mango Sorbet,PaintMixer Basics,#ffb347,,,,
+Lagoon Teal,PaintMixer Basics,#1f7a7a,,,,
+Orchid Bloom,PaintMixer Basics,#9b4f96,,,,
+Shophouse Cream,PaintMixer Basics,#f3e5c0,,,,pale: needs white
+Monsoon Slate,PaintMixer Basics,#4b5563,,,,
+Laterite Red,PaintMixer Basics,#a0522d,,,,
+Midnight Ink,PaintMixer Basics,#1c2340,,,,dark: needs black
+Bamboo Shoot,PaintMixer Basics,#d8cf8a,,,,
+Mid Grey 50,PaintMixer Basics,,50,0,0,neutral reference
+Light Grey 80,PaintMixer Basics,,80,0,0,neutral reference
+Dark Grey 25,PaintMixer Basics,,25,0,0,neutral reference
+Warm Sand,PaintMixer Basics,,72,6,22,
+Ocean Blue,PaintMixer Basics,,45,-5,-35,
+Rose Clay,PaintMixer Basics,,60,25,15,
+Olive Drab,PaintMixer Basics,,45,-8,30,
+Laser Green,PaintMixer Basics,,60,-110,60,deliberately outside sRGB
