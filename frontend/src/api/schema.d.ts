@@ -585,75 +585,75 @@ export interface components {
              * Currency
              * @default SGD
              */
-            currency: string;
+            currency?: string;
             /**
              * Dispenser Channels
              * @default 10
              */
-            dispenser_channels: number;
+            dispenser_channels?: number;
             /**
              * Batch Volume Ml
              * @default 100
              */
-            batch_volume_ml: number;
+            batch_volume_ml?: number;
             /**
              * Dispenser Resolution Ml
              * @default 0.05
              */
-            dispenser_resolution_ml: number;
+            dispenser_resolution_ml?: number;
             /**
              * Saunderson K1
              * @default 0
              */
-            saunderson_k1: number;
+            saunderson_k1?: number;
             /**
              * Saunderson K2
              * @default 0.5
              */
-            saunderson_k2: number;
+            saunderson_k2?: number;
             /** @default D65 */
-            illuminant: components["schemas"]["Illuminant"];
+            illuminant?: components["schemas"]["Illuminant"];
             /**
              * Max Paints
              * @default 5
              */
-            max_paints: number;
+            max_paints?: number;
             /**
              * Min Fraction
              * @default 0.02
              */
-            min_fraction: number;
+            min_fraction?: number;
             /**
              * Top N
              * @default 5
              */
-            top_n: number;
+            top_n?: number;
             weights?: components["schemas"]["SolverWeights"];
             /**
              * Out Of Gamut De
              * @default 1
              */
-            out_of_gamut_de: number;
+            out_of_gamut_de?: number;
             /**
              * Worksheet Batch G
              * @default 10
              */
-            worksheet_batch_g: number;
+            worksheet_batch_g?: number;
             /**
              * Worksheet Scale Resolution G
              * @default 0.01
              */
-            worksheet_scale_resolution_g: number;
+            worksheet_scale_resolution_g?: number;
             /**
              * Worksheet Gap Um
              * @default 150
              */
-            worksheet_gap_um: number;
+            worksheet_gap_um?: number;
             /**
              * Seed
              * @default 1234
              */
-            seed: number;
+            seed?: number;
         };
         /** AppSettingsUpdate */
         AppSettingsUpdate: {
@@ -757,12 +757,12 @@ export interface components {
              * Source
              * @default
              */
-            source: string;
+            source?: string;
             /**
              * Notes
              * @default
              */
-            notes: string;
+            notes?: string;
         };
         /** ColorImportResult */
         ColorImportResult: {
@@ -833,22 +833,22 @@ export interface components {
              * @default additions
              * @enum {string}
              */
-            mode: "additions" | "remix";
+            mode?: "additions" | "remix";
             /**
              * Damping
              * @default 0.001
              */
-            damping: number;
+            damping?: number;
             /**
              * Tolerance De
              * @default 0.5
              */
-            tolerance_de: number;
+            tolerance_de?: number;
             /**
              * Max Iterations
              * @default 5
              */
-            max_iterations: number;
+            max_iterations?: number;
         };
         /** DispenseRequest */
         DispenseRequest: {
@@ -857,17 +857,17 @@ export interface components {
              * @description Only the simulated dispenser exists so far
              * @default true
              */
-            simulate: boolean;
+            simulate?: boolean;
             /**
              * Rel Sigma
              * @default 0.01
              */
-            rel_sigma: number;
+            rel_sigma?: number;
             /**
              * Abs Sigma Ml
              * @default 0.01
              */
-            abs_sigma_ml: number;
+            abs_sigma_ml?: number;
             /** Seed */
             seed?: number | null;
         };
@@ -894,22 +894,22 @@ export interface components {
              * Smoothness
              * @default 0.003
              */
-            smoothness: number;
+            smoothness?: number;
             /**
              * K Folds
              * @default 5
              */
-            k_folds: number;
+            k_folds?: number;
             /**
              * Activate
              * @default true
              */
-            activate: boolean;
+            activate?: boolean;
             /**
              * Notes
              * @default
              */
-            notes: string;
+            notes?: string;
         };
         /** FitRunRead */
         FitRunRead: {
@@ -1012,7 +1012,7 @@ export interface components {
              * Name
              * @default
              */
-            name: string;
+            name?: string;
             target: components["schemas"]["TargetIn"];
             /**
              * Components
@@ -1106,23 +1106,23 @@ export interface components {
              * Simulate
              * @default false
              */
-            simulate: boolean;
+            simulate?: boolean;
             /**
              * Simulate Gain
              * @description Simulated model/instrument bias
              * @default 1
              */
-            simulate_gain: number;
+            simulate_gain?: number;
             /**
              * Simulate Offset
              * @default 0
              */
-            simulate_offset: number;
+            simulate_offset?: number;
             /**
              * Simulate Noise
              * @default 0.001
              */
-            simulate_noise: number;
+            simulate_noise?: number;
             /** Seed */
             seed?: number | null;
         };
@@ -1213,30 +1213,30 @@ export interface components {
              * Brand
              * @default
              */
-            brand: string;
+            brand?: string;
             /**
              * Pigment Code
              * @default
              */
-            pigment_code: string;
+            pigment_code?: string;
             /** @default chromatic */
-            role: components["schemas"]["PaintRole"];
+            role?: components["schemas"]["PaintRole"];
             /**
              * Density G Per Ml
              * @default 1
              */
-            density_g_per_ml: number;
+            density_g_per_ml?: number;
             /**
              * Cost Per Ml
              * @description Cost per ml in the configured currency
              * @default 0
              */
-            cost_per_ml: number;
+            cost_per_ml?: number;
             /**
              * Min Dose Ml
              * @default 0
              */
-            min_dose_ml: number;
+            min_dose_ml?: number;
             /** Dispenser Channel */
             dispenser_channel?: number | null;
             /**
@@ -1244,7 +1244,7 @@ export interface components {
              * @description Currently on the dispensing machine
              * @default false
              */
-            loaded: boolean;
+            loaded?: boolean;
             /**
              * Parent Paint Id
              * @description Parent paint for a diluted stock
@@ -1259,12 +1259,12 @@ export interface components {
              * Active
              * @default true
              */
-            active: boolean;
+            active?: boolean;
             /**
              * Notes
              * @default
              */
-            notes: string;
+            notes?: string;
             /** Id */
             id: string;
         };
@@ -1285,30 +1285,30 @@ export interface components {
              * Brand
              * @default
              */
-            brand: string;
+            brand?: string;
             /**
              * Pigment Code
              * @default
              */
-            pigment_code: string;
+            pigment_code?: string;
             /** @default chromatic */
-            role: components["schemas"]["PaintRole"];
+            role?: components["schemas"]["PaintRole"];
             /**
              * Density G Per Ml
              * @default 1
              */
-            density_g_per_ml: number;
+            density_g_per_ml?: number;
             /**
              * Cost Per Ml
              * @description Cost per ml in the configured currency
              * @default 0
              */
-            cost_per_ml: number;
+            cost_per_ml?: number;
             /**
              * Min Dose Ml
              * @default 0
              */
-            min_dose_ml: number;
+            min_dose_ml?: number;
             /** Dispenser Channel */
             dispenser_channel?: number | null;
             /**
@@ -1316,7 +1316,7 @@ export interface components {
              * @description Currently on the dispensing machine
              * @default false
              */
-            loaded: boolean;
+            loaded?: boolean;
             /**
              * Parent Paint Id
              * @description Parent paint for a diluted stock
@@ -1331,12 +1331,12 @@ export interface components {
              * Active
              * @default true
              */
-            active: boolean;
+            active?: boolean;
             /**
              * Notes
              * @default
              */
-            notes: string;
+            notes?: string;
             /** Id */
             id: string;
             /**
@@ -1344,7 +1344,7 @@ export interface components {
              * @description Present in the active fitted model
              * @default false
              */
-            calibrated: boolean;
+            calibrated?: boolean;
             /**
              * Created At
              * Format: date-time
@@ -1520,7 +1520,7 @@ export interface components {
              * @default auto
              * @enum {string}
              */
-            search: "auto" | "exhaustive" | "staged";
+            search?: "auto" | "exhaustive" | "staged";
         };
         /** SolveResponse */
         SolveResponse: {
@@ -1568,22 +1568,22 @@ export interface components {
              * De
              * @default 1
              */
-            de: number;
+            de?: number;
             /**
              * N Paints
              * @default 0.05
              */
-            n_paints: number;
+            n_paints?: number;
             /**
              * Cost
              * @default 0.5
              */
-            cost: number;
+            cost?: number;
             /**
              * Metamerism
              * @default 0.05
              */
-            metamerism: number;
+            metamerism?: number;
         };
         /**
          * TargetIn
@@ -1604,7 +1604,7 @@ export interface components {
              * Name
              * @default
              */
-            name: string;
+            name?: string;
         };
         /** UploadResult */
         UploadResult: {
@@ -1707,42 +1707,42 @@ export interface components {
              * Holdout Every
              * @default 3
              */
-            holdout_every: number;
+            holdout_every?: number;
             /**
              * N Neutral Per Level
              * @default 2
              */
-            n_neutral_per_level: number;
+            n_neutral_per_level?: number;
             /**
              * N Dark
              * @default 6
              */
-            n_dark: number;
+            n_dark?: number;
             /**
              * N Random
              * @default 12
              */
-            n_random: number;
+            n_random?: number;
             /**
              * Max Paints
              * @default 5
              */
-            max_paints: number;
+            max_paints?: number;
             /**
              * Seed
              * @default 42
              */
-            seed: number;
+            seed?: number;
             /**
              * Spare Fraction
              * @default 0.2
              */
-            spare_fraction: number;
+            spare_fraction?: number;
             /**
              * Include Pairs
              * @default true
              */
-            include_pairs: boolean;
+            include_pairs?: boolean;
         };
         /** WorksheetPaint */
         WorksheetPaint: {
@@ -1765,7 +1765,7 @@ export interface components {
              * Title
              * @default Calibration worksheet
              */
-            title: string;
+            title?: string;
         };
         /** WorksheetResponse */
         WorksheetResponse: {

@@ -26,8 +26,9 @@ export class ApiError extends Error {
   }
 }
 
-export function createApi(baseUrl = '', fetchImpl?: typeof fetch) {
-  return createClient<paths>({ baseUrl, fetch: fetchImpl })
+export function createApi(baseUrl = globalThis.location?.origin ?? '', fetchImpl?: typeof fetch) {
+  // Resolve fetch lazily so tests (and polyfills) can replace globalThis.fetch after import.
+  return createClient<paths>({ baseUrl, fetch: fetchImpl ?? ((req: Request) => globalThis.fetch(req)) })
 }
 
 export const api = createApi()
