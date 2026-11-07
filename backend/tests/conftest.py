@@ -20,7 +20,7 @@ def client(tmp_path: Path) -> Iterator[TestClient]:
     from paintmixer.api.app import create_app
     from paintmixer.config import Settings
 
-    app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'api.db'}"))
+    app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'api.db'}", compute_workers=0))
     with TestClient(app) as c:
         yield c
 
@@ -33,7 +33,7 @@ def fitted_client(tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClie
     from tests.api_helpers import fit, import_paints, upload_calibration
 
     db = tmp_path_factory.mktemp("fitted") / "api.db"
-    app = create_app(Settings(database_url=f"sqlite:///{db}"))
+    app = create_app(Settings(database_url=f"sqlite:///{db}", compute_workers=0))
     with TestClient(app) as c:
         import_paints(c)
         upload_calibration(c)

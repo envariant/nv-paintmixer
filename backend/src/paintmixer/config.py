@@ -19,6 +19,10 @@ class Settings:
     )
     currency: str = field(default_factory=lambda: os.environ.get("PAINTMIXER_CURRENCY", "SGD"))
     seed: int = field(default_factory=lambda: int(os.environ.get("PAINTMIXER_SEED", "1234")))
+    # Worker processes for solve/gamut/fit. 0 = run in the FastAPI thread pool instead.
+    compute_workers: int = field(
+        default_factory=lambda: int(os.environ.get("PAINTMIXER_COMPUTE_WORKERS", "2"))
+    )
 
 
 def get_settings() -> Settings:

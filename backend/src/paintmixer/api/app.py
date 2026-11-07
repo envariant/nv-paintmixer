@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from paintmixer import __version__
+from paintmixer.api.compute import make_executor
 from paintmixer.api.errors import install_error_handlers
 from paintmixer.api.routers import (
     calibration,
@@ -40,9 +41,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     cfg = settings or get_settings()
 
     @asynccontextmanager
-    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app_: FastAPI) -> AsyncIterator[None]:
         migrate(cfg.database_url)
-        yield
+        app_.state.executor = make_executor(cfg.compute_workers)
+        try:
+            yield
+        finally:
+            if app_.state.executor is not None:
+                app_.state.executor.shutdown(wait=False, cancel_futures=True)
 
     app = FastAPI(
         title="PaintMixer API",
@@ -54,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redoc_url=None,
     )
     app.state.settings = cfg
+    app.state.executor = None
     install_error_handlers(app)
     for r in (system, paints, colors, worksheet, calibration, models, mixing, jobs):
         app.include_router(r.router, prefix=API_PREFIX)

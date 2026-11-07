@@ -41,7 +41,7 @@ test-slow: ## Slow solver accuracy/performance tests
 test-frontend: ## Vitest
 	cd $(FRONTEND) && npm test
 
-e2e: ## Playwright smoke test (starts backend + frontend)
+e2e: ## Playwright smoke test (added with the M6 UI)
 	cd $(FRONTEND) && npm run e2e
 
 lint: lint-backend lint-frontend ## ruff + mypy + vue-tsc

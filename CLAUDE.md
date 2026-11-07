@@ -11,6 +11,8 @@
   - `hardware/` dispenser protocol + simulator. `correction.py` closed-loop recipe correction.
   - `db/` SQLModel tables, engine/session, Alembic migrations (`backend/alembic/`).
   - `api/` FastAPI app (`api/app.py:create_app`), routers under `api/routers/`, all under `/api/v1`.
+    Heavy work (solve, gamut, fit) goes through `api/compute.py` (process pool; `compute_workers=0`
+    runs it in the thread pool instead, which the tests use).
   - `cli.py` Typer CLI (`uv run paintmixer --help`).
 - `frontend/` Vue 3 + TS + Vite + Tailwind + Pinia. `src/api/schema.d.ts` is generated — do not edit.
 - `design/` Claude Design handoff bundle goes in `design/handoff/` (needed before building UI pages).

@@ -1,14 +1,15 @@
 """Recipe solving, forward prediction and gamut data.
 
-These endpoints are plain ``def`` so FastAPI runs them in its worker thread pool: the NumPy/SciPy
-work never blocks the event loop.
+Solve and gamut run through :func:`paintmixer.api.compute.run_compute` (process pool, or thread
+pool when ``compute_workers`` is 0), so the event loop is never blocked.
 """
 
 from __future__ import annotations
 
 import numpy as np
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 
+from paintmixer.api.compute import run_compute
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request
 from paintmixer.api.schemas import (
@@ -69,7 +70,7 @@ def candidate_out(
 
 
 @router.post("/solve", response_model=SolveResponse)
-def solve_recipe(body: SolveRequest, session: SessionDep) -> SolveResponse:
+async def solve_recipe(body: SolveRequest, session: SessionDep, request: Request) -> SolveResponse:
     s = load_settings(session)
     model, fm = pool_model(session, body.pool)
     target = resolve_target(session, body.target)
@@ -89,7 +90,7 @@ def solve_recipe(body: SolveRequest, session: SessionDep) -> SolveResponse:
     )
     if opts.max_paints * opts.min_fraction > 1:
         raise bad_request("bad_constraints", "max_paints x min_fraction must be <= 1")
-    res = solve(model, target, opts, gamut_cache_key=fm.version)
+    res = await run_compute(request.app, solve, model, target, opts, gamut_cache_key=fm.version)
     names = {p.id: p.name for p in model.paints}
     cost = {p.id: p.cost_per_ml for p in model.paints}
     return SolveResponse(
@@ -134,8 +135,9 @@ def predict_mixture(body: PredictRequest, session: SessionDep) -> PredictRespons
 
 
 @router.get("/gamut", response_model=GamutResponse)
-def gamut(
+async def gamut(
     session: SessionDep,
+    request: Request,
     pool: str | None = Query(None, description="Comma-separated paint ids; default = loaded"),
     max_paints: int | None = Query(None, ge=1, le=8),
 ) -> GamutResponse:
@@ -143,7 +145,7 @@ def gamut(
     ids = [p.strip() for p in pool.split(",") if p.strip()] if pool else None
     model, fm = pool_model(session, ids)
     k = max_paints or load_settings(session).max_paints
-    g = gamut_for(model, k, cache_key=fm.version)
+    g = await run_compute(request.app, gamut_for, model, k, fm.version)
     return GamutResponse(
         pool=model.ids,
         L_min=g.L_min,

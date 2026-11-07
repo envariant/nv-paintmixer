@@ -293,3 +293,19 @@ def test_committed_openapi_is_current() -> None:
 
     committed = json.loads((Path(__file__).parents[1] / "openapi.json").read_text())
     assert committed == json.loads(json.dumps(create_app().openapi())), "run `make gen-api`"
+
+
+def test_process_pool_compute(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Solve and fit through real worker processes (the production configuration)."""
+    from paintmixer.api.app import create_app
+    from paintmixer.config import Settings
+
+    app = create_app(Settings(database_url=f"sqlite:///{tmp_path / 'p.db'}", compute_workers=1))
+    with TestClient(app) as c:
+        import_paints(c)
+        upload_calibration(c)
+        run = fit(c)
+        assert run["status"] == "succeeded", run
+        r = c.post(f"{API}/solve", json={"target": {"lab": [60, 0, 0]}})
+        assert r.status_code == 200 and r.json()["candidates"]
+        assert c.get(f"{API}/gamut").status_code == 200

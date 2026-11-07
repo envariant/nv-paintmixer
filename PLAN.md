@@ -47,10 +47,10 @@ dataclasses/arrays.
 | M3 | Calibration fit + report | done |
 | M4 | Solver + gamut + scaling tests | done |
 | M5 | Worksheet generator + full API | done |
-| M6 | Frontend from the Claude Design handoff | blocked until `design/handoff/` exists |
+| M6 | Frontend from the Claude Design handoff | **blocked**: no `design/handoff/` bundle; API client, stores, composables + Vitest done |
 | M7 | Measurement sources, spotread parser, `paintmixer measure session` | done |
 | M8 | Dispenser simulator, closed-loop correction, jobs | done |
-| M9 | Hardening + docs | |
+| M9 | Hardening + docs | done |
 
 Progress notes per milestone are appended below as work completes.
 
@@ -90,3 +90,12 @@ Progress notes per milestone are appended below as work completes.
   in tests against a deliberately biased model; jobs API (create → dispense → measure → correct,
   iteration cap → `needs_attention`); every measurement logged to `correction_log` as training
   data for a later learned correction.
+- **M6 (partial)** No design handoff bundle was found in `design/handoff/` (or the session), so
+  no UI pages or design tokens were built. Done without inventing a design: OpenAPI-generated
+  typed client, Pinia stores (paints with loaded-set warnings, mixer, calibration), polling
+  composable, dE tier helper (text + icon, not colour alone), Vitest specs. Remaining once the
+  bundle exists: Tailwind theme from its tokens, the seven pages, print view, ECharts plots,
+  loading/empty/error states, a11y, and the Playwright smoke test.
+- **M9** Solve/gamut/fit moved to a process pool (`/health` stays at ~10 ms while a solve or fit
+  runs; it was ~280 ms with threads); alembic CLI creates the data dir; CI workflow; README with
+  architecture diagram and a walkthrough checked against a live server.

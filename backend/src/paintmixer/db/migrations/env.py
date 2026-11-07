@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
@@ -16,6 +18,8 @@ if config.config_file_name is not None and config.get_main_option("configure_log
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 url = config.get_main_option("sqlalchemy.url") or get_settings().database_url
+if url.startswith("sqlite:///"):
+    Path(url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
 target_metadata = SQLModel.metadata
 
 

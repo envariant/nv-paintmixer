@@ -6,9 +6,10 @@ import traceback
 from typing import Literal
 
 import numpy as np
-from fastapi import APIRouter, BackgroundTasks, File, Query, Response, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Query, Request, Response, UploadFile
 from sqlmodel import Session, col, delete, select
 
+from paintmixer.api.compute import submit_background
 from paintmixer.api.deps import ConfigDep, SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request, not_found
 from paintmixer.api.schemas import (
@@ -244,7 +245,11 @@ def _run_out(session: Session, r: m.FitRun) -> FitRunRead:
 
 @router.post("/fit", response_model=FitRunRead, status_code=202)
 def start_fit(
-    body: FitRequest, session: SessionDep, config: ConfigDep, background: BackgroundTasks
+    body: FitRequest,
+    session: SessionDep,
+    config: ConfigDep,
+    background: BackgroundTasks,
+    request: Request,
 ) -> FitRunRead:
     """Start a fit in the background; poll ``GET /calibration/fits/{id}``."""
     if session.exec(select(m.CalibrationSample)).first() is None:
@@ -254,7 +259,8 @@ def start_fit(
     session.commit()
     session.refresh(run)
     assert run.id is not None
-    background.add_task(run_fit, config.database_url, run.id)
+    if submit_background(request.app, run_fit, config.database_url, run.id) is None:
+        background.add_task(run_fit, config.database_url, run.id)
     return _run_out(session, run)
 
 

@@ -82,3 +82,7 @@ introduced it.
   configurable gain/offset bias and noise.
 - **M8** The learned correction itself is not implemented; residuals are logged (`correction_log`
   table) with recipe, prediction, measurement and target.
+- **M6** Blocked per instructions: no Claude Design handoff bundle exists, so no UI was designed.
+  `frontend/src/App.vue` is a placeholder that only shows API health.
+- **M9** Compute runs in a `spawn` process pool (2 workers by default). The first solve after
+  start-up pays worker start-up (~1 s); gamut caches live per worker.
