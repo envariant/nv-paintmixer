@@ -16,7 +16,13 @@ from paintmixer.worksheet.plan import (
 )
 from paintmixer.worksheet.render import plan_to_csv, plan_to_dict, plan_to_html
 
-STARTER = ["titanium-white", "carbon-black", "phthalo-blue", "quinacridone-magenta", "arylide-yellow"]
+STARTER = [
+    "titanium-white",
+    "carbon-black",
+    "phthalo-blue",
+    "quinacridone-magenta",
+    "arylide-yellow",
+]
 
 
 def starter(paints: dict[str, PaintInfo]) -> list[PaintInfo]:
@@ -80,7 +86,10 @@ def test_fractions_and_mass_conservation(paints: dict[str, PaintInfo]) -> None:
 
 
 def test_target_mass_formula() -> None:
-    paints = {"a": PaintInfo("a", PaintRole.WHITE, 2.0), "b": PaintInfo("b", PaintRole.CHROMATIC, 1.0)}
+    paints = {
+        "a": PaintInfo("a", PaintRole.WHITE, 2.0),
+        "b": PaintInfo("b", PaintRole.CHROMATIC, 1.0),
+    }
     m = target_masses({"a": 0.5, "b": 0.5}, paints, 9.0)
     assert m == pytest.approx({"a": 6.0, "b": 3.0})
 

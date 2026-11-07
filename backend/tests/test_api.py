@@ -23,8 +23,15 @@ def test_health_and_openapi(client: TestClient) -> None:
     assert r.json()["active_model_version"] is None
     spec = client.get(f"{API}/openapi.json").json()
     paths = set(spec["paths"])
-    for p in ["/api/v1/solve", "/api/v1/predict", "/api/v1/gamut", "/api/v1/paints",
-              "/api/v1/calibration/fit", "/api/v1/worksheet", "/api/v1/models/{version}/activate"]:
+    for p in [
+        "/api/v1/solve",
+        "/api/v1/predict",
+        "/api/v1/gamut",
+        "/api/v1/paints",
+        "/api/v1/calibration/fit",
+        "/api/v1/worksheet",
+        "/api/v1/models/{version}/activate",
+    ]:
         assert p in paths
 
 
@@ -58,16 +65,26 @@ def test_paint_crud_and_loaded_rules(client: TestClient) -> None:
     # loaded requires a channel; channels must be unique among loaded paints
     r = client.patch(f"{API}/paints/test-white", json={"loaded": True})
     assert r.status_code == 422 and err(r) == "channel_required"
-    assert client.patch(f"{API}/paints/test-white", json={"loaded": True, "dispenser_channel": 1}).status_code == 200
+    assert (
+        client.patch(
+            f"{API}/paints/test-white", json={"loaded": True, "dispenser_channel": 1}
+        ).status_code
+        == 200
+    )
     client.post(f"{API}/paints", json={"id": "test-blue", "name": "Blue"})
     r = client.patch(f"{API}/paints/test-blue", json={"loaded": True, "dispenser_channel": 1})
     assert r.status_code == 409 and err(r) == "conflict"
     r = client.patch(f"{API}/paints/test-blue", json={"loaded": True, "dispenser_channel": 99})
     assert err(r) == "channel_out_of_range"
     # diluted stock
-    r = client.post(f"{API}/paints", json={"id": "blue-10", "name": "Blue 10%", "parent_paint_id": "test-blue", "dilution": 0.1})
+    r = client.post(
+        f"{API}/paints",
+        json={"id": "blue-10", "name": "Blue 10%", "parent_paint_id": "test-blue", "dilution": 0.1},
+    )
     assert r.status_code == 201 and r.json()["dilution"] == 0.1
-    r = client.post(f"{API}/paints", json={"id": "blue-x", "name": "x", "parent_paint_id": "test-blue"})
+    r = client.post(
+        f"{API}/paints", json={"id": "blue-x", "name": "x", "parent_paint_id": "test-blue"}
+    )
     assert err(r) == "bad_dilution"
     assert client.delete(f"{API}/paints/test-blue").status_code == 409  # parent of a stock
     loaded = client.get(f"{API}/paints", params={"loaded": True}).json()
@@ -117,7 +134,13 @@ def test_color_library(client: TestClient) -> None:
 
 def test_worksheet_json_csv_html(client: TestClient) -> None:
     import_paints(client)
-    ids = ["titanium-white", "carbon-black", "phthalo-blue", "quinacridone-magenta", "arylide-yellow"]
+    ids = [
+        "titanium-white",
+        "carbon-black",
+        "phthalo-blue",
+        "quinacridone-magenta",
+        "arylide-yellow",
+    ]
     body = {"paint_ids": ids, "options": {"batch_g": 10, "scale_resolution_g": 0.01}}
     r = client.post(f"{API}/worksheet", json=body)
     assert r.status_code == 200, r.text
@@ -127,7 +150,9 @@ def test_worksheet_json_csv_html(client: TestClient) -> None:
     assert any(lm["paint_id"] == "carbon-black" for lm in ws["low_mass"])
     csv = client.post(f"{API}/worksheet/csv", json=body)
     assert csv.headers["content-type"].startswith("text/csv")
-    assert csv.text.splitlines()[0].startswith("sample_id,type,substrate,components,notes,components_mass_g,r400")
+    assert csv.text.splitlines()[0].startswith(
+        "sample_id,type,substrate,components,notes,components_mass_g,r400"
+    )
     assert len(csv.text.splitlines()) == 125
     html = client.post(f"{API}/worksheet/html", json=body)
     assert "Actual g" in html.text
@@ -140,14 +165,22 @@ def test_worksheet_json_csv_html(client: TestClient) -> None:
 
 def test_validate_and_upload_errors(client: TestClient) -> None:
     import_paints(client)
-    bad = "sample_id,type,substrate,components,notes," + ",".join(f"r{w}" for w in range(400, 701, 10)) + "\n"
+    bad = (
+        "sample_id,type,substrate,components,notes,"
+        + ",".join(f"r{w}" for w in range(400, 701, 10))
+        + "\n"
+    )
     bad += "MX-1-W,mixture,white,phthalo-blue:0.5;nope:0.5,," + ",".join(["0.5"] * 30) + ",abc\n"
-    r = client.post(f"{API}/calibration/validate", files={"file": ("bad.csv", bad.encode(), "text/csv")})
+    r = client.post(
+        f"{API}/calibration/validate", files={"file": ("bad.csv", bad.encode(), "text/csv")}
+    )
     rep = r.json()
     assert r.status_code == 200 and rep["ok"] is False
     issues = {(i["row"], i["column"], i["code"]) for i in rep["issues"]}
     assert (2, "components", "unknown_paint") in issues and (2, "r700", "not_numeric") in issues
-    r = client.post(f"{API}/calibration/upload", files={"file": ("bad.csv", bad.encode(), "text/csv")})
+    r = client.post(
+        f"{API}/calibration/upload", files={"file": ("bad.csv", bad.encode(), "text/csv")}
+    )
     assert r.json()["stored"] == 0
     r = client.post(f"{API}/calibration/fit", json={})
     assert r.status_code == 422 and err(r) == "no_samples"
@@ -160,7 +193,9 @@ def test_upload_fit_activate(client: TestClient) -> None:
     up = upload_calibration(client)
     assert up["stored"] == 124 and up["report"]["ok"] and up["replaced"] == 0
     assert upload_calibration(client)["replaced"] == 124
-    samples = client.get(f"{API}/calibration/samples", params={"paint_id": "phthalo-blue", "type": "tint"}).json()
+    samples = client.get(
+        f"{API}/calibration/samples", params={"paint_id": "phthalo-blue", "type": "tint"}
+    ).json()
     assert len(samples) == 8 and samples[0]["hex"].startswith("#")
     run = fit(client)
     assert run["status"] == "succeeded" and run["model_version"] == 1 and run["progress"] == 1.0
@@ -191,7 +226,9 @@ def test_solve_variants(fitted_client: TestClient) -> None:
     r = c.post(f"{API}/solve", json={"target": {"lab": [55, -10, -25]}, "top_n": 3})
     assert r.status_code == 200, r.text
     res = r.json()
-    assert sorted(res["pool"]) == sorted(["titanium-white", "carbon-black", "phthalo-blue", "quinacridone-magenta", "arylide-yellow"])
+    assert sorted(res["pool"]) == sorted(
+        ["titanium-white", "carbon-black", "phthalo-blue", "quinacridone-magenta", "arylide-yellow"]
+    )
     assert 1 <= len(res["candidates"]) <= 3
     best = res["candidates"][0]
     assert best["de2000"] < 1.0 and best["currency"] == "SGD"
@@ -201,7 +238,9 @@ def test_solve_variants(fitted_client: TestClient) -> None:
     for target in ({"hex": "#6f4e37"}, {"srgb": [0.2, 0.5, 0.4]}):
         assert c.post(f"{API}/solve", json={"target": target}).status_code == 200
     # spectrum target and library target
-    spec = c.post(f"{API}/predict", json={"components": {"titanium-white": 0.7, "phthalo-blue": 0.3}}).json()["spectrum"]
+    spec = c.post(
+        f"{API}/predict", json={"components": {"titanium-white": 0.7, "phthalo-blue": 0.3}}
+    ).json()["spectrum"]
     r = c.post(f"{API}/solve", json={"target": {"spectrum": spec}, "illuminant": "A"})
     assert r.json()["reference_spectrum_source"] == "measured" and r.json()["illuminant"] == "A"
     assert r.json()["candidates"][0]["de2000"] < 0.5
@@ -209,10 +248,15 @@ def test_solve_variants(fitted_client: TestClient) -> None:
     r = c.post(f"{API}/solve", json={"target": {"library_id": lib["id"]}})
     assert r.json()["target_name"] == "Lib Grey"
     # validation of target and pool
-    assert c.post(f"{API}/solve", json={"target": {"lab": [50, 0, 0], "hex": "#fff"}}).status_code == 422
+    assert (
+        c.post(f"{API}/solve", json={"target": {"lab": [50, 0, 0], "hex": "#fff"}}).status_code
+        == 422
+    )
     r = c.post(f"{API}/solve", json={"target": {"lab": [50, 0, 0]}, "pool": ["pyrrole-red"]})
     assert r.status_code == 422 and err(r) == "uncalibrated_paint"
-    r = c.post(f"{API}/solve", json={"target": {"lab": [50, 0, 0]}, "max_paints": 5, "min_fraction": 0.3})
+    r = c.post(
+        f"{API}/solve", json={"target": {"lab": [50, 0, 0]}, "max_paints": 5, "min_fraction": 0.3}
+    )
     assert err(r) == "bad_constraints"
 
 
@@ -221,7 +265,10 @@ def test_solve_out_of_gamut_and_warnings(fitted_client: TestClient) -> None:
     res = r.json()
     assert res["in_gamut"] is False and res["nearest_de"] > 1
     assert any("Out of gamut" in w for w in res["warnings"])
-    r = fitted_client.post(f"{API}/solve", json={"target": {"lab": [50, 0, 0]}, "pool": ["phthalo-blue", "arylide-yellow"]})
+    r = fitted_client.post(
+        f"{API}/solve",
+        json={"target": {"lab": [50, 0, 0]}, "pool": ["phthalo-blue", "arylide-yellow"]},
+    )
     w = " ".join(r.json()["warnings"])
     assert "No white" in w and "No black" in w
 

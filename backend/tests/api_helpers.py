@@ -16,7 +16,9 @@ def import_paints(client: TestClient) -> dict[str, Any]:
     return out
 
 
-def upload_calibration(client: TestClient, name: str = "calibration_starter5.csv") -> dict[str, Any]:
+def upload_calibration(
+    client: TestClient, name: str = "calibration_starter5.csv"
+) -> dict[str, Any]:
     with (SAMPLE_DATA / name).open("rb") as fh:
         r = client.post("/api/v1/calibration/upload", files={"file": (name, fh, "text/csv")})
     assert r.status_code == 200, r.text
