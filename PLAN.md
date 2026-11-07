@@ -42,7 +42,7 @@ dataclasses/arrays.
 | | Scope | Status |
 |---|---|---|
 | M0 | Scaffold, make targets, docs skeleton | done |
-| M1 | Colour science + K-M + tests | |
+| M1 | Colour science + K-M + tests | done |
 | M2 | Data model, calibration format + validator + JSON schema, synthetic data | |
 | M3 | Calibration fit + report | |
 | M4 | Solver + gamut + scaling tests | |
@@ -55,3 +55,8 @@ dataclasses/arrays.
 Progress notes per milestone are appended below as work completes.
 
 ## Progress log
+- **M0** Scaffold: uv backend with `/api/v1/health`, Vite/Vue/Tailwind frontend with the `/api` proxy, Makefile.
+- **M1** `paintmixer.colorsci`: ASTM E2022 10 nm weights (D65/D50/A/F11), XYZ/Lab/sRGB with
+  out-of-gamut flag, dE2000 matching all 34 Sharma pairs (pair 14 included) and colour-science on
+  2000 random pairs, K-M R∞ / finite layer / Saunderson with analytic derivatives, Jakob-2019
+  spectral recovery.

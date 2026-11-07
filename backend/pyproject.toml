@@ -60,3 +60,8 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 addopts = "-q"
 markers = ["slow: long-running performance/accuracy tests"]
+filterwarnings = [
+    "ignore:.*Matplotlib.* related API features are not available",
+    "ignore:Aligning .* shape to",
+    "ignore:Using `httpx` with `starlette.testclient`",
+]
