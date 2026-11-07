@@ -43,7 +43,7 @@ dataclasses/arrays.
 |---|---|---|
 | M0 | Scaffold, make targets, docs skeleton | done |
 | M1 | Colour science + K-M + tests | done |
-| M2 | Data model, calibration format + validator + JSON schema, synthetic data | |
+| M2 | Data model, calibration format + validator + JSON schema, synthetic data | done |
 | M3 | Calibration fit + report | |
 | M4 | Solver + gamut + scaling tests | |
 | M5 | Worksheet generator + full API | |
@@ -60,3 +60,6 @@ Progress notes per milestone are appended below as work completes.
   out-of-gamut flag, dE2000 matching all 34 Sharma pairs (pair 14 included) and colour-science on
   2000 random pairs, K-M R∞ / finite layer / Saunderson with analytic derivatives, Jakob-2019
   spectral recovery.
+- **M2** SQLModel tables + Alembic `0001` (migrations verified against models in tests), calibration
+  CSV parser/validator with line+column issues, JSON Schema (`docs/calibration_row.schema.json`),
+  worksheet planner (pure), synthetic generator with known K/S, `sample_data/` (5- and 9-paint sets).

@@ -1,0 +1,401 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://paintmixer.local/schemas/calibration_row.schema.json",
+  "title": "PaintMixer calibration CSV row",
+  "type": "object",
+  "required": [
+    "sample_id",
+    "type",
+    "substrate",
+    "components",
+    "notes",
+    "r400",
+    "r410",
+    "r420",
+    "r430",
+    "r440",
+    "r450",
+    "r460",
+    "r470",
+    "r480",
+    "r490",
+    "r500",
+    "r510",
+    "r520",
+    "r530",
+    "r540",
+    "r550",
+    "r560",
+    "r570",
+    "r580",
+    "r590",
+    "r600",
+    "r610",
+    "r620",
+    "r630",
+    "r640",
+    "r650",
+    "r660",
+    "r670",
+    "r680",
+    "r690",
+    "r700"
+  ],
+  "properties": {
+    "sample_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique id; tint/mixture rows end in -W or -B; substrates are SUB-W / SUB-B"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "substrate_white",
+        "substrate_black",
+        "masstone_over_white",
+        "masstone_over_black",
+        "tint",
+        "mixture"
+      ]
+    },
+    "substrate": {
+      "type": "string",
+      "enum": [
+        "white",
+        "black"
+      ]
+    },
+    "components": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*[a-z0-9][a-z0-9_.-]*\\s*:\\s*[0-9.eE+-]+\\s*(;\\s*[a-z0-9][a-z0-9_.-]*\\s*:\\s*[0-9.eE+-]+\\s*)*;?\\s*$",
+      "description": "paint_id:volume_fraction;... summing to 1 (tolerance 0.002); empty for substrates"
+    },
+    "components_mass_g": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*[a-z0-9][a-z0-9_.-]*\\s*:\\s*[0-9.eE+-]+\\s*(;\\s*[a-z0-9][a-z0-9_.-]*\\s*:\\s*[0-9.eE+-]+\\s*)*;?\\s*$",
+      "description": "Optional weighed masses paint_id:grams;... (overrides components)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Semicolon-separated tokens: gap_um=<number>, holdout, free text"
+    },
+    "measured_at": {
+      "type": "string"
+    },
+    "n_readings": {
+      "type": "string",
+      "pattern": "^\\s*\\d*\\s*$"
+    },
+    "r400": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r410": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r420": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r430": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r440": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r450": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r460": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r470": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r480": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r490": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r500": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r510": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r520": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r530": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r540": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r550": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r560": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r570": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r580": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r590": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r600": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r610": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r620": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r630": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r640": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r650": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r660": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r670": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r680": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r690": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r700": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "sd400": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd410": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd420": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd430": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd440": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd450": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd460": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd470": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd480": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd490": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd500": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd510": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd520": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd530": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd540": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd550": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd560": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd570": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd580": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd590": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd600": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd610": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd620": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd630": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd640": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd650": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd660": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd670": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd680": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd690": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd700": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    }
+  },
+  "additionalProperties": false
+}

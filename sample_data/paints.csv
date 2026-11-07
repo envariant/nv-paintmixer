@@ -1,0 +1,10 @@
+id,name,brand,pigment_code,role,density_g_per_ml,cost_per_ml,min_dose_ml,dispenser_channel,loaded
+titanium-white,Titanium White,Synthetic,PW6,white,1.4,0.06,0.05,1,true
+carbon-black,Carbon Black,Synthetic,PBk7,black,1.15,0.08,0.05,2,true
+phthalo-blue,Phthalo Blue (cyan),Synthetic,PB15:3,chromatic,1.1,0.095,0.05,3,true
+quinacridone-magenta,Quinacridone Magenta,Synthetic,PR122,chromatic,1.1,0.12,0.05,4,true
+arylide-yellow,Arylide Yellow,Synthetic,PY74,chromatic,1.2,0.085,0.05,5,true
+pyrrole-red,Pyrrole Red (warm),Synthetic,PR254,chromatic,1.25,0.15,0.05,,false
+pyrrole-orange,Pyrrole Orange,Synthetic,PO73,chromatic,1.25,0.14,0.05,,false
+phthalo-green,Phthalo Green,Synthetic,PG7,chromatic,1.1,0.095,0.05,,false
+dioxazine-violet,Dioxazine Violet,Synthetic,PV23,chromatic,1.1,0.16,0.05,,false

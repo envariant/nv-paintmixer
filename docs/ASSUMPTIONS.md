@@ -15,3 +15,16 @@ introduced it.
   though the 10 nm white point differs from the sRGB matrix white by ~0.01.
 - **M1** Fluorescent and metallic/pearlescent paints are out of scope: K-M two-constant theory
   with 45/0 UV-cut measurement cannot model fluorescence or goniochromatic effects.
+- **M2** Masstones are drawn over the black-and-white chart like everything else, so each masstone
+  drawdown yields `MT-<paint>-W` and `MT-<paint>-B` rows (types `masstone_over_white/black`). The
+  white thickness series uses ids `MT-<white>-<gap>-W/-B`.
+- **M2** Mixture sample ids: `PR-<a>-<b>-<pct a>` (pair), `PW-<a>-<b>` (pair 20/20 + 60 % white),
+  `NN-nnn` near-neutral, `DK-nnn` dark, `RN-nnn` random — each with `-W`/`-B`.
+- **M2** The calibration CSV accepts optional `sd400..sd700` (spread of repeat readings),
+  `measured_at` and `n_readings` columns so a measurement session can store spread in the same file.
+- **M2** `holdout` is honoured on tints and mixtures; on other types it is ignored with a warning.
+- **M2** Synthetic noise: each row is the mean of three readings with per-reading sigma
+  0.002·√3, so the reported reflectance noise is sigma 0.002.
+- **M2** Calibration samples are keyed by `sample_id`; uploading a file with an existing id
+  replaces that sample (upsert), so re-measuring a drawdown is a re-upload.
+- **M2** Costs in `sample_data/paints.csv` are invented SGD/ml figures for development.
