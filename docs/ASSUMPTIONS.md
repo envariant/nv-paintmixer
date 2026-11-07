@@ -74,3 +74,11 @@ introduced it.
   as %/nm) and divided by 100.
 - **M7** One "sample" in a session is one background of one drawdown; masses are asked once per
   drawdown and written to both rows.
+- **M8** The correction assumes the model-vs-reality Lab bias is locally constant, so it solves
+  `J Δc = target − measured` (not `target − predicted`). Corrections default to additions to the
+  existing batch; remix (fresh batch) is available.
+- **M8** Only a simulated dispenser exists; `POST /jobs/{id}/dispense` with `simulate: false`
+  returns `no_dispenser`. Simulated measurements of a job use the job's model version with a
+  configurable gain/offset bias and noise.
+- **M8** The learned correction itself is not implemented; residuals are logged (`correction_log`
+  table) with recipe, prediction, measurement and target.

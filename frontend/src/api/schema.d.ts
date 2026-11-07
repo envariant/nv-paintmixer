@@ -480,6 +480,101 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Jobs */
+        get: operations["list_jobs_api_v1_jobs_get"];
+        put?: never;
+        /** Create Job */
+        post: operations["create_job_api_v1_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Job */
+        get: operations["get_job_api_v1_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/dispense": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dispense
+         * @description Dispense the recipe (or pending correction additions) with the simulated dispenser.
+         */
+        post: operations["dispense_api_v1_jobs__job_id__dispense_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/measurement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Measurement
+         * @description Record the measured colour of the mix (spectrum, Lab, or a simulated reading).
+         */
+        post: operations["record_measurement_api_v1_jobs__job_id__measurement_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/correct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Correct
+         * @description One damped Gauss-Newton correction from the latest measurement.
+         */
+        post: operations["correct_api_v1_jobs__job_id__correct_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -731,6 +826,51 @@ export interface components {
             /** Cost */
             cost: number;
         };
+        /** CorrectRequest */
+        CorrectRequest: {
+            /**
+             * Mode
+             * @default additions
+             * @enum {string}
+             */
+            mode: "additions" | "remix";
+            /**
+             * Damping
+             * @default 0.001
+             */
+            damping: number;
+            /**
+             * Tolerance De
+             * @default 0.5
+             */
+            tolerance_de: number;
+            /**
+             * Max Iterations
+             * @default 5
+             */
+            max_iterations: number;
+        };
+        /** DispenseRequest */
+        DispenseRequest: {
+            /**
+             * Simulate
+             * @description Only the simulated dispenser exists so far
+             * @default true
+             */
+            simulate: boolean;
+            /**
+             * Rel Sigma
+             * @default 0.01
+             */
+            rel_sigma: number;
+            /**
+             * Abs Sigma Ml
+             * @default 0.01
+             */
+            abs_sigma_ml: number;
+            /** Seed */
+            seed?: number | null;
+        };
         /** ErrorBody */
         ErrorBody: {
             /** Code */
@@ -866,6 +1006,78 @@ export interface components {
          * @enum {string}
          */
         Illuminant: "D65" | "D50" | "A" | "F11";
+        /** JobCreate */
+        JobCreate: {
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            target: components["schemas"]["TargetIn"];
+            /**
+             * Components
+             * @description Recipe volume fractions (e.g. a solve candidate)
+             */
+            components: {
+                [key: string]: number;
+            };
+            /** Batch Volume Ml */
+            batch_volume_ml?: number | null;
+            /**
+             * Constraints
+             * @description Solve request, for reference
+             */
+            constraints?: {
+                [key: string]: unknown;
+            };
+        };
+        /** JobRead */
+        JobRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Target */
+            target: {
+                [key: string]: unknown;
+            };
+            /** Constraints */
+            constraints: {
+                [key: string]: unknown;
+            };
+            /** Recipe */
+            recipe: {
+                [key: string]: unknown;
+            };
+            /** Batch Volume Ml */
+            batch_volume_ml: number;
+            /** Model Version */
+            model_version: number | null;
+            /** Dispensed */
+            dispensed: {
+                [key: string]: unknown;
+            } | null;
+            /** Measured */
+            measured: {
+                [key: string]: unknown;
+            } | null;
+            /** Corrections */
+            corrections: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** LowMassOut */
         LowMassOut: {
             /** Drawdown Id */
@@ -880,6 +1092,39 @@ export interface components {
             suggest_dilution: boolean;
             /** Message */
             message: string;
+        };
+        /**
+         * MeasurementIn
+         * @description A measured spectrum or Lab of the mixed paint, or ``simulate`` to use the simulator.
+         */
+        MeasurementIn: {
+            /** Spectrum */
+            spectrum?: number[] | null;
+            /** Lab */
+            lab?: number[] | null;
+            /**
+             * Simulate
+             * @default false
+             */
+            simulate: boolean;
+            /**
+             * Simulate Gain
+             * @description Simulated model/instrument bias
+             * @default 1
+             */
+            simulate_gain: number;
+            /**
+             * Simulate Offset
+             * @default 0
+             */
+            simulate_offset: number;
+            /**
+             * Simulate Noise
+             * @default 0.001
+             */
+            simulate_noise: number;
+            /** Seed */
+            seed?: number | null;
         };
         /** ModelDetail */
         ModelDetail: {
@@ -3220,6 +3465,314 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GamutResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_jobs_api_v1_jobs_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"][];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_job_api_v1_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_job_api_v1_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dispense_api_v1_jobs__job_id__dispense_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispenseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    record_measurement_api_v1_jobs__job_id__measurement_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeasurementIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    correct_api_v1_jobs__job_id__correct_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
                 };
             };
             /** @description Not found */

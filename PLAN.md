@@ -49,7 +49,7 @@ dataclasses/arrays.
 | M5 | Worksheet generator + full API | done |
 | M6 | Frontend from the Claude Design handoff | blocked until `design/handoff/` exists |
 | M7 | Measurement sources, spotread parser, `paintmixer measure session` | done |
-| M8 | Dispenser simulator, closed-loop correction, jobs | |
+| M8 | Dispenser simulator, closed-loop correction, jobs | done |
 | M9 | Hardening + docs | |
 
 Progress notes per milestone are appended below as work completes.
@@ -84,3 +84,9 @@ Progress notes per milestone are appended below as work completes.
   pure parser; resumable `paintmixer measure session` (3 readings, mean + spread, 0.5 dE repeat
   warning, optional weighed masses). Format strings were checked against the ArgyllCMS 3.1.0
   binary; the wrapper is tested end-to-end against a pty fake (`tests/data/spotread`).
+- **M8** `Dispenser` protocol + `SimulatedDispenser` (bias, relative/absolute error, pump
+  resolution); damped Gauss-Newton correction on the simplex tangent space with step cap;
+  "additions" mode (paint can only be added to the cup) and "remix" mode; closed loop converges
+  in tests against a deliberately biased model; jobs API (create → dispense → measure → correct,
+  iteration cap → `needs_attention`); every measurement logged to `correction_log` as training
+  data for a later learned correction.

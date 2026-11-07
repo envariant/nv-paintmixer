@@ -511,3 +511,66 @@ class Health(_Out):
     status: str
     version: str
     active_model_version: int | None
+
+
+# --- jobs -----------------------------------------------------------------------------------
+
+
+class JobCreate(_Model):
+    name: str = ""
+    target: TargetIn
+    components: dict[str, float] = Field(
+        min_length=1, description="Recipe volume fractions (e.g. a solve candidate)"
+    )
+    batch_volume_ml: float | None = Field(None, gt=0)
+    constraints: dict[str, Any] = Field(
+        default_factory=dict, description="Solve request, for reference"
+    )
+
+
+class DispenseRequest(_Model):
+    simulate: bool = Field(True, description="Only the simulated dispenser exists so far")
+    rel_sigma: float = Field(0.01, ge=0, le=0.5)
+    abs_sigma_ml: float = Field(0.01, ge=0)
+    seed: int | None = None
+
+
+class MeasurementIn(_Model):
+    """A measured spectrum or Lab of the mixed paint, or ``simulate`` to use the simulator."""
+
+    spectrum: Spectrum | None = Field(None, min_length=31, max_length=31)
+    lab: list[float] | None = Field(None, min_length=3, max_length=3)
+    simulate: bool = False
+    simulate_gain: float = Field(1.0, gt=0, description="Simulated model/instrument bias")
+    simulate_offset: float = 0.0
+    simulate_noise: float = Field(0.001, ge=0)
+    seed: int | None = None
+
+    @model_validator(mode="after")
+    def _one(self) -> MeasurementIn:
+        if not self.simulate and self.spectrum is None and self.lab is None:
+            raise ValueError("give spectrum, lab or simulate=true")
+        return self
+
+
+class CorrectRequest(_Model):
+    mode: Literal["additions", "remix"] = "additions"
+    damping: float = Field(1e-3, ge=0)
+    tolerance_de: float = Field(0.5, gt=0)
+    max_iterations: int = Field(5, ge=1, le=20)
+
+
+class JobRead(_Out):
+    id: int
+    name: str
+    status: str
+    target: dict[str, Any]
+    constraints: dict[str, Any]
+    recipe: dict[str, Any]
+    batch_volume_ml: float
+    model_version: int | None
+    dispensed: dict[str, Any] | None
+    measured: dict[str, Any] | None
+    corrections: list[dict[str, Any]]
+    created_at: datetime
+    updated_at: datetime

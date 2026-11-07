@@ -9,7 +9,16 @@ from fastapi import FastAPI
 
 from paintmixer import __version__
 from paintmixer.api.errors import install_error_handlers
-from paintmixer.api.routers import calibration, colors, mixing, models, paints, system, worksheet
+from paintmixer.api.routers import (
+    calibration,
+    colors,
+    jobs,
+    mixing,
+    models,
+    paints,
+    system,
+    worksheet,
+)
 from paintmixer.config import Settings, get_settings
 from paintmixer.db.session import migrate
 
@@ -46,7 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = cfg
     install_error_handlers(app)
-    for r in (system, paints, colors, worksheet, calibration, models, mixing):
+    for r in (system, paints, colors, worksheet, calibration, models, mixing, jobs):
         app.include_router(r.router, prefix=API_PREFIX)
     return app
 
