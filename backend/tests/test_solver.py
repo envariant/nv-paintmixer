@@ -6,7 +6,7 @@ import pytest
 from paintmixer.colorsci import Illuminant, delta_e_2000, reflectance_to_lab
 from paintmixer.domain import PaintRole
 from paintmixer.solver.gamut import compute_gamut
-from paintmixer.solver.refine import Weights
+from paintmixer.solver.refine import Weights, project_to_simplex
 from paintmixer.solver.solve import SolveOptions, Target, pool_warnings, predict, solve
 from tests.solver_helpers import pool_model, random_recipe_targets
 
@@ -117,6 +117,20 @@ def test_max_paints_and_min_fraction() -> None:
     for c in res.candidates:
         assert len(c.paint_ids) <= 3
         assert min(c.fractions) >= 0.05 - 1e-9
+
+
+def test_project_to_simplex_keeps_bounds_exactly() -> None:
+    # regression: CI produced 0.0499998 when an SLSQP sum of 1 + 2.9e-6 was clipped and renormalised
+    x = project_to_simplex(np.array([0.868587470, 0.05, 0.081415403]), 0.05)
+    assert x.min() >= 0.05 and abs(x.sum() - 1.0) < 1e-12
+    rng = np.random.default_rng(0)
+    for _ in range(500):
+        k = int(rng.integers(1, 6))
+        lo = float(rng.uniform(0, 1 / k))
+        x = project_to_simplex(rng.normal(0.2, 0.3, size=k), lo)
+        assert x.min() >= lo and abs(x.sum() - 1.0) < 1e-12
+    # points already feasible are unchanged
+    np.testing.assert_allclose(project_to_simplex(np.array([0.2, 0.3, 0.5]), 0.05), [0.2, 0.3, 0.5])
 
 
 def test_black_helps_neutrals_and_darks() -> None:

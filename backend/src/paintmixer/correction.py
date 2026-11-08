@@ -18,6 +18,7 @@ import numpy as np
 from paintmixer.colorsci.delta_e import delta_e_2000
 from paintmixer.colorsci.types import FloatArray, IntArray
 from paintmixer.solver.model import PoolModel
+from paintmixer.solver.refine import project_to_simplex
 
 
 @dataclass
@@ -57,8 +58,7 @@ def correction_step(
     norm = np.abs(d).max()
     if norm > max_step:
         d *= max_step / norm
-    new = np.clip(c + d, min_fraction, None)
-    new /= new.sum()
+    new = project_to_simplex(c + d, min_fraction)
     lab_new = model.lab(idx[None, :], new[None, :])[0] + bias
     return CorrectionStep(new, new - c, lab_new, float(delta_e_2000(lab_new, target_lab)))
 

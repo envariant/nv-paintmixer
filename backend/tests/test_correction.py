@@ -65,6 +65,8 @@ def test_correction_step_reduces_error_on_biased_model() -> None:
     de0 = float(delta_e_2000(meas, target))
     step = correction_step(fitted, idx, c, target, meas)
     assert abs(step.fractions.sum() - 1) < 1e-12
+    bounded = correction_step(fitted, idx, c, target, meas, min_fraction=0.05)
+    assert bounded.fractions.min() >= 0.05 and abs(bounded.fractions.sum() - 1) < 1e-12
     de1 = float(delta_e_2000(true.lab(idx[None], step.fractions[None])[0], target))
     assert de0 > 1.0 and de1 < de0 / 2
 

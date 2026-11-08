@@ -100,6 +100,26 @@ class Objective:
         return float(v[0]), (v[1:] - v[0]) / h
 
 
+def project_to_simplex(x: FloatArray, lo: float = 0.0) -> FloatArray:
+    """Euclidean projection onto ``{c : c_i >= lo, sum(c) = 1}``.
+
+    Clipping to ``lo`` and then renormalising is not enough: when the optimiser's sum is
+    slightly above 1, dividing pushes components that sit on the bound below it.
+    """
+    x = np.asarray(x, dtype=np.float64)
+    k = x.size
+    budget = 1.0 - k * lo
+    if budget < 0:
+        raise ValueError(f"{k} components x min fraction {lo} exceed 1")
+    y = x - lo
+    u = np.sort(y)[::-1]
+    css = np.cumsum(u) - budget
+    rho = int(np.nonzero(u - css / np.arange(1, k + 1) > 0)[0][-1]) if budget > 0 else 0
+    theta = css[rho] / (rho + 1) if budget > 0 else float(y.max())
+    out: FloatArray = lo + np.maximum(y - theta, 0.0)
+    return out
+
+
 def refine_subset(
     obj: Objective, idx: IntArray, c0: FloatArray, rng: np.random.Generator, n_starts: int = 3
 ) -> tuple[FloatArray, float]:
@@ -112,11 +132,11 @@ def refine_subset(
     starts = [c0]
     for _ in range(n_starts - 1):
         d = rng.dirichlet(np.ones(k))
-        starts.append(np.clip(0.7 * c0 + 0.3 * d, lo, None))
+        starts.append(project_to_simplex(0.7 * c0 + 0.3 * d, lo))
     best_c, best_v = c0, obj.value(idx, c0)
     cons = ({"type": "eq", "fun": lambda x: np.sum(x) - 1.0, "jac": lambda x: np.ones_like(x)},)
     for s in starts:
-        s = s / s.sum()
+        s = project_to_simplex(s, lo)
         with _warnings.catch_warnings():
             _warnings.simplefilter("ignore")
             res = minimize(
@@ -128,8 +148,7 @@ def refine_subset(
                 constraints=cons,
                 options={"maxiter": 60, "ftol": 1e-8},
             )
-        x = np.clip(res.x, lo, 1.0)
-        x = x / x.sum()
+        x = project_to_simplex(res.x, lo)
         v = obj.value(idx, x)
         if v < best_v - 1e-12:
             best_c, best_v = x, v
