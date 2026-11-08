@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
+from pydantic import ValidationError
 from sqlmodel import col, select
 
 from paintmixer import __version__
 from paintmixer.api.deps import SessionDep
+from paintmixer.api.errors import bad_request
 from paintmixer.api.schemas import AppSettings, AppSettingsUpdate, Health
 from paintmixer.api.services import load_settings, save_settings
 from paintmixer.db import models as m
@@ -29,4 +31,12 @@ def get_settings(session: SessionDep) -> AppSettings:
 def update_settings(body: AppSettingsUpdate, session: SessionDep) -> AppSettings:
     cur = load_settings(session).model_dump()
     cur.update(body.model_dump(exclude_unset=True, exclude_none=True))
-    return save_settings(session, AppSettings.model_validate(cur))
+    try:
+        new = AppSettings.model_validate(cur)
+    except ValidationError as e:
+        raise bad_request(
+            "invalid_settings",
+            "; ".join(err["msg"] for err in e.errors()),
+            [{"loc": list(err["loc"]), "msg": err["msg"]} for err in e.errors()],
+        ) from e
+    return save_settings(session, new)

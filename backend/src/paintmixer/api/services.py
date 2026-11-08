@@ -21,6 +21,7 @@ from paintmixer.colorsci.km import KMModel
 from paintmixer.colorsci.spectral import Illuminant
 from paintmixer.db import models as m
 from paintmixer.domain import PaintInfo, PaintRole
+from paintmixer.measurement.selftest import SelftestThresholds
 from paintmixer.solver.model import PoolModel
 from paintmixer.solver.solve import Target
 
@@ -47,6 +48,35 @@ def save_settings(session: Session, settings: AppSettings) -> AppSettings:
         session.add(row)
     session.commit()
     return settings
+
+
+def selftest_thresholds(s: AppSettings) -> SelftestThresholds:
+    return SelftestThresholds(
+        warn_de=s.selftest_warn_de,
+        fail_de=s.selftest_fail_de,
+        white_min=s.selftest_white_min,
+        white_max=s.selftest_white_max,
+        max_band_jump=s.selftest_max_band_jump,
+        smoothness_rms=s.selftest_smoothness_rms,
+        cast_chroma=s.selftest_cast_chroma,
+    )
+
+
+def settings_from_db(url: str) -> AppSettings:
+    """App settings stored at ``url``, or defaults if that database does not exist yet."""
+    from pathlib import Path
+
+    from sqlalchemy.exc import OperationalError
+
+    from paintmixer.db.session import get_engine
+
+    if url.startswith("sqlite:///") and not Path(url.removeprefix("sqlite:///")).exists():
+        return AppSettings()
+    try:
+        with Session(get_engine(url)) as session:
+            return load_settings(session)
+    except OperationalError:
+        return AppSettings()
 
 
 # --- paints ---------------------------------------------------------------------------------

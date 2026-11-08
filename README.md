@@ -47,7 +47,7 @@ flowchart LR
       DS["Dispenser:<br/>simulated"]
     end
     API --> DS
-    CLI["paintmixer CLI<br/>(measure session, fit, validate)"] --> MS & CAL
+    CLI["paintmixer CLI<br/>(measure session/selftest, fit, validate)"] --> MS & CAL
   end
   MS -. "pexpect" .-> Argyll["ArgyllCMS spotread<br/>ColorMunki / i1Studio"]
 ```
@@ -172,6 +172,24 @@ The same calibration can be fitted offline:
 ```bash
 cd backend && uv run paintmixer fit ../sample_data/calibration_pool9.csv --paints ../sample_data/paints.csv
 ```
+
+## Check a new instrument
+
+Before the first calibration with a spectrophotometer, run the self-test:
+
+```bash
+cd backend && uv run paintmixer measure selftest --replace --reference-check
+```
+
+It finds the instrument with `spotread -?` (and prints macOS troubleshooting if none is found),
+walks you through white calibration, takes 10 readings of a white tile (lifting the instrument
+between readings with `--replace`) and reports repeatability, drift and spectrum sanity. With
+`--reference-check` it also reads matte white, mid-grey and matte black references. The result is
+PASS, WARN or FAIL (exit code 0, 3 or 1; 2 if no instrument), and a JSON report plus the raw
+spectra land in `sample_data/selftests/<timestamp>/`. The default thresholds (WARN above 0.5,
+FAIL above 1.0 dE2000 vs the mean) are guesses, not manufacturer figures; they are in the app
+settings. To try it without hardware, add `--source simulated`. Details:
+[docs/measurement.md](docs/measurement.md#instrument-self-test).
 
 ## Measuring real paints
 

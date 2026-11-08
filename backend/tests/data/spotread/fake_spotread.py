@@ -5,16 +5,31 @@ Replays the prompts and readings of ``session_colormunki.txt`` (same directory):
 prompt, then one transcript reading per key press. 'q' exits.
 """
 
+import os
 import re
 import sys
 import termios
+import time
 import tty
 from pathlib import Path
 
-text = (Path(__file__).parent / "session_colormunki.txt").read_text()
+HERE = Path(__file__).parent
+text = (HERE / "session_colormunki.txt").read_text()
 blocks = re.findall(r"( Result is XYZ:.*?\nSpectrum from .*?\n.*?\n)", text, re.S)
 fail_first = "--fail-once" in sys.argv
 no_instrument = "--none" in sys.argv
+fixed_block = os.environ.get("FAKE_SPOTREAD_BLOCK")
+
+if "-?" in sys.argv:
+    mode = os.environ.get("FAKE_SPOTREAD_PORTS", "colormunki")
+    if mode == "hang":  # like a machine where port probing never finishes
+        sys.stdout.write((HERE / "no_instrument.txt").read_text())
+        sys.stdout.flush()
+        time.sleep(60)
+        sys.exit(1)
+    sys.stdout.write((HERE / f"usage_{'no_ports' if mode == 'none' else mode}.txt").read_text())
+    sys.stdout.flush()
+    sys.exit(1)
 
 READ = (
     "\nPlace instrument on spot to be measured,\n"
@@ -61,5 +76,5 @@ while True:
             "Hit Esc or Q to give up, any other key to retry: "
         )
         key()
-    out("\n" + blocks[i % len(blocks)])
+    out("\n" + blocks[int(fixed_block) if fixed_block is not None else i % len(blocks)])
     i += 1

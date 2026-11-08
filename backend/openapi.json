@@ -2750,6 +2750,52 @@
             "type": "integer",
             "title": "Seed",
             "default": 1234
+          },
+          "selftest_warn_de": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Selftest Warn De",
+            "description": "WARN if max dE2000 vs mean exceeds",
+            "default": 0.5
+          },
+          "selftest_fail_de": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Selftest Fail De",
+            "description": "FAIL if max dE2000 vs mean exceeds",
+            "default": 1.0
+          },
+          "selftest_white_min": {
+            "type": "number",
+            "maximum": 1.2,
+            "minimum": 0.0,
+            "title": "Selftest White Min",
+            "default": 0.6
+          },
+          "selftest_white_max": {
+            "type": "number",
+            "maximum": 1.2,
+            "minimum": 0.0,
+            "title": "Selftest White Max",
+            "default": 1.05
+          },
+          "selftest_max_band_jump": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Selftest Max Band Jump",
+            "default": 0.05
+          },
+          "selftest_smoothness_rms": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Selftest Smoothness Rms",
+            "default": 0.01
+          },
+          "selftest_cast_chroma": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Selftest Cast Chroma",
+            "default": 3.0
           }
         },
         "additionalProperties": false,
@@ -2949,6 +2995,92 @@
               }
             ],
             "title": "Seed"
+          },
+          "selftest_warn_de": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selftest Warn De"
+          },
+          "selftest_fail_de": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selftest Fail De"
+          },
+          "selftest_white_min": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.2,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selftest White Min"
+          },
+          "selftest_white_max": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.2,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selftest White Max"
+          },
+          "selftest_max_band_jump": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selftest Max Band Jump"
+          },
+          "selftest_smoothness_rms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selftest Smoothness Rms"
+          },
+          "selftest_cast_chroma": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selftest Cast Chroma"
           }
         },
         "additionalProperties": false,

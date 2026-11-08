@@ -1,0 +1,11 @@
+Measure spot values, Version 3.1.0
+Author: Graeme W. Gill, licensed under the AGPL Version 3
+Diagnostic: Usage requested
+usage: spotread [-options] [logfile]
+ -v                   Verbose mode
+ -s                   Print spectrum for each reading
+ -S                   Plot spectrum for each reading
+ -c listno            Set instrument port from the following list (default 1)
+    1 = 'usb:/bus1/dev2/ (GretagMacbeth i1 Pro)' !! Disabled - no firmware !!
+    2 = '/dev/ttyS0'
+ -t                   Use transmission measurement mode

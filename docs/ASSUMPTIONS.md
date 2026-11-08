@@ -86,3 +86,23 @@ introduced it.
   `frontend/src/App.vue` is a placeholder that only shows API health.
 - **M9** Compute runs in a `spawn` process pool (2 workers by default). The first solve after
   start-up pays worker start-up (~1 s); gamut caches live per worker.
+- **Self-test** Verdict thresholds are **my guesses, not manufacturer figures**: WARN if any
+  reading's dE2000 vs the mean white-tile spectrum exceeds 0.5, FAIL above 1.0; drift (first vs
+  last third) uses the same two thresholds. Sanity limits (also guesses): white-tile reflectance
+  0.60–1.05 in every 10 nm band, adjacent-band step ≤ 0.05, RMS second difference ≤ 0.01,
+  reference colour cast C*ab > 3. All are `selftest_*` app settings.
+- **Self-test** Severity: negative values, an implausible white range, band jumps and wrong
+  reference lightness order are FAIL (instrument fault or wrong sample); roughness and colour
+  casts are WARN.
+- **Self-test** CLI only (no API endpoint): every step needs an operator at the instrument, which
+  the start-then-poll background-task pattern can't accommodate. See docs/measurement.md.
+- **Self-test** Instrument detection gives `spotread -?` 30 s. On this Linux CI container it never
+  finishes probing ports (it was still running after 100 s), so a timeout is reported as "not
+  found". A port counts as an instrument only if it has a name in parentheses and isn't marked
+  "Disabled - no firmware"; plain serial ports (e.g. `/dev/cu.Bluetooth-Incoming-Port`) are
+  ignored.
+- **Self-test** "No hidden state": each run prompts for and performs its own white calibration
+  and stores nothing between runs except the output folder.
+- **Self-test** Exit codes: 0 PASS, 3 WARN, 1 FAIL, 2 instrument not found / measurement error.
+- **Self-test** Run outputs go to `sample_data/selftests/` (when run inside the repo) and are not
+  git-ignored; commit them if you want an instrument history.

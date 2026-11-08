@@ -654,6 +654,43 @@ export interface components {
              * @default 1234
              */
             seed?: number;
+            /**
+             * Selftest Warn De
+             * @description WARN if max dE2000 vs mean exceeds
+             * @default 0.5
+             */
+            selftest_warn_de?: number;
+            /**
+             * Selftest Fail De
+             * @description FAIL if max dE2000 vs mean exceeds
+             * @default 1
+             */
+            selftest_fail_de?: number;
+            /**
+             * Selftest White Min
+             * @default 0.6
+             */
+            selftest_white_min?: number;
+            /**
+             * Selftest White Max
+             * @default 1.05
+             */
+            selftest_white_max?: number;
+            /**
+             * Selftest Max Band Jump
+             * @default 0.05
+             */
+            selftest_max_band_jump?: number;
+            /**
+             * Selftest Smoothness Rms
+             * @default 0.01
+             */
+            selftest_smoothness_rms?: number;
+            /**
+             * Selftest Cast Chroma
+             * @default 3
+             */
+            selftest_cast_chroma?: number;
         };
         /** AppSettingsUpdate */
         AppSettingsUpdate: {
@@ -687,6 +724,20 @@ export interface components {
             worksheet_gap_um?: number | null;
             /** Seed */
             seed?: number | null;
+            /** Selftest Warn De */
+            selftest_warn_de?: number | null;
+            /** Selftest Fail De */
+            selftest_fail_de?: number | null;
+            /** Selftest White Min */
+            selftest_white_min?: number | null;
+            /** Selftest White Max */
+            selftest_white_max?: number | null;
+            /** Selftest Max Band Jump */
+            selftest_max_band_jump?: number | null;
+            /** Selftest Smoothness Rms */
+            selftest_smoothness_rms?: number | null;
+            /** Selftest Cast Chroma */
+            selftest_cast_chroma?: number | null;
         };
         /** Body_import_colors_api_v1_colors_import_post */
         Body_import_colors_api_v1_colors_import_post: {

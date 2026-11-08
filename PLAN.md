@@ -99,3 +99,9 @@ Progress notes per milestone are appended below as work completes.
 - **M9** Solve/gamut/fit moved to a process pool (`/health` stays at ~10 ms while a solve or fit
   runs; it was ~280 ms with threads); alembic CLI creates the data dir; CI workflow; README with
   architecture diagram and a walkthrough checked against a live server.
+- **Instrument self-test** `paintmixer measure selftest`: spotread port-list detection with
+  macOS help, guided white calibration, N white-tile readings (optional lift/replace),
+  per-band mean/std, repeatability and drift in dE2000, white-spectrum sanity checks, optional
+  white/grey/black reference check, PASS/WARN/FAIL from `selftest_*` settings, JSON + CSV output
+  under `sample_data/selftests/`. CLI only (operator-driven). Also fixed: `PATCH /settings` now
+  returns a 422 error envelope for cross-field violations instead of a 500.

@@ -94,6 +94,87 @@ def check_fatal(text: str) -> str | None:
     return m.group(1) if m else None
 
 
+# --- instrument detection (``spotread -?``) ---------------------------------------------------
+
+_PORT_LIST = re.compile(r"-c listno\s+Set instrument port from the following list")
+_PORT = re.compile(r"^\s+(\d+) = '([^']*)'(.*)$", re.M)
+NO_PORTS = "** No ports found **"
+
+
+@dataclass(frozen=True)
+class PortInfo:
+    """One entry of the ``-c`` port list printed by ``spotread -?``."""
+
+    index: int
+    name: str  # as printed, e.g. "usb:/bus2/dev3/ (ColorMunki)" or "/dev/cu.Bluetooth..."
+    instrument: str | None  # instrument name in parentheses, None for plain serial ports
+    disabled: bool = False  # "!! Disabled - no firmware !!"
+
+
+def parse_port_list(text: str) -> list[PortInfo]:
+    """Parse the port list from ``spotread -?`` output (empty if absent or "No ports found")."""
+    head = _PORT_LIST.search(text)
+    if head is None:
+        return []
+    ports = []
+    for line in text[head.end() :].splitlines()[1:]:
+        if NO_PORTS in line:
+            break
+        m = _PORT.match(line)
+        if m is None:
+            if line.strip():
+                break  # next usage option: end of the list
+            continue
+        name = m.group(2)
+        inst = re.search(r"\(([^()]*)\)\s*$", name)
+        ports.append(
+            PortInfo(
+                int(m.group(1)),
+                name,
+                inst.group(1).strip() if inst else None,
+                "Disabled" in m.group(3),
+            )
+        )
+    return ports
+
+
+@dataclass
+class DetectionResult:
+    ports: list[PortInfo]
+    output: str
+    timed_out: bool = False
+    error: str | None = None
+
+    @property
+    def instruments(self) -> list[PortInfo]:
+        """Ports that look like a usable instrument (named, not disabled)."""
+        return [p for p in self.ports if p.instrument and not p.disabled]
+
+
+def detect_instruments(
+    executable: str = "spotread", timeout: float = 30.0, extra_args: tuple[str, ...] = ()
+) -> DetectionResult:
+    """Run ``spotread -?`` and parse the instruments it lists.
+
+    spotread prints its usage (including the port list) and exits. On machines with odd serial
+    or USB devices it can spend a long time probing ports, so the run is cut off after
+    ``timeout`` seconds and whatever was listed by then is used.
+    """
+    import pexpect
+
+    if shutil.which(executable) is None:
+        return DetectionResult([], "", error=f"{executable!r} not found on PATH")
+    child = pexpect.spawn(executable, [*extra_args, "-?"], encoding="utf-8", timeout=timeout)
+    try:
+        i = child.expect(
+            [pexpect.EOF, pexpect.TIMEOUT, re.escape(NO_PORTS), r"\n -t\s"], timeout=timeout
+        )
+        text = str(child.before or "") + (child.after if isinstance(child.after, str) else "")
+    finally:
+        child.close(force=True)
+    return DetectionResult(parse_port_list(text), text, timed_out=(i == 1))
+
+
 class ArgyllSpotread:
     """Drive ``spotread -s`` through pexpect.
 

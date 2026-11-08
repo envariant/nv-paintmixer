@@ -1,0 +1,12 @@
+Measure spot values, Version 3.1.0
+Author: Graeme W. Gill, licensed under the AGPL Version 3
+Diagnostic: Usage requested
+usage: spotread [-options] [logfile]
+ -v                   Verbose mode
+ -s                   Print spectrum for each reading
+ -S                   Plot spectrum for each reading
+ -c listno            Set instrument port from the following list (default 1)
+    1 = 'usb:/bus2/dev5/ (X-Rite ColorMunki)'
+    2 = '/dev/cu.Bluetooth-Incoming-Port'
+ -t                   Use transmission measurement mode
+ -e                   Use emissive measurement mode (absolute results)

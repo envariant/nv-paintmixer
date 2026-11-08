@@ -33,6 +33,69 @@ instrument button takes the reading and prints `Result is XYZ: …, D50 Lab: …
 380–730 nm to 400–700 nm / 10 nm and converts percent to 0–1. If spotread asks to recalibrate or
 reports "sensor in the wrong position", the session tells the operator what to do and retries.
 
+## Instrument self-test
+
+Run this before calibrating with a new (or newly reconnected) instrument:
+
+```bash
+cd backend && uv run paintmixer measure selftest --replace --reference-check
+```
+
+1. **Detection.** Runs `spotread -?` (30 s timeout, `--detect-timeout`) and parses the `-c`
+   port list. Plain serial ports and entries marked "Disabled - no firmware" don't count. With no
+   instrument it prints macOS help (brew install, USB port/cable, old X-Rite daemons, sudo) and
+   exits with code 2. Use `--port N` to pick one of several instruments.
+2. **White calibration.** Prompts you to put the instrument on its base/calibration tile
+   (ColorMunki: dial to the calibration position), then spotread's own calibration runs. Every
+   run calibrates afresh; nothing is carried over from earlier sessions.
+3. **White-tile readings.** `--n` readings (default 10, minimum 3). With `--replace` you are
+   asked to lift the instrument and put it back between readings, so repeatability includes
+   placement. Use a white reference tile that the instrument can read in measurement mode (an
+   external ceramic or Spectralon-type tile; the ColorMunki's internal calibration tile is only
+   readable in the calibration position).
+4. **Analysis**, with all colour maths from `paintmixer.colorsci` (D65, CIE 1931 2°):
+   * per-band mean and standard deviation (reflectance);
+   * repeatability: mean and max dE2000 of each reading vs the mean spectrum;
+   * drift: dE2000 between the mean of the first and last third of the readings, plus the
+     per-reading trend;
+   * sanity checks on the white spectrum: every band within 0.60–1.05, no negative values
+     in any reading, no adjacent-band step > 0.05, and a smooth spectrum (RMS second
+     difference ≤ 0.01).
+5. **`--reference-check`** (optional). Three readings each of a matte white, a mid-grey and a
+   matte black reference. Reports L*, C*ab and hue, warns on a colour cast (C* > 3), and fails if
+   L* is not white > grey > black.
+6. **Verdict.**
+
+   | Check | WARN | FAIL |
+   |---|---|---|
+   | repeatability (max dE2000 vs mean) | > 0.5 | > 1.0 |
+   | drift (first vs last third) | > 0.5 | > 1.0 |
+   | negative values, white range, band jumps | — | any |
+   | smoothness, reference colour cast | any | — |
+   | reference lightness order | — | not white > grey > black |
+
+   The thresholds live in the app settings (`selftest_*` fields, editable with `PATCH
+   /api/v1/settings`). The CLI reads them from the PaintMixer database (defaults if it doesn't
+   exist yet); `--warn-de` / `--fail-de` override them for one run. **These defaults are
+   PaintMixer's guesses, not manufacturer specifications** (see docs/ASSUMPTIONS.md); tune them
+   once you have a few runs from your own instrument.
+7. **Output.** A console report, plus a folder `sample_data/selftests/<UTC timestamp>/` with
+   `report.json` (all statistics, checks and thresholds), `spectra.csv` (every reading on the
+   400–700 nm grid, replayable with `--source file --file spectra.csv`) and, for spotread,
+   `spectra_raw.csv` (values as reported, e.g. 380–730 nm in %). `--out-dir` changes the root.
+
+Exit codes: 0 PASS, 3 WARN, 1 FAIL, 2 instrument not found or measurement error.
+
+`--source simulated` (with `--sim-noise`, `--sim-drift`) rehearses the procedure without
+hardware. `--source file --file spectra.csv` re-analyses saved spectra.
+
+**CLI only.** There is no `POST /api/v1/instrument/selftest`. The test needs an operator at the
+instrument for every step (turning the dial to calibrate, placing and lifting the instrument,
+swapping references), and the API's background-task pattern (start, then poll a status
+endpoint) has no way to pause for those confirmations. Adding it would need a step-wise session
+API (start → status shows the pending prompt → confirm), plus a server running on the machine
+the instrument is plugged into. Revisit when the UI exists.
+
 ## Measure session
 
 1. Generate the worksheet (UI or `POST /api/v1/worksheet/csv`) and print it

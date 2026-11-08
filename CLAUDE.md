@@ -31,6 +31,9 @@ make sample-data    # regenerate sample_data/ from the synthetic generator
 make e2e            # Playwright smoke test
 ```
 
+Instrument tools (inside `backend/`): `uv run paintmixer measure selftest` (add `--source simulated`
+without hardware) and `uv run paintmixer measure session --worksheet ... --out ...`.
+
 Inside `backend/`: `uv run pytest tests/test_x.py -k name`, `uv run paintmixer ...`.
 
 ## Conventions

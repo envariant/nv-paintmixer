@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 import numpy as np
@@ -55,7 +55,10 @@ class SimulatedSource:
     """Model-based instrument: K-M prediction + Gaussian noise + systematic bias.
 
     The bias models a model/instrument mismatch: ``R_meas = gain * R + offset`` per band (gain
-    and offset may be arrays), applied before noise.
+    and offset may be arrays), applied before noise. ``fixed`` maps sample ids to known
+    spectra (e.g. a white tile or grey references) that are returned instead of a K-M
+    prediction. ``drift_per_read`` adds an instrument drift: reading ``k`` (0-based) is scaled by
+    ``1 + drift_per_read * k``.
     """
 
     name = "simulated"
@@ -72,6 +75,8 @@ class SimulatedSource:
         gain: FloatArray | float = 1.0,
         offset: FloatArray | float = 0.0,
         seed: int = 0,
+        fixed: Mapping[str, FloatArray] | None = None,
+        drift_per_read: float = 0.0,
     ) -> None:
         from paintmixer.calibration.synthetic import substrate_black as sb
         from paintmixer.calibration.synthetic import substrate_white as sw
@@ -86,11 +91,17 @@ class SimulatedSource:
         self.gain = gain
         self.offset = offset
         self.rng = np.random.default_rng(seed)
+        self.fixed = {k: np.asarray(v, dtype=np.float64) for k, v in (fixed or {}).items()}
+        self.drift_per_read = drift_per_read
+        self.n_reads = 0
 
     def open(self) -> None:
         pass
 
     def clean(self, request: MeasureRequest) -> FloatArray:
+        if request.sample_id in self.fixed:
+            r = self.fixed[request.sample_id]
+            return np.asarray(np.asarray(self.gain) * r + self.offset, dtype=np.float64)
         if not request.components:
             return self.sub_b if request.substrate == Substrate.BLACK else self.sub_w
         c = np.zeros(self.model.n_paints)
@@ -107,7 +118,9 @@ class SimulatedSource:
         return np.asarray(np.clip(np.asarray(self.gain) * r + self.offset, 0.0, 1.2))
 
     def read(self, request: MeasureRequest) -> Reading:
-        r = self.clean(request) + self.rng.normal(0.0, self.noise, size=31)
+        drift = 1.0 + self.drift_per_read * self.n_reads
+        self.n_reads += 1
+        r = self.clean(request) * drift + self.rng.normal(0.0, self.noise, size=31)
         return Reading(np.clip(r, 0.0, 1.2), source=self.name)
 
     def close(self) -> None:

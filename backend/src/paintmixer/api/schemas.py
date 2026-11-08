@@ -107,6 +107,22 @@ class AppSettings(_Model):
     worksheet_scale_resolution_g: float = Field(0.01, gt=0)
     worksheet_gap_um: float = Field(150.0, gt=0)
     seed: int = 1234
+    # Instrument self-test thresholds (guesses, not manufacturer figures; docs/ASSUMPTIONS.md)
+    selftest_warn_de: float = Field(0.5, gt=0, description="WARN if max dE2000 vs mean exceeds")
+    selftest_fail_de: float = Field(1.0, gt=0, description="FAIL if max dE2000 vs mean exceeds")
+    selftest_white_min: float = Field(0.60, ge=0, le=1.2)
+    selftest_white_max: float = Field(1.05, ge=0, le=1.2)
+    selftest_max_band_jump: float = Field(0.05, gt=0)
+    selftest_smoothness_rms: float = Field(0.01, gt=0)
+    selftest_cast_chroma: float = Field(3.0, gt=0)
+
+    @model_validator(mode="after")
+    def _selftest_order(self) -> AppSettings:
+        if self.selftest_warn_de > self.selftest_fail_de:
+            raise ValueError("selftest_warn_de must be <= selftest_fail_de")
+        if self.selftest_white_min >= self.selftest_white_max:
+            raise ValueError("selftest_white_min must be < selftest_white_max")
+        return self
 
 
 class AppSettingsUpdate(_Model):
@@ -126,6 +142,13 @@ class AppSettingsUpdate(_Model):
     worksheet_scale_resolution_g: float | None = Field(None, gt=0)
     worksheet_gap_um: float | None = Field(None, gt=0)
     seed: int | None = None
+    selftest_warn_de: float | None = Field(None, gt=0)
+    selftest_fail_de: float | None = Field(None, gt=0)
+    selftest_white_min: float | None = Field(None, ge=0, le=1.2)
+    selftest_white_max: float | None = Field(None, ge=0, le=1.2)
+    selftest_max_band_jump: float | None = Field(None, gt=0)
+    selftest_smoothness_rms: float | None = Field(None, gt=0)
+    selftest_cast_chroma: float | None = Field(None, gt=0)
 
 
 # --- colour library -------------------------------------------------------------------------
