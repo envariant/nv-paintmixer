@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+from dataclasses import dataclass
 
 from fastapi import APIRouter, File, Query, Response, UploadFile
 from pydantic import ValidationError
@@ -12,20 +13,37 @@ from sqlmodel import Session, col, select
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request, conflict, not_found
 from paintmixer.api.schemas import PaintCreate, PaintImportResult, PaintRead, PaintUpdate
-from paintmixer.api.services import load_settings
+from paintmixer.api.services import load_settings, model_strengths
+from paintmixer.calibration.strength import PaintStrength
 from paintmixer.db import models as m
 from paintmixer.db.models import utcnow
 
 router = APIRouter(prefix="/paints", tags=["paints"], responses=ERROR_RESPONSES)
 
 
-def _calibrated_ids(session: Session) -> set[str]:
+@dataclass
+class _ActiveInfo:
+    calibrated: set[str]
+    strengths: dict[str, PaintStrength]
+
+
+def _calibrated_ids(session: Session) -> _ActiveInfo:
     fm = session.exec(select(m.FittedModel).where(col(m.FittedModel.active))).first()
-    return set(fm.paint_ids) if fm else set()
+    if fm is None:
+        return _ActiveInfo(set(), {})
+    return _ActiveInfo(set(fm.paint_ids), model_strengths(session, fm))
 
 
-def _read(p: m.Paint, calibrated: set[str]) -> PaintRead:
-    return PaintRead.model_validate({**p.model_dump(), "calibrated": p.id in calibrated})
+def _read(p: m.Paint, info: _ActiveInfo) -> PaintRead:
+    st = info.strengths.get(p.id)
+    return PaintRead.model_validate(
+        {
+            **p.model_dump(),
+            "calibrated": p.id in info.calibrated,
+            "tinting_strength": st.reduction_ks if st else None,
+            "tinting_peak_nm": st.peak_nm if st else None,
+        }
+    )
 
 
 def _check(session: Session, p: m.Paint) -> None:

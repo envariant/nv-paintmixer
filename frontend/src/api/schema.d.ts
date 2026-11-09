@@ -413,7 +413,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Model Spectra */
+        /**
+         * Model Spectra
+         * @description K, S, masstone and tinting strength of each paint (everything a client needs to run the
+         *     forward model itself, together with ``GET /colorimetry``).
+         */
         get: operations["model_spectra_api_v1_models__version__spectra_get"];
         put?: never;
         post?: never;
@@ -1216,6 +1220,12 @@ export interface components {
         ModelSpectra: {
             /** Version */
             version: number;
+            /** K1 */
+            k1: number;
+            /** K2 */
+            k2: number;
+            /** Reference Version */
+            reference_version?: number | null;
             /** Wavelengths */
             wavelengths: number[];
             /** Paints */
@@ -1397,6 +1407,13 @@ export interface components {
              */
             calibrated?: boolean;
             /**
+             * Tinting Strength
+             * @description K/S of a 10 % reduction in the model's white at its absorption peak (ISO 787-24 style; active model). None for white or uncalibrated paints.
+             */
+            tinting_strength?: number | null;
+            /** Tinting Peak Nm */
+            tinting_peak_nm?: number | null;
+            /**
              * Created At
              * Format: date-time
              */
@@ -1428,6 +1445,7 @@ export interface components {
             masstone: number[];
             /** Masstone Hex */
             masstone_hex: string;
+            strength?: components["schemas"]["StrengthOut"] | null;
         };
         /** PaintUpdate */
         PaintUpdate: {
@@ -1635,6 +1653,27 @@ export interface components {
              * @default 0.05
              */
             metamerism?: number;
+        };
+        /** StrengthOut */
+        StrengthOut: {
+            /** Reduction Fraction */
+            reduction_fraction: number;
+            /**
+             * Reduction Ks
+             * @description K/S of the reduction at its absorption peak
+             */
+            reduction_ks: number;
+            /** Peak Nm */
+            peak_nm: number;
+            /** Reduction Lab */
+            reduction_lab: number[];
+            /** Reduction Hex */
+            reduction_hex: string;
+            /**
+             * Relative Pct
+             * @description Relative tinting strength vs reference_version (100 = equal)
+             */
+            relative_pct?: number | null;
         };
         /**
          * TargetIn
@@ -3347,7 +3386,10 @@ export interface operations {
     };
     model_spectra_api_v1_models__version__spectra_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Model version to compare tinting strength against (relative %) */
+                reference_version?: number | null;
+            };
             header?: never;
             path: {
                 version: number;

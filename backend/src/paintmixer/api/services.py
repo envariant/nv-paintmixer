@@ -10,6 +10,7 @@ from sqlmodel import Session, col, select
 from paintmixer.api.errors import ApiError, bad_request, not_found
 from paintmixer.api.schemas import AppSettings, TargetIn
 from paintmixer.calibration.format import CalibrationSampleData, SampleType, Substrate
+from paintmixer.calibration.strength import PaintStrength, tinting_strengths
 from paintmixer.colorsci.convert import (
     hex_to_srgb,
     lab_to_srgb,
@@ -142,6 +143,15 @@ def pool_model(session: Session, pool: list[str] | None) -> tuple[PoolModel, m.F
             seen.append(p)
     infos = [paint_info(paints[p]) for p in seen]
     return PoolModel.from_model(km_of(fm), fm.paint_ids, infos), fm
+
+
+def model_strengths(session: Session, fm: m.FittedModel) -> dict[str, PaintStrength]:
+    """Tinting strength of each non-white paint in ``fm``, reduced with the model's white."""
+    roles = {p.id: p.role for p in all_paints(session)}
+    whites = [p for p in fm.paint_ids if roles.get(p) == PaintRole.WHITE.value]
+    if not whites:
+        return {}
+    return tinting_strengths(km_of(fm), fm.paint_ids, whites[0])
 
 
 # --- colours / targets ----------------------------------------------------------------------

@@ -117,3 +117,9 @@ introduced it.
   ΔE_OK), implemented from the spec, not copied. Every `hex` the API returns uses it; the
   `out_of_gamut` / `in_srgb_gamut` flags still say when a swatch is only an approximation.
   `lab_to_srgb(..., method="clip")` keeps the old per-channel clipping.
+- **Tinting strength** Defined ISO 787-24 style from the fitted model: K/S of a 10 % paint /
+  90 % white (by volume) reduction at its absorption peak, searched over 400–700 nm. It is
+  computed from K and S, not measured. The absolute value depends on the white used, so it is
+  only comparable between paints reduced with the same white. Relative strength compares two
+  model versions of the same paint at the reference's peak wavelength. Not defined for white
+  (`null`).

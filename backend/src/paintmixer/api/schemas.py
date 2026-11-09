@@ -70,6 +70,12 @@ class PaintRead(PaintFields):
 
     id: str
     calibrated: bool = Field(False, description="Present in the active fitted model")
+    tinting_strength: float | None = Field(
+        None,
+        description="K/S of a 10 % reduction in the model's white at its absorption peak "
+        "(ISO 787-24 style; active model). None for white or uncalibrated paints.",
+    )
+    tinting_peak_nm: float | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -392,6 +398,17 @@ class ModelDetail(ModelSummary):
     residuals: list[ResidualOut]
 
 
+class StrengthOut(_Out):
+    reduction_fraction: float
+    reduction_ks: float = Field(description="K/S of the reduction at its absorption peak")
+    peak_nm: float
+    reduction_lab: list[float]
+    reduction_hex: str
+    relative_pct: float | None = Field(
+        None, description="Relative tinting strength vs reference_version (100 = equal)"
+    )
+
+
 class PaintSpectra(_Out):
     paint_id: str
     name: str
@@ -400,10 +417,14 @@ class PaintSpectra(_Out):
     ks: Spectrum
     masstone: Spectrum
     masstone_hex: str
+    strength: StrengthOut | None = None
 
 
 class ModelSpectra(_Out):
     version: int
+    k1: float
+    k2: float
+    reference_version: int | None = None
     wavelengths: list[float]
     paints: list[PaintSpectra]
     tau: Spectrum

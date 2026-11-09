@@ -1969,6 +1969,7 @@
           "models"
         ],
         "summary": "Model Spectra",
+        "description": "K, S, masstone and tinting strength of each paint (everything a client needs to run the\nforward model itself, together with ``GET /colorimetry``).",
         "operationId": "model_spectra_api_v1_models__version__spectra_get",
         "parameters": [
           {
@@ -1979,6 +1980,24 @@
               "type": "integer",
               "title": "Version"
             }
+          },
+          {
+            "name": "reference_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Model version to compare tinting strength against (relative %)",
+              "title": "Reference Version"
+            },
+            "description": "Model version to compare tinting strength against (relative %)"
           }
         ],
         "responses": {
@@ -4395,6 +4414,25 @@
             "type": "integer",
             "title": "Version"
           },
+          "k1": {
+            "type": "number",
+            "title": "K1"
+          },
+          "k2": {
+            "type": "number",
+            "title": "K2"
+          },
+          "reference_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Version"
+          },
           "wavelengths": {
             "items": {
               "type": "number"
@@ -4434,6 +4472,8 @@
         "type": "object",
         "required": [
           "version",
+          "k1",
+          "k2",
           "wavelengths",
           "paints",
           "tau",
@@ -4766,6 +4806,29 @@
             "description": "Present in the active fitted model",
             "default": false
           },
+          "tinting_strength": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tinting Strength",
+            "description": "K/S of a 10 % reduction in the model's white at its absorption peak (ISO 787-24 style; active model). None for white or uncalibrated paints."
+          },
+          "tinting_peak_nm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tinting Peak Nm"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -4836,6 +4899,16 @@
           "masstone_hex": {
             "type": "string",
             "title": "Masstone Hex"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StrengthOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -5564,6 +5637,55 @@
         "additionalProperties": false,
         "type": "object",
         "title": "SolverWeights"
+      },
+      "StrengthOut": {
+        "properties": {
+          "reduction_fraction": {
+            "type": "number",
+            "title": "Reduction Fraction"
+          },
+          "reduction_ks": {
+            "type": "number",
+            "title": "Reduction Ks",
+            "description": "K/S of the reduction at its absorption peak"
+          },
+          "peak_nm": {
+            "type": "number",
+            "title": "Peak Nm"
+          },
+          "reduction_lab": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Reduction Lab"
+          },
+          "reduction_hex": {
+            "type": "string",
+            "title": "Reduction Hex"
+          },
+          "relative_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Pct",
+            "description": "Relative tinting strength vs reference_version (100 = equal)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reduction_fraction",
+          "reduction_ks",
+          "peak_nm",
+          "reduction_lab",
+          "reduction_hex"
+        ],
+        "title": "StrengthOut"
       },
       "TargetIn": {
         "properties": {

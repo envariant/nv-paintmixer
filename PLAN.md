@@ -110,3 +110,6 @@ Progress notes per milestone are appended below as work completes.
   regenerated (r400–r700 are the required minimum).
 - **Gamut-mapped swatches** `colorsci.oklab`: OKLab/OKLCh (checked against Ottosson's table and
   colour-science) and vectorised CSS Color 4 gamut mapping, now the default for every swatch.
+- **Tinting strength** `calibration.strength`: reduction K/S at peak absorption per paint,
+  relative % against another model version; on `GET /paints` (active model) and
+  `GET /models/{v}/spectra?reference_version=`.

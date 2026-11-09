@@ -214,6 +214,16 @@ def test_upload_fit_activate(client: TestClient) -> None:
     assert spectra["paints"][0]["S"] == [1.0] * 36
     paints = {p["id"]: p for p in client.get(f"{API}/paints").json()}
     assert paints["phthalo-blue"]["calibrated"] and not paints["pyrrole-red"]["calibrated"]
+    # tinting strength from the active model (v2): blue absorbs red, white has none
+    assert paints["phthalo-blue"]["tinting_strength"] > 0
+    assert 600 <= paints["phthalo-blue"]["tinting_peak_nm"] <= 650
+    assert paints["titanium-white"]["tinting_strength"] is None
+    assert paints["pyrrole-red"]["tinting_strength"] is None
+    rel = client.get(f"{API}/models/2/spectra", params={"reference_version": 1}).json()
+    blue = next(x for x in rel["paints"] if x["paint_id"] == "phthalo-blue")
+    assert rel["reference_version"] == 1 and rel["k2"] == 0.55
+    assert 80 < blue["strength"]["relative_pct"] < 120  # same paint, different Saunderson k2
+    assert next(x for x in rel["paints"] if x["paint_id"] == "titanium-white")["strength"] is None
     # deleting a paint used by samples is refused
     assert client.delete(f"{API}/paints/phthalo-blue").status_code == 409
 
