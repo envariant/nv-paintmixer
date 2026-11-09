@@ -1762,17 +1762,38 @@
           "models"
         ],
         "summary": "List Models",
+        "description": "All model versions, newest first.",
         "operationId": "list_models_api_v1_models_get",
+        "parameters": [
+          {
+            "name": "line",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only versions of this model line",
+              "title": "Line"
+            },
+            "description": "Only versions of this model line"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ModelSummary"
                   },
-                  "type": "array",
                   "title": "Response List Models Api V1 Models Get"
                 }
               }
@@ -1924,22 +1945,24 @@
         }
       }
     },
-    "/api/v1/models/{version}": {
+    "/api/v1/models/{ref}": {
       "get": {
         "tags": [
           "models"
         ],
         "summary": "Get Model",
-        "operationId": "get_model_api_v1_models__version__get",
+        "operationId": "get_model_api_v1_models__ref__get",
         "parameters": [
           {
-            "name": "version",
+            "name": "ref",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "integer",
-              "title": "Version"
-            }
+              "type": "string",
+              "description": "Model ref: global version (12), line id (current model), line@3 or line@latest",
+              "title": "Ref"
+            },
+            "description": "Model ref: global version (12), line id (current model), line@3 or line@latest"
           }
         ],
         "responses": {
@@ -1984,24 +2007,100 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Update Model",
+        "description": "Edit a version's label or notes, or move it to another line (where it gets the next\nrevision; its global version never changes). Spectra are immutable.",
+        "operationId": "update_model_api_v1_models__ref__patch",
+        "parameters": [
+          {
+            "name": "ref",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Model ref: global version (12), line id (current model), line@3 or line@latest",
+              "title": "Ref"
+            },
+            "description": "Model ref: global version (12), line id (current model), line@3 or line@latest"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
-    "/api/v1/models/{version}/activate": {
+    "/api/v1/models/{ref}/activate": {
       "post": {
         "tags": [
           "models"
         ],
         "summary": "Activate Model",
-        "operationId": "activate_model_api_v1_models__version__activate_post",
+        "description": "Make this the one active model (used by solve, predict, ramps and jobs).",
+        "operationId": "activate_model_api_v1_models__ref__activate_post",
         "parameters": [
           {
-            "name": "version",
+            "name": "ref",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "integer",
-              "title": "Version"
-            }
+              "type": "string",
+              "description": "Model ref: global version (12), line id (current model), line@3 or line@latest",
+              "title": "Ref"
+            },
+            "description": "Model ref: global version (12), line id (current model), line@3 or line@latest"
           }
         ],
         "responses": {
@@ -2048,23 +2147,25 @@
         }
       }
     },
-    "/api/v1/models/{version}/spectra": {
+    "/api/v1/models/{ref}/spectra": {
       "get": {
         "tags": [
           "models"
         ],
         "summary": "Model Spectra",
         "description": "K, S, masstone and tinting strength of each paint (everything a client needs to run the\nforward model itself, together with ``GET /colorimetry``).",
-        "operationId": "model_spectra_api_v1_models__version__spectra_get",
+        "operationId": "model_spectra_api_v1_models__ref__spectra_get",
         "parameters": [
           {
-            "name": "version",
+            "name": "ref",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "integer",
-              "title": "Version"
-            }
+              "type": "string",
+              "description": "Model ref: global version (12), line id (current model), line@3 or line@latest",
+              "title": "Ref"
+            },
+            "description": "Model ref: global version (12), line id (current model), line@3 or line@latest"
           },
           {
             "name": "reference_version",
@@ -2073,16 +2174,16 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "integer"
+                  "type": "string"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "Model version to compare tinting strength against (relative %)",
+              "description": "Model ref to compare tinting strength against (relative %)",
               "title": "Reference Version"
             },
-            "description": "Model version to compare tinting strength against (relative %)"
+            "description": "Model ref to compare tinting strength against (relative %)"
           }
         ],
         "responses": {
@@ -2129,23 +2230,25 @@
         }
       }
     },
-    "/api/v1/models/{version}/gamut": {
+    "/api/v1/models/{ref}/gamut": {
       "get": {
         "tags": [
           "models"
         ],
         "summary": "Model Gamut",
         "description": "Colour reachability of any model version (active or not): the a*b* boundary per L*\nslice, with each boundary point's display colour, for charting or comparing versions.",
-        "operationId": "model_gamut_api_v1_models__version__gamut_get",
+        "operationId": "model_gamut_api_v1_models__ref__gamut_get",
         "parameters": [
           {
-            "name": "version",
+            "name": "ref",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "integer",
-              "title": "Version"
-            }
+              "type": "string",
+              "description": "Model ref: global version (12), line id (current model), line@3 or line@latest",
+              "title": "Ref"
+            },
+            "description": "Model ref: global version (12), line id (current model), line@3 or line@latest"
           },
           {
             "name": "pool",
@@ -2230,23 +2333,25 @@
         }
       }
     },
-    "/api/v1/models/{version}/gamut.svg": {
+    "/api/v1/models/{ref}/gamut.svg": {
       "get": {
         "tags": [
           "models"
         ],
         "summary": "Model Gamut Svg",
         "description": "The same gamut as a ready-to-view SVG: one a*b* panel per L* slice on a neutral grey\nsurround, wedges coloured from neutral to the boundary colour.",
-        "operationId": "model_gamut_svg_api_v1_models__version__gamut_svg_get",
+        "operationId": "model_gamut_svg_api_v1_models__ref__gamut_svg_get",
         "parameters": [
           {
-            "name": "version",
+            "name": "ref",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "integer",
-              "title": "Version"
-            }
+              "type": "string",
+              "description": "Model ref: global version (12), line id (current model), line@3 or line@latest",
+              "title": "Ref"
+            },
+            "description": "Model ref: global version (12), line id (current model), line@3 or line@latest"
           },
           {
             "name": "pool",
@@ -2327,6 +2432,308 @@
             "content": {
               "image/svg+xml": {}
             }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/model-lines": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "List Lines",
+        "operationId": "list_lines_api_v1_model_lines_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelLineSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Lines Api V1 Model Lines Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "models"
+        ],
+        "summary": "New Line",
+        "description": "Create an empty line; fits and swatch models are added to it with ``\"line\": <id>``.",
+        "operationId": "new_line_api_v1_model_lines_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelLineCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelLineDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/model-lines/{slug}": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Get Model Line",
+        "operationId": "get_model_line_api_v1_model_lines__slug__get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelLineDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Update Line",
+        "description": "Rename or re-describe a line. Its id is fixed, so refs keep working.",
+        "operationId": "update_line_api_v1_model_lines__slug__patch",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelLinePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelLineDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Delete Line",
+        "description": "Delete an empty line. Models are never deleted: move them out first.",
+        "operationId": "delete_line_api_v1_model_lines__slug__delete",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "404": {
             "description": "Not found",
@@ -4187,6 +4594,24 @@
             "type": "string",
             "title": "Notes",
             "default": ""
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line",
+            "description": "Model line (its id) to add the new version to; must exist. Default: 'default'"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Label",
+            "default": ""
           }
         },
         "additionalProperties": false,
@@ -4967,7 +5392,32 @@
         "properties": {
           "version": {
             "type": "integer",
-            "title": "Version"
+            "title": "Version",
+            "description": "Global version number, unique across all lines"
+          },
+          "ref": {
+            "type": "string",
+            "title": "Ref",
+            "description": "line@revision; usable wherever the API takes a model"
+          },
+          "line": {
+            "type": "string",
+            "title": "Line",
+            "description": "Id of the model line this version belongs to"
+          },
+          "line_name": {
+            "type": "string",
+            "title": "Line Name"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision",
+            "description": "Sequence number within the line"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Editable display name of this version"
           },
           "active": {
             "type": "boolean",
@@ -5045,6 +5495,11 @@
         "type": "object",
         "required": [
           "version",
+          "ref",
+          "line",
+          "line_name",
+          "revision",
+          "label",
           "active",
           "created_at",
           "paint_ids",
@@ -5060,6 +5515,265 @@
           "residuals"
         ],
         "title": "ModelDetail"
+      },
+      "ModelLineCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug",
+            "description": "Id used in refs (a-z, 0-9, '-'); default: derived from the name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ModelLineCreate"
+      },
+      "ModelLineDetail": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "n_versions": {
+            "type": "integer",
+            "title": "N Versions"
+          },
+          "current_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Version",
+            "description": "What the bare line id resolves to: newest calibrated revision, else newest"
+          },
+          "current_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ref"
+          },
+          "active_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Version",
+            "description": "The active model, if it is in this line"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/ModelSummary"
+            },
+            "type": "array",
+            "title": "Versions",
+            "description": "Newest revision first"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "name",
+          "description",
+          "created_at",
+          "n_versions",
+          "current_version",
+          "current_ref",
+          "active_version",
+          "versions"
+        ],
+        "title": "ModelLineDetail"
+      },
+      "ModelLinePatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ModelLinePatch"
+      },
+      "ModelLineSummary": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "n_versions": {
+            "type": "integer",
+            "title": "N Versions"
+          },
+          "current_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Version",
+            "description": "What the bare line id resolves to: newest calibrated revision, else newest"
+          },
+          "current_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ref"
+          },
+          "active_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Version",
+            "description": "The active model, if it is in this line"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug",
+          "name",
+          "description",
+          "created_at",
+          "n_versions",
+          "current_version",
+          "current_ref",
+          "active_version"
+        ],
+        "title": "ModelLineSummary"
+      },
+      "ModelPatch": {
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line",
+            "description": "Move to this line; the version gets that line's next revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ModelPatch"
       },
       "ModelSpectra": {
         "properties": {
@@ -5139,7 +5853,32 @@
         "properties": {
           "version": {
             "type": "integer",
-            "title": "Version"
+            "title": "Version",
+            "description": "Global version number, unique across all lines"
+          },
+          "ref": {
+            "type": "string",
+            "title": "Ref",
+            "description": "line@revision; usable wherever the API takes a model"
+          },
+          "line": {
+            "type": "string",
+            "title": "Line",
+            "description": "Id of the model line this version belongs to"
+          },
+          "line_name": {
+            "type": "string",
+            "title": "Line Name"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision",
+            "description": "Sequence number within the line"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Editable display name of this version"
           },
           "active": {
             "type": "boolean",
@@ -5205,6 +5944,11 @@
         "type": "object",
         "required": [
           "version",
+          "ref",
+          "line",
+          "line_name",
+          "revision",
+          "label",
           "active",
           "created_at",
           "paint_ids",
@@ -6801,6 +7545,24 @@
           "notes": {
             "type": "string",
             "title": "Notes",
+            "default": ""
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line",
+            "description": "Model line (its id) to add the new version to; must exist. Default: 'default'"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Label",
             "default": ""
           }
         },

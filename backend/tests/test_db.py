@@ -21,8 +21,18 @@ def test_migrations_match_models(tmp_path: Path) -> None:
     assert diff == [], f"models and migrations differ; generate a new revision: {diff}"
     with Session(engine) as s:
         s.add(m.Paint(id="titanium-white", name="Titanium White", role="white"))
+        line = m.ModelLine(slug="default", name="Default")
+        s.add(line)
+        s.flush()
+        assert line.id is not None
         s.add(
-            m.FittedModel(version=1, K=[[0.1] * 31], S=[[1.0] * 31], paint_ids=["titanium-white"])
+            m.FittedModel(
+                version=1,
+                line_id=line.id,
+                K=[[0.1] * 31],
+                S=[[1.0] * 31],
+                paint_ids=["titanium-white"],
+            )
         )
         s.commit()
         fm = s.exec(select(m.FittedModel)).one()
@@ -93,3 +103,46 @@ def test_grid_migration_pads_31_band_data(tmp_path: Path) -> None:
     command.downgrade(alembic_config(url), "0001")
     with Session(get_engine(url)) as s:
         assert s.get(m.CalibrationSample, "S1").reflectance == old  # type: ignore[union-attr]
+
+
+def test_model_line_migration_assigns_default_line(tmp_path: Path) -> None:
+    """0004 puts existing models in a line "default", revisions in version order."""
+    from alembic import command
+
+    from paintmixer.db.session import alembic_config
+
+    url = f"sqlite:///{tmp_path / 'lines.db'}"
+    get_engine(url)
+    command.upgrade(alembic_config(url), "0003")
+    with get_engine(url).begin() as conn:
+        for version, active in ((3, 0), (5, 1)):
+            conn.execute(
+                text(
+                    "INSERT INTO fitted_model (version, active, source, k1, k2, illuminant,"
+                    " observer, n_samples, notes, created_at, paint_ids, K, S, tau,"
+                    " substrate_white, substrate_black, diagnostics, holdout_report) VALUES"
+                    " (:v, :a, 'calibration', 0, 0.5, 'D65', 'CIE 1931 2', 0, '',"
+                    " '2026-01-01 00:00:00', '[]', '[]', '[]', '[]', '[]', '[]', '{}', '{}')"
+                ),
+                {"v": version, "a": active},
+            )
+    command.upgrade(alembic_config(url), "head")
+    with Session(get_engine(url)) as s:
+        line = s.exec(select(m.ModelLine)).one()
+        assert line.slug == "default" and line.last_revision == 2
+        rows = s.exec(select(m.FittedModel).order_by(m.FittedModel.version)).all()  # type: ignore[arg-type]
+        assert [(r.version, r.revision, r.line_id, r.label) for r in rows] == [
+            (3, 1, line.id, ""),
+            (5, 2, line.id, ""),
+        ]
+    command.downgrade(alembic_config(url), "0003")
+    with get_engine(url).connect() as conn:
+        assert conn.execute(text("SELECT count(*) FROM fitted_model")).scalar_one() == 2
+
+
+def test_model_line_migration_empty_database(tmp_path: Path) -> None:
+    """With no models, 0004 creates no line (the first fit creates "default")."""
+    url = f"sqlite:///{tmp_path / 'empty.db'}"
+    migrate(url)
+    with Session(get_engine(url)) as s:
+        assert s.exec(select(m.ModelLine)).first() is None

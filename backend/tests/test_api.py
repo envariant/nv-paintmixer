@@ -30,7 +30,8 @@ def test_health_and_openapi(client: TestClient) -> None:
         "/api/v1/paints",
         "/api/v1/calibration/fit",
         "/api/v1/worksheet",
-        "/api/v1/models/{version}/activate",
+        "/api/v1/models/{ref}/activate",
+        "/api/v1/model-lines",
     ]:
         assert p in paths
 

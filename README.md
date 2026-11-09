@@ -96,35 +96,79 @@ It loads a five-paint set: White (Titanium), Black (Carbon), Cyan (Phthalo Blue)
 and a synthetic calibration set (`sample_data/calibration_starter5.csv`). It then fits two
 model versions:
 
-* **v1** comes from the calibration data (`source: calibration`) and is **active**.
-* **v2** is built from the swatch colours only (`source: swatches`, uncalibrated) and is
-  inactive, for comparison.
+* **v1 = `cmykw-demo@1`** comes from the calibration data (`source: calibration`) and is
+  **active**.
+* **v2 = `cmykw-demo@2`** is built from the swatch colours only (`source: swatches`,
+  uncalibrated) and is inactive, for comparison.
 
-Running it again changes nothing that exists: paints, colours and samples are upserted, and
-models are only added when missing. `uv run paintmixer seed-demo --refit` adds new versions
-instead. Only one model is active at a time; switch with `POST /api/v1/models/{v}/activate`.
+Both are in the model line `cmykw-demo` (see below). Running it again changes nothing that
+exists: paints, colours and samples are upserted, and models are only added when the line has
+none of that kind. `uv run paintmixer seed-demo --refit` adds new revisions instead. Only one
+model is active at a time; switch with `POST /api/v1/models/{ref}/activate`.
 `GET /api/v1/models` lists all versions. With `PAINTMIXER_SEED_DEMO=1`, the server seeds an
 empty database on startup and leaves a non-empty one alone.
 
+## Model lines: named series of versions
+
+A **model line** is a named series of model versions, usually one paint set recalibrated over
+time ("Studio acrylics"), or a separate paint set ("Oils"). Each line has a fixed id (`slug`),
+an editable name and a description. Every model belongs to one line and has:
+
+* a global `version` that never changes (solve results and jobs record it);
+* a `revision` within its line, never reused;
+* an editable `label`, e.g. "after new white batch".
+
+Wherever the API takes a model (`/models/{ref}`, its `spectra`, `gamut`, `gamut.svg`,
+`activate`), a **ref** can be:
+
+| Ref | Means |
+|---|---|
+| `12` | global version 12 |
+| `studio` | the line's current model: its newest *calibrated* revision (or newest of any kind if none is calibrated) |
+| `studio@3` | revision 3 of the line |
+| `studio@latest` | the newest revision, calibrated or not |
+
+```bash
+curl -s -X POST $API/model-lines -H 'content-type: application/json' -d '{"name":"Studio acrylics","slug":"studio"}'
+```
+
+```bash
+curl -s -X POST $API/calibration/fit -H 'content-type: application/json' -d '{"line":"studio","label":"first calibration"}'
+```
+
+```bash
+curl -s -X POST $API/models/studio/activate
+```
+
+`POST /calibration/fit` and `POST /models/from-swatches` take `line` (it must already exist;
+if omitted, the model goes into an auto-created line `default`) and `label`.
+`PATCH /models/{ref}` edits a label or notes, or moves a version to another line, where it
+gets that line's next revision. `GET /model-lines` lists lines with their current and active
+versions. `GET /model-lines/{id}` shows a line's versions. `PATCH` renames a line;
+its id is fixed so refs keep working. `DELETE` removes a line only once it is empty. Model
+data is never deleted. Only one model is active at a time, across all lines.
+
+Databases created before lines existed are migrated into a line called `default`.
+
 ## Gamut charts: what each model can reach
 
-`GET /api/v1/models/{version}/gamut` works for any model version, active or not. By default it
+`GET /api/v1/models/{ref}/gamut` works for any model version, active or not. By default it
 uses every paint in that model; `pool` (comma-separated ids) and `max_paints` narrow it. It
 returns the a*b* boundary at every 10 L*: the most chromatic mix found per 10° hue bin. Each
 boundary point carries its display colour (`hex`, D65 sRGB, gamut-mapped). `GET /api/v1/gamut`
 returns the same for the active model and loaded paints.
 
-`GET /api/v1/models/{version}/gamut.svg` draws it: one a*b* panel per L* slice, on a neutral
+`GET /api/v1/models/{ref}/gamut.svg` draws it: one a*b* panel per L* slice, on a neutral
 grey surround. Each hue wedge shades from grey at the centre to the boundary colour, and a dark
 outline marks the true boundary. To compare versions, give both charts the same axis with
 `chroma_scale`:
 
 ```bash
-curl -s "$API/models/1/gamut.svg?chroma_scale=100" -o v1.svg
+curl -s "$API/models/cmykw-demo@1/gamut.svg?chroma_scale=100" -o v1.svg
 ```
 
 ```bash
-curl -s "$API/models/2/gamut.svg?chroma_scale=100" -o v2.svg
+curl -s "$API/models/cmykw-demo@2/gamut.svg?chroma_scale=100" -o v2.svg
 ```
 
 Two caveats when reading a chart. First, each panel covers L* ±5 and assumes everything

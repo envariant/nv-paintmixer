@@ -170,3 +170,17 @@ introduced it.
   gamut mapping, so very chromatic wedges look duller than the paint. The outline is the
   boundary in Lab. By default a chart's scale is its own maximum C*, rounded up to 20;
   `chroma_scale` fixes it so versions can be compared. Hue bins with no samples get `hex: null`.
+- **Model lines** Names belong to *lines* (series of versions), not to individual versions.
+  A version gets an editable `label` instead of a unique name, so a ref like `studio` has only
+  one meaning. The global `version` is kept and stays the stable key: solve results, jobs and
+  caches record it. Revisions are counted per line and never reused: the line stores the
+  highest revision it has issued, so a ref like `studio@2` can never come to mean a different
+  model after one is moved out. A bare line id resolves to the newest *calibrated* revision,
+  so adding an uncalibrated swatch model to a line does not silently replace its calibrated
+  model (`@latest` gives the newest of any kind). "One active model" stays global across lines,
+  since the dispenser holds one paint set at a time. A fit's line must exist before the fit,
+  so a typo is an error rather than a new line. The exception is `default`, created on first
+  use and by the migration for existing models. Line ids are immutable (lower case, digits and
+  `-`, starting with a letter, so they can't be mistaken for versions). `active` and
+  `from-swatches` are reserved. Lines can be deleted only when empty; models are never deleted.
+

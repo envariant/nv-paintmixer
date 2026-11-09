@@ -131,3 +131,8 @@ Progress notes per milestone are appended below as work completes.
   `GET /models/{v}/gamut` and `/gamut.svg` (`solver.gamut_chart`) work for any version; gamut
   responses gained per-point `hex`, `model_source` and `max_paints`. The gamut sampler adds
   white let-downs of chromatic pairs and triples, so the light slices are filled.
+- **Model lines** `model_line` table (migration `0004`; existing models go into `default`),
+  `fitted_model.line_id/revision/label`, refs (`12`, `line`, `line@3`, `line@latest`) on every
+  `/models/{ref}` endpoint, `/model-lines` CRUD, `PATCH /models/{ref}` (label, notes, move),
+  `line`/`label` on fits and swatch models. The demo seeds into `cmykw-demo`.
+

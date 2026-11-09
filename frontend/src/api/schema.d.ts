@@ -370,7 +370,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Models */
+        /**
+         * List Models
+         * @description All model versions, newest first.
+         */
         get: operations["list_models_api_v1_models_get"];
         put?: never;
         post?: never;
@@ -419,7 +422,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/models/{version}": {
+    "/api/v1/models/{ref}": {
         parameters: {
             query?: never;
             header?: never;
@@ -427,16 +430,21 @@ export interface paths {
             cookie?: never;
         };
         /** Get Model */
-        get: operations["get_model_api_v1_models__version__get"];
+        get: operations["get_model_api_v1_models__ref__get"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update Model
+         * @description Edit a version's label or notes, or move it to another line (where it gets the next
+         *     revision; its global version never changes). Spectra are immutable.
+         */
+        patch: operations["update_model_api_v1_models__ref__patch"];
         trace?: never;
     };
-    "/api/v1/models/{version}/activate": {
+    "/api/v1/models/{ref}/activate": {
         parameters: {
             query?: never;
             header?: never;
@@ -445,15 +453,18 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Activate Model */
-        post: operations["activate_model_api_v1_models__version__activate_post"];
+        /**
+         * Activate Model
+         * @description Make this the one active model (used by solve, predict, ramps and jobs).
+         */
+        post: operations["activate_model_api_v1_models__ref__activate_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/models/{version}/spectra": {
+    "/api/v1/models/{ref}/spectra": {
         parameters: {
             query?: never;
             header?: never;
@@ -465,7 +476,7 @@ export interface paths {
          * @description K, S, masstone and tinting strength of each paint (everything a client needs to run the
          *     forward model itself, together with ``GET /colorimetry``).
          */
-        get: operations["model_spectra_api_v1_models__version__spectra_get"];
+        get: operations["model_spectra_api_v1_models__ref__spectra_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -474,7 +485,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/models/{version}/gamut": {
+    "/api/v1/models/{ref}/gamut": {
         parameters: {
             query?: never;
             header?: never;
@@ -486,7 +497,7 @@ export interface paths {
          * @description Colour reachability of any model version (active or not): the a*b* boundary per L*
          *     slice, with each boundary point's display colour, for charting or comparing versions.
          */
-        get: operations["model_gamut_api_v1_models__version__gamut_get"];
+        get: operations["model_gamut_api_v1_models__ref__gamut_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -495,7 +506,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/models/{version}/gamut.svg": {
+    "/api/v1/models/{ref}/gamut.svg": {
         parameters: {
             query?: never;
             header?: never;
@@ -507,13 +518,59 @@ export interface paths {
          * @description The same gamut as a ready-to-view SVG: one a*b* panel per L* slice on a neutral grey
          *     surround, wedges coloured from neutral to the boundary colour.
          */
-        get: operations["model_gamut_svg_api_v1_models__version__gamut_svg_get"];
+        get: operations["model_gamut_svg_api_v1_models__ref__gamut_svg_get"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Lines */
+        get: operations["list_lines_api_v1_model_lines_get"];
+        put?: never;
+        /**
+         * New Line
+         * @description Create an empty line; fits and swatch models are added to it with ``"line": <id>``.
+         */
+        post: operations["new_line_api_v1_model_lines_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model-lines/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Model Line */
+        get: operations["get_model_line_api_v1_model_lines__slug__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Line
+         * @description Delete an empty line. Models are never deleted: move them out first.
+         */
+        delete: operations["delete_line_api_v1_model_lines__slug__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Line
+         * @description Rename or re-describe a line. Its id is fixed, so refs keep working.
+         */
+        patch: operations["update_line_api_v1_model_lines__slug__patch"];
         trace?: never;
     };
     "/api/v1/solve": {
@@ -1113,6 +1170,16 @@ export interface components {
              * @default
              */
             notes?: string;
+            /**
+             * Line
+             * @description Model line (its id) to add the new version to; must exist. Default: 'default'
+             */
+            line?: string | null;
+            /**
+             * Label
+             * @default
+             */
+            label?: string;
         };
         /** FitRunRead */
         FitRunRead: {
@@ -1380,8 +1447,33 @@ export interface components {
         };
         /** ModelDetail */
         ModelDetail: {
-            /** Version */
+            /**
+             * Version
+             * @description Global version number, unique across all lines
+             */
             version: number;
+            /**
+             * Ref
+             * @description line@revision; usable wherever the API takes a model
+             */
+            ref: string;
+            /**
+             * Line
+             * @description Id of the model line this version belongs to
+             */
+            line: string;
+            /** Line Name */
+            line_name: string;
+            /**
+             * Revision
+             * @description Sequence number within the line
+             */
+            revision: number;
+            /**
+             * Label
+             * @description Editable display name of this version
+             */
+            label: string;
             /** Active */
             active: boolean;
             /**
@@ -1420,6 +1512,101 @@ export interface components {
             /** Residuals */
             residuals: components["schemas"]["ResidualOut"][];
         };
+        /** ModelLineCreate */
+        ModelLineCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Slug
+             * @description Id used in refs (a-z, 0-9, '-'); default: derived from the name
+             */
+            slug?: string | null;
+            /**
+             * Description
+             * @default
+             */
+            description?: string;
+        };
+        /** ModelLineDetail */
+        ModelLineDetail: {
+            /** Slug */
+            slug: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** N Versions */
+            n_versions: number;
+            /**
+             * Current Version
+             * @description What the bare line id resolves to: newest calibrated revision, else newest
+             */
+            current_version: number | null;
+            /** Current Ref */
+            current_ref: string | null;
+            /**
+             * Active Version
+             * @description The active model, if it is in this line
+             */
+            active_version: number | null;
+            /**
+             * Versions
+             * @description Newest revision first
+             */
+            versions: components["schemas"]["ModelSummary"][];
+        };
+        /** ModelLinePatch */
+        ModelLinePatch: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+        };
+        /** ModelLineSummary */
+        ModelLineSummary: {
+            /** Slug */
+            slug: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** N Versions */
+            n_versions: number;
+            /**
+             * Current Version
+             * @description What the bare line id resolves to: newest calibrated revision, else newest
+             */
+            current_version: number | null;
+            /** Current Ref */
+            current_ref: string | null;
+            /**
+             * Active Version
+             * @description The active model, if it is in this line
+             */
+            active_version: number | null;
+        };
+        /** ModelPatch */
+        ModelPatch: {
+            /** Label */
+            label?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Line
+             * @description Move to this line; the version gets that line's next revision
+             */
+            line?: string | null;
+        };
         /** ModelSpectra */
         ModelSpectra: {
             /** Version */
@@ -1443,8 +1630,33 @@ export interface components {
         };
         /** ModelSummary */
         ModelSummary: {
-            /** Version */
+            /**
+             * Version
+             * @description Global version number, unique across all lines
+             */
             version: number;
+            /**
+             * Ref
+             * @description line@revision; usable wherever the API takes a model
+             */
+            ref: string;
+            /**
+             * Line
+             * @description Id of the model line this version belongs to
+             */
+            line: string;
+            /** Line Name */
+            line_name: string;
+            /**
+             * Revision
+             * @description Sequence number within the line
+             */
+            revision: number;
+            /**
+             * Label
+             * @description Editable display name of this version
+             */
+            label: string;
             /** Active */
             active: boolean;
             /**
@@ -2074,6 +2286,16 @@ export interface components {
              * @default
              */
             notes?: string;
+            /**
+             * Line
+             * @description Model line (its id) to add the new version to; must exist. Default: 'default'
+             */
+            line?: string | null;
+            /**
+             * Label
+             * @default
+             */
+            label?: string;
         };
         /** SwatchModelResult */
         SwatchModelResult: {
@@ -3639,7 +3861,10 @@ export interface operations {
     };
     list_models_api_v1_models_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Only versions of this model line */
+                line?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -3782,12 +4007,13 @@ export interface operations {
             };
         };
     };
-    get_model_api_v1_models__version__get: {
+    get_model_api_v1_models__ref__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                version: number;
+                /** @description Model ref: global version (12), line id (current model), line@3 or line@latest */
+                ref: string;
             };
             cookie?: never;
         };
@@ -3831,12 +4057,67 @@ export interface operations {
             };
         };
     };
-    activate_model_api_v1_models__version__activate_post: {
+    update_model_api_v1_models__ref__patch: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                version: number;
+                /** @description Model ref: global version (12), line id (current model), line@3 or line@latest */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelSummary"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    activate_model_api_v1_models__ref__activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Model ref: global version (12), line id (current model), line@3 or line@latest */
+                ref: string;
             };
             cookie?: never;
         };
@@ -3880,15 +4161,16 @@ export interface operations {
             };
         };
     };
-    model_spectra_api_v1_models__version__spectra_get: {
+    model_spectra_api_v1_models__ref__spectra_get: {
         parameters: {
             query?: {
-                /** @description Model version to compare tinting strength against (relative %) */
-                reference_version?: number | null;
+                /** @description Model ref to compare tinting strength against (relative %) */
+                reference_version?: string | null;
             };
             header?: never;
             path: {
-                version: number;
+                /** @description Model ref: global version (12), line id (current model), line@3 or line@latest */
+                ref: string;
             };
             cookie?: never;
         };
@@ -3932,7 +4214,7 @@ export interface operations {
             };
         };
     };
-    model_gamut_api_v1_models__version__gamut_get: {
+    model_gamut_api_v1_models__ref__gamut_get: {
         parameters: {
             query?: {
                 /** @description Comma-separated paint ids; default = every paint in the model */
@@ -3942,7 +4224,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                version: number;
+                /** @description Model ref: global version (12), line id (current model), line@3 or line@latest */
+                ref: string;
             };
             cookie?: never;
         };
@@ -3986,7 +4269,7 @@ export interface operations {
             };
         };
     };
-    model_gamut_svg_api_v1_models__version__gamut_svg_get: {
+    model_gamut_svg_api_v1_models__ref__gamut_svg_get: {
         parameters: {
             query?: {
                 /** @description Comma-separated paint ids; default = every paint in the model */
@@ -4000,7 +4283,8 @@ export interface operations {
             };
             header?: never;
             path: {
-                version: number;
+                /** @description Model ref: global version (12), line id (current model), line@3 or line@latest */
+                ref: string;
             };
             cookie?: never;
         };
@@ -4013,6 +4297,253 @@ export interface operations {
                 };
                 content: {
                     "image/svg+xml": unknown;
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_lines_api_v1_model_lines_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelLineSummary"][];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    new_line_api_v1_model_lines_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelLineCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelLineDetail"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_model_line_api_v1_model_lines__slug__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelLineDetail"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_line_api_v1_model_lines__slug__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_line_api_v1_model_lines__slug__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelLinePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelLineDetail"];
                 };
             };
             /** @description Not found */
