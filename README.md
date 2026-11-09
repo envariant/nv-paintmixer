@@ -192,7 +192,9 @@ about 16 dE2000.
 
 ## Explore mixes of several paints
 
-`POST /api/v1/ramp` previews one paint into another (e.g. a tint ladder into white).
+`POST /api/v1/ramp` previews one paint into another, defaulting to white. Its `log` scale gives a
+tint ladder (the same dilution factor at every step). It is a shortcut built on the multimix
+code: a `linear` ramp of n steps equals a two-paint multimix with `divisions` n − 1.
 `POST /api/v1/multimix` previews whole arrays of mixes of 2–6 paints:
 
 ```bash

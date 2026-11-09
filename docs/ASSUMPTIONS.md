@@ -147,3 +147,7 @@ introduced it.
   duplicates (1:1 and 2:2), so the N-D shape stays intact. Cap: 10,000 cells per request. The
   layout puts paint j at angle 90° + j·360°/k on the unit circle (two paints: a horizontal
   line), a display aid only. Predictions are opaque films, like ramps and the solver.
+- **Ramp vs multimix** `/ramp` is kept as the shortcut for two-paint previews (it defaults to the
+  model's white and offers log tint ladders), but it is computed by the multimix code, so there
+  is one prediction path. A linear ramp of n steps is identical to a two-paint simplex with
+  n − 1 divisions; a test checks this.

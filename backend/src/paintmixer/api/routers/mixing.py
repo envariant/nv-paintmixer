@@ -161,7 +161,12 @@ def predict_mixture(body: PredictRequest, session: SessionDep) -> PredictRespons
 
 @router.post("/ramp", response_model=RampResponse)
 def palette_ramp(body: RampRequest, session: SessionDep) -> RampResponse:
-    """Predicted swatches mixing paint A into paint B (default: white, i.e. a tint ladder)."""
+    """Predicted swatches mixing paint A into paint B (default: white, i.e. a tint ladder).
+
+    A shortcut for the commonest two-paint preview. ``scale: "log"`` dilutes paint A by the same
+    factor at every step (a tint ladder); a ``linear`` ramp of ``n`` steps equals
+    ``POST /multimix`` with these two paints and ``divisions = n - 1``.
+    """
     fm = active_model(session)
     roles = {p.id: p.role for p in all_paints(session)}
     b = body.paint_b

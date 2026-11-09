@@ -523,6 +523,10 @@ export interface paths {
         /**
          * Palette Ramp
          * @description Predicted swatches mixing paint A into paint B (default: white, i.e. a tint ladder).
+         *
+         *     A shortcut for the commonest two-paint preview. ``scale: "log"`` dilutes paint A by the same
+         *     factor at every step (a tint ladder); a ``linear`` ramp of ``n`` steps equals
+         *     ``POST /multimix`` with these two paints and ``divisions = n - 1``.
          */
         post: operations["palette_ramp_api_v1_ramp_post"];
         delete?: never;
