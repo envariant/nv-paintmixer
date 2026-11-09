@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import numpy as np
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse, PlainTextResponse
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request
 from paintmixer.api.schemas import WorksheetRequest, WorksheetResponse
-from paintmixer.api.services import all_paints, load_settings, paint_info
+from paintmixer.api.services import all_paints, km_of, load_settings, paint_info
+from paintmixer.db import models as m
 from paintmixer.domain import PaintInfo
 from paintmixer.worksheet.plan import WorksheetOptions, WorksheetPlan, plan_worksheet
+from paintmixer.worksheet.preview import preview_plan
 from paintmixer.worksheet.render import plan_to_csv, plan_to_dict, plan_to_html
 
 router = APIRouter(prefix="/worksheet", tags=["worksheet"], responses=ERROR_RESPONSES)
@@ -51,8 +54,28 @@ def _plan(body: WorksheetRequest, session: Session) -> tuple[WorksheetPlan, dict
 
 @router.post("", response_model=WorksheetResponse)
 def generate_worksheet(body: WorksheetRequest, session: SessionDep) -> WorksheetResponse:
+    """Plan the drawdowns. When an active model covers the paints, every row also gets the
+    colour it is expected to show on its background (finite film at the drawdown's gap)."""
     plan, infos = _plan(body, session)
-    return WorksheetResponse.model_validate(plan_to_dict(plan, infos))
+    data = plan_to_dict(plan, infos)
+    fm = session.exec(select(m.FittedModel).where(col(m.FittedModel.active))).first()
+    if fm is not None:
+        prev = preview_plan(
+            plan,
+            km_of(fm),
+            fm.paint_ids,
+            np.array(fm.tau),
+            np.array(fm.substrate_white),
+            np.array(fm.substrate_black),
+        )
+        for row in data["rows"]:
+            p = prev.get(row["sample_id"])
+            if p is not None:
+                row["predicted_hex"] = p.hex
+                row["predicted_lab"] = [round(x, 3) for x in p.lab]
+        data["preview_model_version"] = fm.version
+        data["preview_model_source"] = fm.source
+    return WorksheetResponse.model_validate(data)
 
 
 @router.post("/csv", response_class=PlainTextResponse)

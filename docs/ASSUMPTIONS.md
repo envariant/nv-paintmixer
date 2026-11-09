@@ -132,3 +132,7 @@ introduced it.
   Such models are stored with `source = "swatches"`, and every solve/predict reports it with
   a warning. They have no hold-out report. Their film-thickness scale and substrates are
   synthetic defaults, used only for worksheet previews.
+- **Ramps / previews** Ramps are opaque-film predictions, like the solver's. Worksheet row
+  previews use the finite-layer model at the drawdown's gap over the active model's substrates,
+  so -W and -B rows differ wherever the film isn't hiding. Rows whose paints aren't in the
+  active model have no preview.

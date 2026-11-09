@@ -116,3 +116,6 @@ Progress notes per milestone are appended below as work completes.
 - **Swatch models** `calibration.swatch` + `POST /models/from-swatches`: uncalibrated model from
   masstone/tint swatch colours (migration `0003`: paint `swatch_hex`/`tint_hex`/`tint_fraction`,
   model `source`); solve/predict/health report the model source and warn.
+- **Ramps and worksheet preview** `solver.ramp` + `POST /ramp` (linear or log tint ladders
+  between two paints, default into white); `POST /worksheet` rows carry `predicted_hex/lab`
+  from the active model (finite film at the drawdown's gap over the model's substrates).

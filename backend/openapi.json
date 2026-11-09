@@ -944,6 +944,7 @@
           "worksheet"
         ],
         "summary": "Generate Worksheet",
+        "description": "Plan the drawdowns. When an active model covers the paints, every row also gets the\ncolour it is expected to show on its background (finite film at the drawdown's gap).",
         "operationId": "generate_worksheet_api_v1_worksheet_post",
         "requestBody": {
           "content": {
@@ -2192,6 +2193,68 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PredictResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ramp": {
+      "post": {
+        "tags": [
+          "mixing"
+        ],
+        "summary": "Palette Ramp",
+        "description": "Predicted swatches mixing paint A into paint B (default: white, i.e. a tint ladder).",
+        "operationId": "palette_ramp_api_v1_ramp_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RampRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RampResponse"
                 }
               }
             }
@@ -5372,6 +5435,132 @@
         ],
         "title": "PredictResponse"
       },
+      "RampRequest": {
+        "properties": {
+          "paint_a": {
+            "type": "string",
+            "title": "Paint A"
+          },
+          "paint_b": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paint B",
+            "description": "Default: the active model's first white"
+          },
+          "steps": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 2.0,
+            "title": "Steps",
+            "default": 9
+          },
+          "scale": {
+            "type": "string",
+            "enum": [
+              "linear",
+              "log"
+            ],
+            "title": "Scale",
+            "description": "log: paint A diluted by the same factor each step (tint ladder)",
+            "default": "linear"
+          },
+          "min_fraction": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Min Fraction",
+            "description": "Last fraction of A for log",
+            "default": 0.01
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "paint_a"
+        ],
+        "title": "RampRequest"
+      },
+      "RampResponse": {
+        "properties": {
+          "paint_a": {
+            "type": "string",
+            "title": "Paint A"
+          },
+          "paint_b": {
+            "type": "string",
+            "title": "Paint B"
+          },
+          "model_version": {
+            "type": "integer",
+            "title": "Model Version"
+          },
+          "model_source": {
+            "type": "string",
+            "title": "Model Source"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/RampStepOut"
+            },
+            "type": "array",
+            "title": "Steps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paint_a",
+          "paint_b",
+          "model_version",
+          "model_source",
+          "steps"
+        ],
+        "title": "RampResponse"
+      },
+      "RampStepOut": {
+        "properties": {
+          "fraction_a": {
+            "type": "number",
+            "title": "Fraction A"
+          },
+          "lab": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Lab"
+          },
+          "hex": {
+            "type": "string",
+            "title": "Hex"
+          },
+          "out_of_srgb_gamut": {
+            "type": "boolean",
+            "title": "Out Of Srgb Gamut"
+          },
+          "spectrum": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Spectrum"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fraction_a",
+          "lab",
+          "hex",
+          "out_of_srgb_gamut",
+          "spectrum"
+        ],
+        "title": "RampStepOut"
+      },
       "ResidualOut": {
         "properties": {
           "sample_id": {
@@ -6491,6 +6680,28 @@
       },
       "WorksheetResponse": {
         "properties": {
+          "preview_model_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Model Version"
+          },
+          "preview_model_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Model Source"
+          },
           "options": {
             "additionalProperties": true,
             "type": "object",
@@ -6587,6 +6798,32 @@
           "notes": {
             "type": "string",
             "title": "Notes"
+          },
+          "predicted_hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Hex",
+            "description": "Expected colour on this background (active model), if available"
+          },
+          "predicted_lab": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Lab"
           }
         },
         "type": "object",

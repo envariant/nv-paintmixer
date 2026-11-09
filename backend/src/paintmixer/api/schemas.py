@@ -266,6 +266,10 @@ class WorksheetRow(_Out):
     type: str
     substrate: str
     notes: str
+    predicted_hex: str | None = Field(
+        None, description="Expected colour on this background (active model), if available"
+    )
+    predicted_lab: list[float] | None = None
 
 
 class LowMassOut(_Out):
@@ -284,6 +288,8 @@ class WorksheetPaint(_Out):
 
 
 class WorksheetResponse(_Out):
+    preview_model_version: int | None = None
+    preview_model_source: str | None = None
     options: dict[str, Any]
     warnings: list[str]
     n_drawdowns: int
@@ -570,6 +576,32 @@ class GamutResponse(_Out):
     n_samples: int
     slices: list[GamutSliceOut]
     model_version: int
+
+
+class RampRequest(_Model):
+    paint_a: str
+    paint_b: str | None = Field(None, description="Default: the active model's first white")
+    steps: int = Field(9, ge=2, le=50)
+    scale: Literal["linear", "log"] = Field(
+        "linear", description="log: paint A diluted by the same factor each step (tint ladder)"
+    )
+    min_fraction: float = Field(0.01, gt=0, lt=1, description="Last fraction of A for log")
+
+
+class RampStepOut(_Out):
+    fraction_a: float
+    lab: list[float]
+    hex: str
+    out_of_srgb_gamut: bool
+    spectrum: Spectrum
+
+
+class RampResponse(_Out):
+    paint_a: str
+    paint_b: str
+    model_version: int
+    model_source: str
+    steps: list[RampStepOut]
 
 
 class Health(_Out):

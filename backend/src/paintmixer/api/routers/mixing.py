@@ -19,17 +19,23 @@ from paintmixer.api.schemas import (
     GamutSliceOut,
     PredictRequest,
     PredictResponse,
+    RampRequest,
+    RampResponse,
+    RampStepOut,
     SolveRequest,
     SolveResponse,
 )
 from paintmixer.api.services import (
     ILLUMINANTS_REPORTED,
+    active_model,
+    all_paints,
     load_settings,
     pool_model,
     resolve_target,
 )
 from paintmixer.colorsci.convert import reflectance_to_lab, reflectance_to_srgb, srgb_to_hex
 from paintmixer.colorsci.spectral import WAVELENGTHS
+from paintmixer.solver.ramp import ramp, ramp_fractions
 from paintmixer.solver.refine import Weights
 from paintmixer.solver.solve import Candidate, SolveOptions, gamut_for, predict, solve
 
@@ -140,6 +146,43 @@ def predict_mixture(body: PredictRequest, session: SessionDep) -> PredictRespons
         out_of_srgb_gamut=bool(srgb.out_of_gamut),
         model_version=fm.version,
         model_source=fm.source,
+    )
+
+
+@router.post("/ramp", response_model=RampResponse)
+def palette_ramp(body: RampRequest, session: SessionDep) -> RampResponse:
+    """Predicted swatches mixing paint A into paint B (default: white, i.e. a tint ladder)."""
+    fm = active_model(session)
+    roles = {p.id: p.role for p in all_paints(session)}
+    b = body.paint_b
+    if b is None:
+        whites = [p for p in fm.paint_ids if roles.get(p) == "white"]
+        if not whites:
+            raise bad_request("no_white", "the active model has no white; give paint_b")
+        b = whites[0]
+    if b == body.paint_a:
+        raise bad_request("same_paint", "paint_a and paint_b must differ")
+    model, fm = pool_model(session, [body.paint_a, b])
+    try:
+        fr = ramp_fractions(body.steps, body.scale, body.min_fraction)
+    except ValueError as e:
+        raise bad_request("bad_ramp", str(e)) from e
+    steps = ramp(model.km, 0, 1, fr)
+    return RampResponse(
+        paint_a=body.paint_a,
+        paint_b=b,
+        model_version=fm.version,
+        model_source=fm.source,
+        steps=[
+            RampStepOut(
+                fraction_a=round(s.fraction_a, 6),
+                lab=[round(x, 4) for x in s.lab],
+                hex=s.hex,
+                out_of_srgb_gamut=s.out_of_srgb_gamut,
+                spectrum=s.reflectance.round(6).tolist(),
+            )
+            for s in steps
+        ],
     )
 
 

@@ -163,7 +163,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Generate Worksheet */
+        /**
+         * Generate Worksheet
+         * @description Plan the drawdowns. When an active model covers the paints, every row also gets the
+         *     colour it is expected to show on its background (finite film at the drawdown's gap).
+         */
         post: operations["generate_worksheet_api_v1_worksheet_post"];
         delete?: never;
         options?: never;
@@ -480,6 +484,26 @@ export interface paths {
          * @description Forward model: predicted opaque-film spectrum and colour of a given mixture.
          */
         post: operations["predict_mixture_api_v1_predict_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ramp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Palette Ramp
+         * @description Predicted swatches mixing paint A into paint B (default: white, i.e. a tint ladder).
+         */
+        post: operations["palette_ramp_api_v1_ramp_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1579,6 +1603,60 @@ export interface components {
              */
             model_source?: "calibration" | "swatches";
         };
+        /** RampRequest */
+        RampRequest: {
+            /** Paint A */
+            paint_a: string;
+            /**
+             * Paint B
+             * @description Default: the active model's first white
+             */
+            paint_b?: string | null;
+            /**
+             * Steps
+             * @default 9
+             */
+            steps?: number;
+            /**
+             * Scale
+             * @description log: paint A diluted by the same factor each step (tint ladder)
+             * @default linear
+             * @enum {string}
+             */
+            scale?: "linear" | "log";
+            /**
+             * Min Fraction
+             * @description Last fraction of A for log
+             * @default 0.01
+             */
+            min_fraction?: number;
+        };
+        /** RampResponse */
+        RampResponse: {
+            /** Paint A */
+            paint_a: string;
+            /** Paint B */
+            paint_b: string;
+            /** Model Version */
+            model_version: number;
+            /** Model Source */
+            model_source: string;
+            /** Steps */
+            steps: components["schemas"]["RampStepOut"][];
+        };
+        /** RampStepOut */
+        RampStepOut: {
+            /** Fraction A */
+            fraction_a: number;
+            /** Lab */
+            lab: number[];
+            /** Hex */
+            hex: string;
+            /** Out Of Srgb Gamut */
+            out_of_srgb_gamut: boolean;
+            /** Spectrum */
+            spectrum: number[];
+        };
         /** ResidualOut */
         ResidualOut: {
             /** Sample Id */
@@ -1983,6 +2061,10 @@ export interface components {
         };
         /** WorksheetResponse */
         WorksheetResponse: {
+            /** Preview Model Version */
+            preview_model_version?: number | null;
+            /** Preview Model Source */
+            preview_model_source?: string | null;
             /** Options */
             options: {
                 [key: string]: unknown;
@@ -2022,6 +2104,13 @@ export interface components {
             substrate: string;
             /** Notes */
             notes: string;
+            /**
+             * Predicted Hex
+             * @description Expected colour on this background (active model), if available
+             */
+            predicted_hex?: string | null;
+            /** Predicted Lab */
+            predicted_lab?: number[] | null;
         };
     };
     responses: never;
@@ -3682,6 +3771,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PredictResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    palette_ramp_api_v1_ramp_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RampRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RampResponse"];
                 };
             };
             /** @description Not found */
