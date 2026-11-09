@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi.testclient import TestClient
 
 from tests.api_helpers import fit, import_paints, upload_calibration
@@ -333,7 +335,61 @@ def test_colorimetry_endpoint_matches_backend(client: TestClient) -> None:
     np.testing.assert_allclose(c["illuminants"]["A"]["white"], white_point("A"), atol=1e-12)
 
 
+def _fixture_diffs(a: object, b: object, path: str = "$") -> list[str]:
+    """Paths where two parsed fixtures differ. Floats match within 1e-9 (relative above 1):
+    the last bits of NumPy sums vary between CPUs (SIMD paths), which can flip the fixture's
+    12th decimal on a CI runner. The browser check itself uses 1e-9, so that is the contract."""
+    if isinstance(a, dict) and isinstance(b, dict):
+        if a.keys() != b.keys():
+            return [f"{path}: keys {sorted(a.keys() ^ b.keys())}"]
+        return [d for k in a for d in _fixture_diffs(a[k], b[k], f"{path}.{k}")]
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            return [f"{path}: length {len(a)} != {len(b)}"]
+        return [
+            d
+            for i, (x, y) in enumerate(zip(a, b, strict=True))
+            for d in _fixture_diffs(x, y, f"{path}[{i}]")
+        ]
+    numbers = (int, float)
+    if isinstance(a, numbers) and isinstance(b, numbers) and not isinstance(a, bool):
+        return [] if abs(a - b) <= 1e-9 * max(1.0, abs(a)) else [f"{path}: {a} != {b}"]
+    return [] if a == b else [f"{path}: {a!r} != {b!r}"]
+
+
 def test_parity_fixture_is_current() -> None:
+    import json
+
     from paintmixer.parity import FIXTURE, fixture_json
 
-    assert FIXTURE.read_text() == fixture_json(), "run `uv run paintmixer parity-fixture`"
+    diffs = _fixture_diffs(json.loads(FIXTURE.read_text()), json.loads(fixture_json()))
+    assert not diffs, f"run `uv run paintmixer parity-fixture`: {diffs[:5]}"
+
+
+def test_fixture_diffs_tolerate_only_last_bits() -> None:
+    import copy
+    import json
+
+    from paintmixer.parity import FIXTURE
+
+    base = json.loads(FIXTURE.read_text())
+    bumped = copy.deepcopy(base)
+    bumped["ramp"]["lab"][3][0] += 1e-12  # the CI failure: another CPU's rounding
+    assert _fixture_diffs(base, bumped) == []
+
+    def lab_off(f: dict[str, Any]) -> None:
+        f["ramp"]["lab"][3][0] += 1e-6
+
+    def hex_off(f: dict[str, Any]) -> None:
+        f["ramp"]["hex"][0] = "#000000"
+
+    def shorter(f: dict[str, Any]) -> None:
+        f["ramp"]["fractions"].pop()
+
+    def missing(f: dict[str, Any]) -> None:
+        f.pop("ramp")
+
+    for change in (lab_off, hex_off, shorter, missing):
+        broken = copy.deepcopy(base)
+        change(broken)
+        assert _fixture_diffs(base, broken), change.__name__
