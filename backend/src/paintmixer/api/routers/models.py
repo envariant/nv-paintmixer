@@ -3,23 +3,28 @@
 from __future__ import annotations
 
 import numpy as np
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from sqlmodel import Session, col, select
 
+from paintmixer.api.compute import run_compute
 from paintmixer.api.deps import SessionDep
-from paintmixer.api.errors import ERROR_RESPONSES, not_found
+from paintmixer.api.errors import ERROR_RESPONSES, bad_request, not_found
 from paintmixer.api.schemas import (
     ModelDetail,
     ModelSpectra,
     ModelSummary,
     PaintSpectra,
     StrengthOut,
+    SwatchModelRequest,
+    SwatchModelResult,
 )
-from paintmixer.api.services import all_paints, km_of, model_strengths
+from paintmixer.api.services import all_paints, km_of, load_settings, model_strengths
 from paintmixer.calibration.strength import PaintStrength, with_relative
-from paintmixer.colorsci.convert import reflectance_to_srgb, srgb_to_hex
+from paintmixer.calibration.swatch import SwatchError, SwatchPaint, model_from_swatches
+from paintmixer.colorsci.convert import hex_to_srgb, reflectance_to_srgb, srgb_to_hex, srgb_to_lab
 from paintmixer.colorsci.spectral import WAVELENGTHS
 from paintmixer.db import models as m
+from paintmixer.domain import PaintRole
 
 router = APIRouter(prefix="/models", tags=["models"], responses=ERROR_RESPONSES)
 
@@ -48,6 +53,7 @@ def _summary(fm: m.FittedModel) -> dict[str, object]:
     return {
         "version": fm.version,
         "active": fm.active,
+        "source": fm.source,
         "created_at": fm.created_at,
         "paint_ids": fm.paint_ids,
         "n_samples": fm.n_samples,
@@ -73,6 +79,95 @@ def get_active(session: SessionDep) -> ModelDetail:
     if fm is None:
         raise not_found("active model", "active")
     return get_model(fm.version, session)
+
+
+@router.post("/from-swatches", response_model=SwatchModelResult, status_code=201)
+async def model_from_swatch_colours(
+    body: SwatchModelRequest, session: SessionDep, request: Request
+) -> SwatchModelResult:
+    """Build an **uncalibrated** model from each paint's swatch colours (``swatch_hex``, and
+    optionally ``tint_hex`` / ``tint_fraction``), so recipes can be tried before calibrating.
+    Expect several dE2000 of error; see docs/ASSUMPTIONS.md."""
+    paints = {p.id: p for p in all_paints(session)}
+    if body.paint_ids is None:
+        ids = [p.id for p in paints.values() if p.active and p.swatch_hex]
+    else:
+        ids = body.paint_ids
+    unknown = [i for i in ids if i not in paints]
+    if unknown:
+        raise bad_request("unknown_paint", f"unknown paint ids: {', '.join(unknown)}")
+    missing = [i for i in ids if not paints[i].swatch_hex]
+    if missing:
+        raise bad_request(
+            "missing_swatch", f"paints without swatch_hex: {', '.join(missing)}", missing
+        )
+    if not ids:
+        raise bad_request("empty_pool", "no paints with swatch colours")
+    swatches = [
+        SwatchPaint(
+            p.id,
+            PaintRole(p.role),
+            srgb_to_lab(hex_to_srgb(p.swatch_hex or "")),
+            srgb_to_lab(hex_to_srgb(p.tint_hex)) if p.tint_hex else None,
+            p.tint_fraction or 0.1,
+        )
+        for p in (paints[i] for i in ids)
+    ]
+    s = load_settings(session)
+    try:
+        sm = await run_compute(
+            request.app,
+            model_from_swatches,
+            swatches,
+            k1=s.saunderson_k1,
+            k2=s.saunderson_k2,
+            default_scattering=body.default_scattering,
+        )
+    except SwatchError as e:
+        raise bad_request("swatch_model_failed", str(e)) from e
+    last = session.exec(select(m.FittedModel).order_by(col(m.FittedModel.version).desc())).first()
+    if body.activate:
+        for other in session.exec(select(m.FittedModel).where(col(m.FittedModel.active))).all():
+            other.active = False
+            session.add(other)
+    fm = m.FittedModel(
+        version=(last.version if last else 0) + 1,
+        active=body.activate,
+        source="swatches",
+        paint_ids=sm.paint_ids,
+        K=np.round(sm.K, 7).tolist(),
+        S=np.round(sm.S, 7).tolist(),
+        tau=np.round(sm.tau, 9).tolist(),
+        k1=sm.k1,
+        k2=sm.k2,
+        substrate_white=np.round(sm.substrate_white, 6).tolist(),
+        substrate_black=np.round(sm.substrate_black, 6).tolist(),
+        diagnostics={
+            "warnings": sm.warnings,
+            "scattering_source": sm.scattering_source,
+            "tint_match_de": sm.tint_match_de,
+        },
+        holdout_report={
+            "method": "none",
+            "n_samples": 0,
+            "mean_de": None,
+            "median_de": None,
+            "p95_de": None,
+            "max_de": None,
+            "mean_rms": None,
+            "noise_floor_mean_de": None,
+        },
+        notes=body.notes or "uncalibrated: built from swatch colours",
+    )
+    session.add(fm)
+    session.commit()
+    session.refresh(fm)
+    return SwatchModelResult(
+        model=ModelSummary.model_validate(_summary(fm)),
+        scattering_source=sm.scattering_source,
+        tint_match_de={k: round(v, 3) for k, v in sm.tint_match_de.items()},
+        warnings=sm.warnings,
+    )
 
 
 @router.get("/{version}", response_model=ModelDetail)

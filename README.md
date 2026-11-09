@@ -173,6 +173,23 @@ The same calibration can be fitted offline:
 cd backend && uv run paintmixer fit ../sample_data/calibration_pool9.csv --paints ../sample_data/paints.csv
 ```
 
+## Try it before calibrating
+
+Calibration means making and measuring dozens of drawdowns. To explore recipes first, give each
+paint its colour-card swatches: `swatch_hex` (the opaque masstone chip) and optionally
+`tint_hex` with `tint_fraction` (the paint reduced with white, e.g. 0.1 for 1:9). The sample
+`paints.csv` already has them. Then build an uncalibrated model:
+
+```bash
+curl -s -X POST $API/models/from-swatches -H 'content-type: application/json' -d '{}'
+```
+
+Spectra are reconstructed from the colours, so this is a metameric guess. On the synthetic set
+it is about 4 dE2000 off on mixtures (median; 9 dE2000 at the 90th percentile), versus ~0.25
+for a calibrated model. Every solve result says `"model_source": "swatches"` and carries a
+warning. Tint swatches matter: without them, scattering is assumed and the 90th percentile is
+about 16 dE2000.
+
 ## Check a new instrument
 
 Before the first calibration with a spectrophotometer, run the self-test:

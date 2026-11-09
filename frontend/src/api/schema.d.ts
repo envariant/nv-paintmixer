@@ -372,6 +372,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models/from-swatches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Model From Swatch Colours
+         * @description Build an **uncalibrated** model from each paint's swatch colours (``swatch_hex``, and
+         *     optionally ``tint_hex`` / ``tint_fraction``), so recipes can be tried before calibrating.
+         *     Expect several dE2000 of error; see docs/ASSUMPTIONS.md.
+         */
+        post: operations["model_from_swatch_colours_api_v1_models_from_swatches_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/models/{version}": {
         parameters: {
             query?: never;
@@ -1036,6 +1058,8 @@ export interface components {
             version: string;
             /** Active Model Version */
             active_model_version: number | null;
+            /** Active Model Source */
+            active_model_source?: ("calibration" | "swatches") | null;
         };
         /** HoldoutOut */
         HoldoutOut: {
@@ -1188,6 +1212,13 @@ export interface components {
             /** Active */
             active: boolean;
             /**
+             * Source
+             * @description calibration: fitted from measurements; swatches: uncalibrated
+             * @default calibration
+             * @enum {string}
+             */
+            source?: "calibration" | "swatches";
+            /**
              * Created At
              * Format: date-time
              */
@@ -1243,6 +1274,13 @@ export interface components {
             version: number;
             /** Active */
             active: boolean;
+            /**
+             * Source
+             * @description calibration: fitted from measurements; swatches: uncalibrated
+             * @default calibration
+             * @enum {string}
+             */
+            source?: "calibration" | "swatches";
             /**
              * Created At
              * Format: date-time
@@ -1326,6 +1364,21 @@ export interface components {
              * @default
              */
             notes?: string;
+            /**
+             * Swatch Hex
+             * @description Masstone swatch colour (for the uncalibrated model)
+             */
+            swatch_hex?: string | null;
+            /**
+             * Tint Hex
+             * @description Tint swatch colour: the paint reduced with white
+             */
+            tint_hex?: string | null;
+            /**
+             * Tint Fraction
+             * @description Paint volume fraction in the tint swatch (default 0.1)
+             */
+            tint_fraction?: number | null;
             /** Id */
             id: string;
         };
@@ -1398,6 +1451,21 @@ export interface components {
              * @default
              */
             notes?: string;
+            /**
+             * Swatch Hex
+             * @description Masstone swatch colour (for the uncalibrated model)
+             */
+            swatch_hex?: string | null;
+            /**
+             * Tint Hex
+             * @description Tint swatch colour: the paint reduced with white
+             */
+            tint_hex?: string | null;
+            /**
+             * Tint Fraction
+             * @description Paint volume fraction in the tint swatch (default 0.1)
+             */
+            tint_fraction?: number | null;
             /** Id */
             id: string;
             /**
@@ -1474,6 +1542,12 @@ export interface components {
             active?: boolean | null;
             /** Notes */
             notes?: string | null;
+            /** Swatch Hex */
+            swatch_hex?: string | null;
+            /** Tint Hex */
+            tint_hex?: string | null;
+            /** Tint Fraction */
+            tint_fraction?: number | null;
         };
         /** PredictRequest */
         PredictRequest: {
@@ -1498,6 +1572,12 @@ export interface components {
             out_of_srgb_gamut: boolean;
             /** Model Version */
             model_version: number;
+            /**
+             * Model Source
+             * @default calibration
+             * @enum {string}
+             */
+            model_source?: "calibration" | "swatches";
         };
         /** ResidualOut */
         ResidualOut: {
@@ -1624,6 +1704,12 @@ export interface components {
             duration_s: number;
             /** Model Version */
             model_version: number;
+            /**
+             * Model Source
+             * @default calibration
+             * @enum {string}
+             */
+            model_source?: "calibration" | "swatches";
             /** Pool */
             pool: string[];
             /** Batch Volume Ml */
@@ -1674,6 +1760,44 @@ export interface components {
              * @description Relative tinting strength vs reference_version (100 = equal)
              */
             relative_pct?: number | null;
+        };
+        /** SwatchModelRequest */
+        SwatchModelRequest: {
+            /**
+             * Paint Ids
+             * @description Default: all active paints that have a swatch_hex
+             */
+            paint_ids?: string[] | null;
+            /**
+             * Activate
+             * @default true
+             */
+            activate?: boolean;
+            /**
+             * Default Scattering
+             * @description S relative to white for paints without a tint swatch
+             * @default 0.3
+             */
+            default_scattering?: number;
+            /**
+             * Notes
+             * @default
+             */
+            notes?: string;
+        };
+        /** SwatchModelResult */
+        SwatchModelResult: {
+            model: components["schemas"]["ModelSummary"];
+            /** Scattering Source */
+            scattering_source: {
+                [key: string]: "white" | "tint" | "assumed";
+            };
+            /** Tint Match De */
+            tint_match_de: {
+                [key: string]: number;
+            };
+            /** Warnings */
+            warnings: string[];
         };
         /**
          * TargetIn
@@ -3255,6 +3379,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelDetail"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    model_from_swatch_colours_api_v1_models_from_swatches_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwatchModelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwatchModelResult"];
                 };
             };
             /** @description Not found */

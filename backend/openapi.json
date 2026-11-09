@@ -1839,6 +1839,68 @@
         }
       }
     },
+    "/api/v1/models/from-swatches": {
+      "post": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Model From Swatch Colours",
+        "description": "Build an **uncalibrated** model from each paint's swatch colours (``swatch_hex``, and\noptionally ``tint_hex`` / ``tint_fraction``), so recipes can be tried before calibrating.\nExpect several dE2000 of error; see docs/ASSUMPTIONS.md.",
+        "operationId": "model_from_swatch_colours_api_v1_models_from_swatches_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwatchModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwatchModelResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/models/{version}": {
       "get": {
         "tags": [
@@ -3947,6 +4009,21 @@
               }
             ],
             "title": "Active Model Version"
+          },
+          "active_model_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "calibration",
+                  "swatches"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Model Source"
           }
         },
         "type": "object",
@@ -4330,6 +4407,16 @@
             "type": "boolean",
             "title": "Active"
           },
+          "source": {
+            "type": "string",
+            "enum": [
+              "calibration",
+              "swatches"
+            ],
+            "title": "Source",
+            "description": "calibration: fitted from measurements; swatches: uncalibrated",
+            "default": "calibration"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -4492,6 +4579,16 @@
             "type": "boolean",
             "title": "Active"
           },
+          "source": {
+            "type": "string",
+            "enum": [
+              "calibration",
+              "swatches"
+            ],
+            "title": "Source",
+            "description": "calibration: fitted from measurements; swatches: uncalibrated",
+            "default": "calibration"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -4652,6 +4749,46 @@
             "title": "Notes",
             "default": ""
           },
+          "swatch_hex": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Swatch Hex",
+            "description": "Masstone swatch colour (for the uncalibrated model)"
+          },
+          "tint_hex": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tint Hex",
+            "description": "Tint swatch colour: the paint reduced with white"
+          },
+          "tint_fraction": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tint Fraction",
+            "description": "Paint volume fraction in the tint swatch (default 0.1)"
+          },
           "id": {
             "type": "string",
             "maxLength": 64,
@@ -4795,6 +4932,46 @@
             "type": "string",
             "title": "Notes",
             "default": ""
+          },
+          "swatch_hex": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Swatch Hex",
+            "description": "Masstone swatch colour (for the uncalibrated model)"
+          },
+          "tint_hex": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tint Hex",
+            "description": "Tint swatch colour: the paint reduced with white"
+          },
+          "tint_fraction": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tint Fraction",
+            "description": "Paint volume fraction in the tint swatch (default 0.1)"
           },
           "id": {
             "type": "string",
@@ -5075,6 +5252,43 @@
               }
             ],
             "title": "Notes"
+          },
+          "swatch_hex": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Swatch Hex"
+          },
+          "tint_hex": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tint Hex"
+          },
+          "tint_fraction": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tint Fraction"
           }
         },
         "additionalProperties": false,
@@ -5136,6 +5350,15 @@
           "model_version": {
             "type": "integer",
             "title": "Model Version"
+          },
+          "model_source": {
+            "type": "string",
+            "enum": [
+              "calibration",
+              "swatches"
+            ],
+            "title": "Model Source",
+            "default": "calibration"
           }
         },
         "type": "object",
@@ -5569,6 +5792,15 @@
             "type": "integer",
             "title": "Model Version"
           },
+          "model_source": {
+            "type": "string",
+            "enum": [
+              "calibration",
+              "swatches"
+            ],
+            "title": "Model Source",
+            "default": "calibration"
+          },
           "pool": {
             "items": {
               "type": "string"
@@ -5686,6 +5918,87 @@
           "reduction_hex"
         ],
         "title": "StrengthOut"
+      },
+      "SwatchModelRequest": {
+        "properties": {
+          "paint_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paint Ids",
+            "description": "Default: all active paints that have a swatch_hex"
+          },
+          "activate": {
+            "type": "boolean",
+            "title": "Activate",
+            "default": true
+          },
+          "default_scattering": {
+            "type": "number",
+            "maximum": 5.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Default Scattering",
+            "description": "S relative to white for paints without a tint swatch",
+            "default": 0.3
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SwatchModelRequest"
+      },
+      "SwatchModelResult": {
+        "properties": {
+          "model": {
+            "$ref": "#/components/schemas/ModelSummary"
+          },
+          "scattering_source": {
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "white",
+                "tint",
+                "assumed"
+              ]
+            },
+            "type": "object",
+            "title": "Scattering Source"
+          },
+          "tint_match_de": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Tint Match De"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "scattering_source",
+          "tint_match_de",
+          "warnings"
+        ],
+        "title": "SwatchModelResult"
       },
       "TargetIn": {
         "properties": {

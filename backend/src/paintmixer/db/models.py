@@ -28,6 +28,10 @@ class Paint(SQLModel, table=True):
     dilution: float | None = None  # fraction of parent paint in a diluted stock
     active: bool = True
     notes: str = ""
+    # manufacturer swatches, used to build an uncalibrated "try it" model
+    swatch_hex: str | None = None  # masstone (opaque chip)
+    tint_hex: str | None = None  # reduction with white
+    tint_fraction: float | None = None  # paint volume fraction in the tint swatch
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 
@@ -93,6 +97,8 @@ class FittedModel(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     version: int = Field(index=True, unique=True)
     active: bool = Field(default=False, index=True)
+    # "calibration" (fitted from measurements) or "swatches" (uncalibrated, from swatch colours)
+    source: str = Field(default="calibration", sa_column_kwargs={"server_default": "calibration"})
     paint_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     K: list[list[float]] = Field(default_factory=list, sa_column=Column(JSON))
     S: list[list[float]] = Field(default_factory=list, sa_column=Column(JSON))

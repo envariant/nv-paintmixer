@@ -19,7 +19,12 @@ router = APIRouter(tags=["system"])
 @router.get("/health", response_model=Health)
 def health(session: SessionDep) -> Health:
     fm = session.exec(select(m.FittedModel).where(col(m.FittedModel.active))).first()
-    return Health(status="ok", version=__version__, active_model_version=fm.version if fm else None)
+    return Health(
+        status="ok",
+        version=__version__,
+        active_model_version=fm.version if fm else None,
+        active_model_source=fm.source if fm else None,
+    )
 
 
 @router.get("/settings", response_model=AppSettings)

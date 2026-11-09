@@ -11,6 +11,7 @@ from paintmixer.colorsci.spectral import N_BANDS, Illuminant
 from paintmixer.domain import PaintRole
 
 SLUG = r"^[a-z0-9][a-z0-9_.-]*$"
+HEX_PATTERN = r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
 Spectrum = list[float]
 
 
@@ -43,6 +44,15 @@ class PaintFields(_Model):
     dilution: float | None = Field(None, gt=0, lt=1, description="Fraction of parent in the stock")
     active: bool = True
     notes: str = ""
+    swatch_hex: str | None = Field(
+        None, pattern=HEX_PATTERN, description="Masstone swatch colour (for the uncalibrated model)"
+    )
+    tint_hex: str | None = Field(
+        None, pattern=HEX_PATTERN, description="Tint swatch colour: the paint reduced with white"
+    )
+    tint_fraction: float | None = Field(
+        None, gt=0, lt=1, description="Paint volume fraction in the tint swatch (default 0.1)"
+    )
 
 
 class PaintCreate(PaintFields):
@@ -63,6 +73,9 @@ class PaintUpdate(_Model):
     dilution: float | None = Field(None, gt=0, lt=1)
     active: bool | None = None
     notes: str | None = None
+    swatch_hex: str | None = Field(None, pattern=HEX_PATTERN)
+    tint_hex: str | None = Field(None, pattern=HEX_PATTERN)
+    tint_fraction: float | None = Field(None, gt=0, lt=1)
 
 
 class PaintRead(PaintFields):
@@ -378,9 +391,15 @@ class ResidualOut(_Out):
     noise_floor_de: float
 
 
+ModelSource = Literal["calibration", "swatches"]
+
+
 class ModelSummary(_Out):
     version: int
     active: bool
+    source: ModelSource = Field(
+        "calibration", description="calibration: fitted from measurements; swatches: uncalibrated"
+    )
     created_at: datetime
     paint_ids: list[str]
     n_samples: int
@@ -516,6 +535,7 @@ class SolveResponse(_Out):
     n_subsets: int
     duration_s: float
     model_version: int
+    model_source: ModelSource = "calibration"
     pool: list[str]
     batch_volume_ml: float
     illuminant: str
@@ -532,6 +552,7 @@ class PredictResponse(_Out):
     hex: str
     out_of_srgb_gamut: bool
     model_version: int
+    model_source: ModelSource = "calibration"
 
 
 class GamutSliceOut(_Out):
@@ -555,6 +576,25 @@ class Health(_Out):
     status: str
     version: str
     active_model_version: int | None
+    active_model_source: ModelSource | None = None
+
+
+class SwatchModelRequest(_Model):
+    paint_ids: list[str] | None = Field(
+        None, description="Default: all active paints that have a swatch_hex"
+    )
+    activate: bool = True
+    default_scattering: float = Field(
+        0.3, gt=0, le=5, description="S relative to white for paints without a tint swatch"
+    )
+    notes: str = ""
+
+
+class SwatchModelResult(_Out):
+    model: ModelSummary
+    scattering_source: dict[str, Literal["white", "tint", "assumed"]]
+    tint_match_de: dict[str, float]
+    warnings: list[str]
 
 
 # --- jobs -----------------------------------------------------------------------------------

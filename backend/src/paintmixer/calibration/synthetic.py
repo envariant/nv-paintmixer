@@ -331,11 +331,36 @@ def generate_calibration(
     return samples, truth, plan
 
 
+SWATCH_TINT_FRACTION = 0.1
+
+
+def swatch_hexes(paints: Sequence[SyntheticPaint]) -> dict[str, tuple[str, str | None]]:
+    """What a colour card would show for each synthetic paint: the opaque masstone and a 1:9
+    tint with the first white, both as sRGB hex (so the uncalibrated "try it" model can be
+    compared with the ground truth)."""
+    from paintmixer.colorsci.convert import reflectance_to_srgb, srgb_to_hex
+
+    model = KMModel(np.stack([p.K for p in paints]), np.stack([p.S for p in paints]))
+    n = len(paints)
+    whites = [i for i, p in enumerate(paints) if p.info.role == PaintRole.WHITE]
+    out: dict[str, tuple[str, str | None]] = {}
+    for i, p in enumerate(paints):
+        mass = srgb_to_hex(reflectance_to_srgb(model.reflectance(np.eye(n)[i])).rgb)
+        tint = None
+        if whites and i != whites[0]:
+            c = np.zeros(n)
+            c[i], c[whites[0]] = SWATCH_TINT_FRACTION, 1 - SWATCH_TINT_FRACTION
+            tint = srgb_to_hex(reflectance_to_srgb(model.reflectance(c)).rgb)
+        out[p.info.id] = (mass, tint)
+    return out
+
+
 def paints_csv(paints: Sequence[SyntheticPaint], loaded: Sequence[str] = STARTER_IDS) -> str:
     codes = pigment_codes()
+    swatches = swatch_hexes(paints)
     lines = [
         "id,name,brand,pigment_code,role,density_g_per_ml,cost_per_ml,min_dose_ml,"
-        "dispenser_channel,loaded"
+        "dispenser_channel,loaded,swatch_hex,tint_hex,tint_fraction"
     ]
     channel = 0
     for p in paints:
@@ -355,6 +380,9 @@ def paints_csv(paints: Sequence[SyntheticPaint], loaded: Sequence[str] = STARTER
                     f"{p.info.min_dose_ml:g}",
                     str(channel) if is_loaded else "",
                     "true" if is_loaded else "false",
+                    swatches[p.info.id][0],
+                    swatches[p.info.id][1] or "",
+                    f"{SWATCH_TINT_FRACTION:g}" if swatches[p.info.id][1] else "",
                 ]
             )
         )

@@ -113,3 +113,6 @@ Progress notes per milestone are appended below as work completes.
 - **Tinting strength** `calibration.strength`: reduction K/S at peak absorption per paint,
   relative % against another model version; on `GET /paints` (active model) and
   `GET /models/{v}/spectra?reference_version=`.
+- **Swatch models** `calibration.swatch` + `POST /models/from-swatches`: uncalibrated model from
+  masstone/tint swatch colours (migration `0003`: paint `swatch_hex`/`tint_hex`/`tint_fraction`,
+  model `source`); solve/predict/health report the model source and warn.

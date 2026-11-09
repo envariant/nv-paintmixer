@@ -35,6 +35,11 @@ from paintmixer.solver.solve import Candidate, SolveOptions, gamut_for, predict,
 
 router = APIRouter(tags=["mixing"], responses=ERROR_RESPONSES)
 
+SWATCH_MODEL_WARNING = (
+    "The active model is built from swatch colours, not calibration measurements: predictions "
+    "and recipes are rough (typically several dE2000 off). Calibrate for accurate recipes."
+)
+
 
 def candidate_out(
     c: Candidate, names: dict[str, str], cost: dict[str, float], currency: str
@@ -91,6 +96,8 @@ async def solve_recipe(body: SolveRequest, session: SessionDep, request: Request
     if opts.max_paints * opts.min_fraction > 1:
         raise bad_request("bad_constraints", "max_paints x min_fraction must be <= 1")
     res = await run_compute(request.app, solve, model, target, opts, gamut_cache_key=fm.version)
+    if fm.source == "swatches":
+        res.warnings.insert(0, SWATCH_MODEL_WARNING)
     names = {p.id: p.name for p in model.paints}
     cost = {p.id: p.cost_per_ml for p in model.paints}
     return SolveResponse(
@@ -108,6 +115,7 @@ async def solve_recipe(body: SolveRequest, session: SessionDep, request: Request
         n_subsets=res.n_subsets,
         duration_s=res.duration_s,
         model_version=fm.version,
+        model_source=fm.source,
         pool=model.ids,
         batch_volume_ml=opts.batch_volume_ml,
         illuminant=opts.illuminant.value,
@@ -131,6 +139,7 @@ def predict_mixture(body: PredictRequest, session: SessionDep) -> PredictRespons
         hex=srgb_to_hex(srgb.rgb),
         out_of_srgb_gamut=bool(srgb.out_of_gamut),
         model_version=fm.version,
+        model_source=fm.source,
     )
 
 

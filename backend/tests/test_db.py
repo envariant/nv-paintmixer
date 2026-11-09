@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
+from sqlalchemy import text
 from sqlmodel import Session, SQLModel, select
 
 import paintmixer.db.models as m
@@ -37,25 +39,45 @@ def test_grid_migration_pads_31_band_data(tmp_path: Path) -> None:
     get_engine(url)
     command.upgrade(alembic_config(url), "0001")
     old = [0.1 + i / 100 for i in range(31)]
-    with Session(get_engine(url)) as s:
-        s.add(
-            m.CalibrationSample(
-                id="S1", type="mixture", substrate="white", reflectance=old, spread=None
-            )
+    j = json.dumps
+    now = "2026-01-01 00:00:00"
+    # raw rows matching the 0001 schema (the ORM classes describe the latest schema)
+    with get_engine(url).begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO calibration_sample (id, type, substrate, holdout, notes, created_at,"
+                " reflectance, spread, components) VALUES ('S1', 'mixture', 'white', 0, '', :t,"
+                " :r, NULL, '{}')"
+            ),
+            {"t": now, "r": j(old)},
         )
-        s.add(
-            m.FittedModel(
-                version=1, K=[old, old], S=[[1.0] * 31, old], tau=old, paint_ids=["a", "b"]
-            )
+        conn.execute(
+            text(
+                "INSERT INTO fitted_model (version, active, k1, k2, illuminant, observer,"
+                " n_samples, notes, created_at, paint_ids, K, S, tau, substrate_white,"
+                " substrate_black, diagnostics, holdout_report) VALUES (1, 1, 0, 0.5, 'D65',"
+                " 'CIE 1931 2', 0, '', :t, :ids, :K, :S, :tau, '[]', '[]', '{}', '{}')"
+            ),
+            {
+                "t": now,
+                "ids": j(["a", "b"]),
+                "K": j([old, old]),
+                "S": j([[1.0] * 31, old]),
+                "tau": j(old),
+            },
         )
-        s.add(m.ColorLibraryEntry(name="x", spectrum=old, lab=[50, 0, 0], srgb=[0.5] * 3))
-        s.add(
-            m.Job(
-                target={"lab": [1, 2, 3], "spectrum": old},
-                measured={"spectrum": old, "lab": [1, 2, 3]},
-            )
+        conn.execute(
+            text(
+                "INSERT INTO job (name, status, batch_volume_ml, created_at, updated_at, target,"
+                " measured, constraints, candidates, recipe, corrections) VALUES ('', 'draft',"
+                " 100, :t, :t, :target, :measured, '{}', '[]', '{}', '[]')"
+            ),
+            {
+                "t": now,
+                "target": j({"lab": [1, 2, 3], "spectrum": old}),
+                "measured": j({"spectrum": old, "lab": [1, 2, 3]}),
+            },
         )
-        s.commit()
     command.upgrade(alembic_config(url), "head")
     with Session(get_engine(url)) as s:
         smp = s.get(m.CalibrationSample, "S1")

@@ -123,3 +123,12 @@ introduced it.
   only comparable between paints reduced with the same white. Relative strength compares two
   model versions of the same paint at the reference's peak wavelength. Not defined for white
   (`null`).
+- **Swatch ("try it") models** `POST /models/from-swatches` builds an uncalibrated model from
+  swatch colours. Spectra come from Jakob-2019 reconstruction. K/S per band comes from the opaque
+  masstone. Scattering is one value per paint, fitted so the model reproduces the tint swatch's
+  colour, or assumed as 0.3 × white without one. Absorption is never adjusted to the tint:
+  that kept masstones exact at a small cost in mixture accuracy. On the synthetic 5-paint set
+  the mixture error is median ≈ 4, p90 ≈ 9 dE2000 with tints; median ≈ 5, p90 ≈ 16 without.
+  Such models are stored with `source = "swatches"`, and every solve/predict reports it with
+  a warning. They have no hold-out report. Their film-thickness scale and substrates are
+  synthetic defaults, used only for worksheet previews.
