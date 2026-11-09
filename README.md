@@ -77,9 +77,61 @@ make dev
 | `make lint` | ruff, ruff format --check, mypy --strict, vue-tsc |
 | `make gen-api` | export `backend/openapi.json` and regenerate `frontend/src/api/schema.d.ts` |
 | `make sample-data` | regenerate the synthetic files in `sample_data/` |
+| `make seed-demo` | load the CMYKW demo (paints, colour library, calibrated model) into the database |
 
 Environment variables: `PAINTMIXER_CURRENCY` (default SGD), `PAINTMIXER_COMPUTE_WORKERS`
-(solver/fit worker processes, default 2; 0 = thread pool), `PAINTMIXER_SEED`.
+(solver/fit worker processes, default 2; 0 = thread pool), `PAINTMIXER_SEED`,
+`PAINTMIXER_SEED_DEMO` (`1` = seed the demo on startup when the database is empty).
+
+## Demo database
+
+For a ready-to-use backend without making drawdowns, seed the demo:
+
+```bash
+make seed-demo
+```
+
+It loads a five-paint set: White (Titanium), Black (Carbon), Cyan (Phthalo Blue), Magenta
+(Quinacridone) and Yellow (Arylide). They are loaded on channels 1–5, with the colour library
+and a synthetic calibration set (`sample_data/calibration_starter5.csv`). It then fits two
+model versions:
+
+* **v1** comes from the calibration data (`source: calibration`) and is **active**.
+* **v2** is built from the swatch colours only (`source: swatches`, uncalibrated) and is
+  inactive, for comparison.
+
+Running it again changes nothing that exists: paints, colours and samples are upserted, and
+models are only added when missing. `uv run paintmixer seed-demo --refit` adds new versions
+instead. Only one model is active at a time; switch with `POST /api/v1/models/{v}/activate`.
+`GET /api/v1/models` lists all versions. With `PAINTMIXER_SEED_DEMO=1`, the server seeds an
+empty database on startup and leaves a non-empty one alone.
+
+## Gamut charts: what each model can reach
+
+`GET /api/v1/models/{version}/gamut` works for any model version, active or not. By default it
+uses every paint in that model; `pool` (comma-separated ids) and `max_paints` narrow it. It
+returns the a*b* boundary at every 10 L*: the most chromatic mix found per 10° hue bin. Each
+boundary point carries its display colour (`hex`, D65 sRGB, gamut-mapped). `GET /api/v1/gamut`
+returns the same for the active model and loaded paints.
+
+`GET /api/v1/models/{version}/gamut.svg` draws it: one a*b* panel per L* slice, on a neutral
+grey surround. Each hue wedge shades from grey at the centre to the boundary colour, and a dark
+outline marks the true boundary. To compare versions, give both charts the same axis with
+`chroma_scale`:
+
+```bash
+curl -s "$API/models/1/gamut.svg?chroma_scale=100" -o v1.svg
+```
+
+```bash
+curl -s "$API/models/2/gamut.svg?chroma_scale=100" -o v2.svg
+```
+
+Two caveats when reading a chart. First, each panel covers L* ±5 and assumes everything
+between the neutral axis and the outline is mixable. Second, screens cannot show the most
+saturated paint colours, so those wedges look duller than the paint. Each panel `<svg>`
+carries `data-L`, `data-cx`, `data-cy` and `data-px-per-chroma`, so a click can be mapped back
+to Lab: a* = (x − cx) / k, b* = (cy − y) / k.
 
 ## Walkthrough with the sample data
 

@@ -16,7 +16,6 @@ from paintmixer.api.schemas import (
     CandidateOut,
     ComponentOut,
     GamutResponse,
-    GamutSliceOut,
     MixCellOut,
     MultimixRequest,
     MultimixResponse,
@@ -32,6 +31,7 @@ from paintmixer.api.services import (
     ILLUMINANTS_REPORTED,
     active_model,
     all_paints,
+    gamut_response,
     load_settings,
     pool_model,
     resolve_target,
@@ -259,25 +259,10 @@ async def gamut(
     pool: str | None = Query(None, description="Comma-separated paint ids; default = loaded"),
     max_paints: int | None = Query(None, ge=1, le=8),
 ) -> GamutResponse:
-    """a*b* boundary (max chroma per 10° hue bin) at L* slices every 10 units."""
+    """a*b* boundary (max chroma per 10° hue bin) at L* slices every 10 units, for the active
+    model. ``GET /models/{version}/gamut`` does the same for any model version."""
     ids = [p.strip() for p in pool.split(",") if p.strip()] if pool else None
     model, fm = pool_model(session, ids)
     k = max_paints or load_settings(session).max_paints
     g = await run_compute(request.app, gamut_for, model, k, fm.version)
-    return GamutResponse(
-        pool=model.ids,
-        L_min=g.L_min,
-        L_max=g.L_max,
-        n_samples=g.n_samples,
-        model_version=fm.version,
-        slices=[
-            GamutSliceOut(
-                L=sl.L,
-                hue_deg=sl.hue_deg.tolist(),
-                chroma=np.round(sl.chroma, 3).tolist(),
-                a=np.round(sl.a, 3).tolist(),
-                b=np.round(sl.b, 3).tolist(),
-            )
-            for sl in g.slices
-        ],
-    )
+    return gamut_response(model, fm, g, k)

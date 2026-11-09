@@ -151,3 +151,22 @@ introduced it.
   model's white and offers log tint ladders), but it is computed by the multimix code, so there
   is one prediction path. A linear ramp of n steps is identical to a two-paint simplex with
   n − 1 divisions; a test checks this.
+- **Demo seed** The demo is the 5-paint starter set, renamed after its role (White/Black/Cyan/
+  Magenta/Yellow, with the pigment in brackets), on the synthetic `calibration_starter5.csv`.
+  The ids stay pigment-based (`phthalo-blue`, ...), so data keyed on them keeps working. The
+  seed never deletes: it upserts paints, colours and samples, and adds a model only when none of
+  that source exists (or with `--refit`). The calibrated model is activated and the swatch
+  model is not. Auto-seeding (`PAINTMIXER_SEED_DEMO`) only fires on a database with no paints
+  and no models, so it can't overwrite a user's work.
+- **Gamut sampling of light colours** Besides singles, pairs and random 3–5 paint mixes, the
+  sampler now lets every chromatic pair and triple down with the lightest paint (normally white)
+  at 50–99.5 %. Random mixes rarely land above L* 70, so the light slices used to show only the
+  two-paint tint lines, as spikes, even though the colours between those hues were mixable.
+  This only adds samples, so the gamut can only grow. It changes the solver's out-of-gamut
+  pre-check the same way, but the achieved dE is still the final word.
+- **Gamut charts** Each panel is one L* slice (±5). Wedges are filled radially from the neutral
+  axis to the boundary, which assumes each slice is star-shaped around neutral. That holds for
+  pools with white and black but is not proven in general. Fills are D65 sRGB with CSS Color 4
+  gamut mapping, so very chromatic wedges look duller than the paint. The outline is the
+  boundary in Lab. By default a chart's scale is its own maximum C*, rounded up to 20;
+  `chroma_scale` fixes it so versions can be compared. Hue bins with no samples get `hex: null`.

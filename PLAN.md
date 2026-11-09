@@ -125,3 +125,9 @@ Progress notes per milestone are appended below as work completes.
 - **Multimix arrays** `solver.multimix` + `POST /multimix`: simplex lattices or N-D level grids
   of 2–6 paints with predicted swatches and polygon layout; mirrored in `km.ts`, with parity
   pinned by the fixture.
+- **Demo seed + gamut per model** `paintmixer seed-demo` / `make seed-demo` /
+  `PAINTMIXER_SEED_DEMO`: CMYKW starter set, colour library, calibrated model v1 (active) and
+  swatch model v2. Shared import/fit/swatch logic moved from the routers to `api/importers.py`.
+  `GET /models/{v}/gamut` and `/gamut.svg` (`solver.gamut_chart`) work for any version; gamut
+  responses gained per-point `hex`, `model_source` and `max_paints`. The gamut sampler adds
+  white let-downs of chromatic pairs and triples, so the light slices are filled.

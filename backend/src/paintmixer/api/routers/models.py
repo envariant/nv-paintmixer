@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import numpy as np
 from fastapi import APIRouter, Query, Request
+from fastapi.responses import Response
 from sqlmodel import Session, col, select
 
 from paintmixer.api.compute import run_compute
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request, not_found
+from paintmixer.api.importers import store_swatch_model, swatch_inputs
 from paintmixer.api.schemas import (
+    GamutResponse,
     ModelDetail,
     ModelSpectra,
     ModelSummary,
@@ -18,13 +21,23 @@ from paintmixer.api.schemas import (
     SwatchModelRequest,
     SwatchModelResult,
 )
-from paintmixer.api.services import all_paints, km_of, load_settings, model_strengths
+from paintmixer.api.services import (
+    all_paints,
+    gamut_response,
+    km_of,
+    load_settings,
+    model_strengths,
+    pool_model,
+)
 from paintmixer.calibration.strength import PaintStrength, with_relative
-from paintmixer.calibration.swatch import SwatchError, SwatchPaint, model_from_swatches
-from paintmixer.colorsci.convert import hex_to_srgb, reflectance_to_srgb, srgb_to_hex, srgb_to_lab
+from paintmixer.calibration.swatch import SwatchError, model_from_swatches
+from paintmixer.colorsci.convert import reflectance_to_srgb, srgb_to_hex
 from paintmixer.colorsci.spectral import WAVELENGTHS
 from paintmixer.db import models as m
-from paintmixer.domain import PaintRole
+from paintmixer.solver.gamut import Gamut
+from paintmixer.solver.gamut_chart import gamut_svg
+from paintmixer.solver.model import PoolModel
+from paintmixer.solver.solve import gamut_for
 
 router = APIRouter(prefix="/models", tags=["models"], responses=ERROR_RESPONSES)
 
@@ -88,31 +101,7 @@ async def model_from_swatch_colours(
     """Build an **uncalibrated** model from each paint's swatch colours (``swatch_hex``, and
     optionally ``tint_hex`` / ``tint_fraction``), so recipes can be tried before calibrating.
     Expect several dE2000 of error; see docs/ASSUMPTIONS.md."""
-    paints = {p.id: p for p in all_paints(session)}
-    if body.paint_ids is None:
-        ids = [p.id for p in paints.values() if p.active and p.swatch_hex]
-    else:
-        ids = body.paint_ids
-    unknown = [i for i in ids if i not in paints]
-    if unknown:
-        raise bad_request("unknown_paint", f"unknown paint ids: {', '.join(unknown)}")
-    missing = [i for i in ids if not paints[i].swatch_hex]
-    if missing:
-        raise bad_request(
-            "missing_swatch", f"paints without swatch_hex: {', '.join(missing)}", missing
-        )
-    if not ids:
-        raise bad_request("empty_pool", "no paints with swatch colours")
-    swatches = [
-        SwatchPaint(
-            p.id,
-            PaintRole(p.role),
-            srgb_to_lab(hex_to_srgb(p.swatch_hex or "")),
-            srgb_to_lab(hex_to_srgb(p.tint_hex)) if p.tint_hex else None,
-            p.tint_fraction or 0.1,
-        )
-        for p in (paints[i] for i in ids)
-    ]
+    swatches = swatch_inputs(session, body.paint_ids)
     s = load_settings(session)
     try:
         sm = await run_compute(
@@ -125,43 +114,7 @@ async def model_from_swatch_colours(
         )
     except SwatchError as e:
         raise bad_request("swatch_model_failed", str(e)) from e
-    last = session.exec(select(m.FittedModel).order_by(col(m.FittedModel.version).desc())).first()
-    if body.activate:
-        for other in session.exec(select(m.FittedModel).where(col(m.FittedModel.active))).all():
-            other.active = False
-            session.add(other)
-    fm = m.FittedModel(
-        version=(last.version if last else 0) + 1,
-        active=body.activate,
-        source="swatches",
-        paint_ids=sm.paint_ids,
-        K=np.round(sm.K, 7).tolist(),
-        S=np.round(sm.S, 7).tolist(),
-        tau=np.round(sm.tau, 9).tolist(),
-        k1=sm.k1,
-        k2=sm.k2,
-        substrate_white=np.round(sm.substrate_white, 6).tolist(),
-        substrate_black=np.round(sm.substrate_black, 6).tolist(),
-        diagnostics={
-            "warnings": sm.warnings,
-            "scattering_source": sm.scattering_source,
-            "tint_match_de": sm.tint_match_de,
-        },
-        holdout_report={
-            "method": "none",
-            "n_samples": 0,
-            "mean_de": None,
-            "median_de": None,
-            "p95_de": None,
-            "max_de": None,
-            "mean_rms": None,
-            "noise_floor_mean_de": None,
-        },
-        notes=body.notes or "uncalibrated: built from swatch colours",
-    )
-    session.add(fm)
-    session.commit()
-    session.refresh(fm)
+    fm = store_swatch_model(session, sm, body.activate, body.notes)
     return SwatchModelResult(
         model=ModelSummary.model_validate(_summary(fm)),
         scattering_source=sm.scattering_source,
@@ -238,3 +191,57 @@ def model_spectra(
         substrate_white=fm.substrate_white,
         substrate_black=fm.substrate_black,
     )
+
+
+_POOL_Q = Query(None, description="Comma-separated paint ids; default = every paint in the model")
+_MAX_Q = Query(None, ge=1, le=8, description="Most paints per mixture; default = settings")
+
+
+async def _model_gamut(
+    request: Request, session: Session, version: int, pool: str | None, max_paints: int | None
+) -> tuple[PoolModel, m.FittedModel, Gamut, int]:
+    fm = _get(session, version)
+    ids = [p.strip() for p in pool.split(",") if p.strip()] if pool else None
+    model, fm = pool_model(session, ids, fm)
+    k = max_paints or load_settings(session).max_paints
+    g = await run_compute(request.app, gamut_for, model, k, fm.version)
+    return model, fm, g, k
+
+
+@router.get("/{version}/gamut", response_model=GamutResponse)
+async def model_gamut(
+    version: int,
+    session: SessionDep,
+    request: Request,
+    pool: str | None = _POOL_Q,
+    max_paints: int | None = _MAX_Q,
+) -> GamutResponse:
+    """Colour reachability of any model version (active or not): the a*b* boundary per L*
+    slice, with each boundary point's display colour, for charting or comparing versions."""
+    model, fm, g, k = await _model_gamut(request, session, version, pool, max_paints)
+    return gamut_response(model, fm, g, k)
+
+
+@router.get(
+    "/{version}/gamut.svg",
+    response_class=Response,
+    responses={200: {"content": {"image/svg+xml": {}}, "description": "SVG chart"}},
+)
+async def model_gamut_svg(
+    version: int,
+    session: SessionDep,
+    request: Request,
+    pool: str | None = _POOL_Q,
+    max_paints: int | None = _MAX_Q,
+    columns: int = Query(5, ge=1, le=12, description="Panels per row"),
+    chroma_scale: float | None = Query(
+        None, gt=0, le=250, description="C* at the panel edge; fix it to compare versions"
+    ),
+) -> Response:
+    """The same gamut as a ready-to-view SVG: one a*b* panel per L* slice on a neutral grey
+    surround, wedges coloured from neutral to the boundary colour."""
+    model, fm, g, k = await _model_gamut(request, session, version, pool, max_paints)
+    title = f"Gamut of model v{fm.version} ({fm.source}{', active' if fm.active else ''})"
+    sub = f"{', '.join(model.ids)} | up to {k} paints per mix | {g.n_samples} sampled mixtures"
+    svg = gamut_svg(g, title, sub, columns, chroma_scale)
+    return Response(svg, media_type="image/svg+xml")

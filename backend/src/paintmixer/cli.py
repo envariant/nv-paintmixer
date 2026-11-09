@@ -32,6 +32,23 @@ def synthetic(out: Path = typer.Option(Path("../sample_data"), help="Output dire
         typer.echo(f"wrote {p}")
 
 
+@app.command("seed-demo")
+def seed_demo_cmd(
+    refit: bool = typer.Option(False, help="Fit again and add new model versions"),
+    sample_dir: Path | None = typer.Option(None, help="Default: the repository's sample_data/"),
+) -> None:
+    """Seed the database with the CMYKW demo: 5 paints, colour library, calibrated model."""
+    from paintmixer.config import get_settings
+    from paintmixer.demo import seed_demo
+
+    url = get_settings().database_url
+    report = seed_demo(url, sample_dir, refit=refit)
+    typer.echo(f"Seeded {url}")
+    typer.echo(report.summary())
+    if report.errors:
+        raise typer.Exit(1)
+
+
 @app.command()
 def schema(out: Path = typer.Option(..., help="Where to write the JSON schema")) -> None:
     """Write the calibration-row JSON schema."""

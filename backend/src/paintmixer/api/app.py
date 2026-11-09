@@ -43,6 +43,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app_: FastAPI) -> AsyncIterator[None]:
         migrate(cfg.database_url)
+        if cfg.seed_demo:
+            from paintmixer.demo import database_is_empty, seed_demo
+
+            if database_is_empty(cfg.database_url):
+                seed_demo(cfg.database_url)
         app_.state.executor = make_executor(cfg.compute_workers)
         try:
             yield

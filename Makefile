@@ -6,7 +6,7 @@ FRONTEND := frontend
 export UV_NO_PROGRESS := 1
 
 .PHONY: help install dev dev-backend dev-frontend test test-backend test-frontend test-slow \
-        lint lint-backend lint-frontend fmt openapi gen-api e2e sample-data migrate build
+        lint lint-backend lint-frontend fmt openapi gen-api e2e sample-data migrate build seed-demo
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
@@ -26,6 +26,9 @@ dev-backend: ## Run the FastAPI dev server
 
 dev-frontend: ## Run the Vite dev server
 	cd $(FRONTEND) && npm run dev
+
+seed-demo: ## Seed the CMYKW demo (5 paints, colour library, calibrated + swatch models)
+	cd $(BACKEND) && $(UV) run paintmixer seed-demo
 
 migrate: ## Apply database migrations
 	cd $(BACKEND) && $(UV) run alembic upgrade head
