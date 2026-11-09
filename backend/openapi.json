@@ -27,6 +27,28 @@
         }
       }
     },
+    "/api/v1/colorimetry": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get Colorimetry",
+        "description": "Weighting tables (D65, A, F11; CIE 1931 2\u00b0) and sRGB constants exactly as the backend uses\nthem, so clients can run the forward model locally (see ``GET /models/{v}/spectra``).",
+        "operationId": "get_colorimetry_api_v1_colorimetry_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Colorimetry"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/settings": {
       "get": {
         "tags": [
@@ -3645,6 +3667,34 @@
         "type": "object",
         "title": "ColorUpdate"
       },
+      "Colorimetry": {
+        "properties": {
+          "wavelengths": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Wavelengths"
+          },
+          "illuminants": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/IlluminantTables"
+            },
+            "type": "object",
+            "title": "Illuminants"
+          },
+          "srgb": {
+            "$ref": "#/components/schemas/SrgbTables"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wavelengths",
+          "illuminants",
+          "srgb"
+        ],
+        "title": "Colorimetry"
+      },
       "ComponentOut": {
         "properties": {
           "paint_id": {
@@ -4196,6 +4246,34 @@
           "F11"
         ],
         "title": "Illuminant"
+      },
+      "IlluminantTables": {
+        "properties": {
+          "weights": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Weights",
+            "description": "3 x bands: XYZ = R @ weights.T (Y white = 100)"
+          },
+          "white": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "White"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weights",
+          "white"
+        ],
+        "title": "IlluminantTables"
       },
       "JobCreate": {
         "properties": {
@@ -6058,6 +6136,33 @@
         "additionalProperties": false,
         "type": "object",
         "title": "SolverWeights"
+      },
+      "SrgbTables": {
+        "properties": {
+          "white": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "White"
+          },
+          "xyz_to_rgb": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Xyz To Rgb"
+          }
+        },
+        "type": "object",
+        "required": [
+          "white",
+          "xyz_to_rgb"
+        ],
+        "title": "SrgbTables"
       },
       "StrengthOut": {
         "properties": {

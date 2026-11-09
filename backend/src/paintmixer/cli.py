@@ -41,6 +41,18 @@ def schema(out: Path = typer.Option(..., help="Where to write the JSON schema"))
     typer.echo(f"wrote {out}")
 
 
+@app.command("parity-fixture")
+def parity_fixture(
+    out: Path | None = typer.Option(None, help="Default: frontend/src/lib/"),
+) -> None:
+    """Write the golden values the browser forward model is tested against."""
+    from paintmixer.parity import FIXTURE, fixture_json
+
+    path = out or FIXTURE
+    path.write_text(fixture_json())
+    typer.echo(f"wrote {path}")
+
+
 @app.command()
 def openapi(out: Path = typer.Option(Path("openapi.json"))) -> None:
     """Export the OpenAPI document."""

@@ -58,8 +58,9 @@ fmt: ## Auto-format backend
 openapi: ## Export the OpenAPI schema to backend/openapi.json
 	cd $(BACKEND) && $(UV) run paintmixer openapi --out openapi.json
 
-gen-api: openapi ## Regenerate the typed frontend API client from OpenAPI
+gen-api: openapi ## Regenerate the frontend API client types and forward-model parity fixture
 	cd $(FRONTEND) && npm run gen:api
+	cd $(BACKEND) && $(UV) run paintmixer parity-fixture
 
 sample-data: ## Regenerate synthetic calibration data in sample_data/
 	cd $(BACKEND) && $(UV) run paintmixer synthetic --out ../sample_data

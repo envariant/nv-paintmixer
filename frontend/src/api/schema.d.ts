@@ -21,6 +21,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/colorimetry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Colorimetry
+         * @description Weighting tables (D65, A, F11; CIE 1931 2°) and sRGB constants exactly as the backend uses
+         *     them, so clients can run the forward model locally (see ``GET /models/{v}/spectra``).
+         */
+        get: operations["get_colorimetry_api_v1_colorimetry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -910,6 +931,16 @@ export interface components {
             /** Spectrum */
             spectrum?: number[] | null;
         };
+        /** Colorimetry */
+        Colorimetry: {
+            /** Wavelengths */
+            wavelengths: number[];
+            /** Illuminants */
+            illuminants: {
+                [key: string]: components["schemas"]["IlluminantTables"];
+            };
+            srgb: components["schemas"]["SrgbTables"];
+        };
         /** ComponentOut */
         ComponentOut: {
             /** Paint Id */
@@ -1109,6 +1140,16 @@ export interface components {
          * @enum {string}
          */
         Illuminant: "D65" | "D50" | "A" | "F11";
+        /** IlluminantTables */
+        IlluminantTables: {
+            /**
+             * Weights
+             * @description 3 x bands: XYZ = R @ weights.T (Y white = 100)
+             */
+            weights: number[][];
+            /** White */
+            white: number[];
+        };
         /** JobCreate */
         JobCreate: {
             /**
@@ -1818,6 +1859,13 @@ export interface components {
              */
             metamerism?: number;
         };
+        /** SrgbTables */
+        SrgbTables: {
+            /** White */
+            white: number[];
+            /** Xyz To Rgb */
+            xyz_to_rgb: number[][];
+        };
         /** StrengthOut */
         StrengthOut: {
             /** Reduction Fraction */
@@ -2137,6 +2185,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    get_colorimetry_api_v1_colorimetry_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Colorimetry"];
                 };
             };
         };

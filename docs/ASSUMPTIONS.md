@@ -136,3 +136,8 @@ introduced it.
   previews use the finite-layer model at the drawdown's gap over the active model's substrates,
   so -W and -B rows differ wherever the film isn't hiding. Rows whose paints aren't in the
   active model have no preview.
+- **Browser forward model** The TypeScript port covers prediction only (opaque films, D65/A/F11,
+  dE2000, CSS gamut mapping, ramps); solving and fitting stay on the server. It reads the
+  server's exact weighting tables (`GET /colorimetry`) rather than embedding its own, so the
+  only parity risk is code drift. The generated `km.parity.json` fixture pins that: reflectance
+  within 1e-9, Lab within 1e-6, swatch hex identical.

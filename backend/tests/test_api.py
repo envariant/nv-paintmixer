@@ -319,3 +319,20 @@ def test_process_pool_compute(tmp_path) -> None:  # type: ignore[no-untyped-def]
         r = c.post(f"{API}/solve", json={"target": {"lab": [60, 0, 0]}})
         assert r.status_code == 200 and r.json()["candidates"]
         assert c.get(f"{API}/gamut").status_code == 200
+
+
+def test_colorimetry_endpoint_matches_backend(client: TestClient) -> None:
+    import numpy as np
+
+    from paintmixer.colorsci import weighting_matrix, white_point
+
+    c = client.get(f"{API}/colorimetry").json()
+    assert len(c["wavelengths"]) == 36 and set(c["illuminants"]) == {"D65", "A", "F11"}
+    np.testing.assert_allclose(c["illuminants"]["D65"]["weights"], weighting_matrix(), atol=1e-12)
+    np.testing.assert_allclose(c["illuminants"]["A"]["white"], white_point("A"), atol=1e-12)
+
+
+def test_parity_fixture_is_current() -> None:
+    from paintmixer.parity import FIXTURE, fixture_json
+
+    assert FIXTURE.read_text() == fixture_json(), "run `uv run paintmixer parity-fixture`"

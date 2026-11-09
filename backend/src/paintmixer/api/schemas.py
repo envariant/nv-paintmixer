@@ -604,6 +604,22 @@ class RampResponse(_Out):
     steps: list[RampStepOut]
 
 
+class IlluminantTables(_Out):
+    weights: list[list[float]] = Field(description="3 x bands: XYZ = R @ weights.T (Y white = 100)")
+    white: list[float]
+
+
+class SrgbTables(_Out):
+    white: list[float]
+    xyz_to_rgb: list[list[float]]
+
+
+class Colorimetry(_Out):
+    wavelengths: list[float]
+    illuminants: dict[str, IlluminantTables]
+    srgb: SrgbTables
+
+
 class Health(_Out):
     status: str
     version: str

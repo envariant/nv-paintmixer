@@ -9,9 +9,10 @@ from sqlmodel import col, select
 from paintmixer import __version__
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import bad_request
-from paintmixer.api.schemas import AppSettings, AppSettingsUpdate, Health
+from paintmixer.api.schemas import AppSettings, AppSettingsUpdate, Colorimetry, Health
 from paintmixer.api.services import load_settings, save_settings
 from paintmixer.db import models as m
+from paintmixer.parity import colorimetry
 
 router = APIRouter(tags=["system"])
 
@@ -25,6 +26,13 @@ def health(session: SessionDep) -> Health:
         active_model_version=fm.version if fm else None,
         active_model_source=fm.source if fm else None,
     )
+
+
+@router.get("/colorimetry", response_model=Colorimetry)
+def get_colorimetry() -> Colorimetry:
+    """Weighting tables (D65, A, F11; CIE 1931 2°) and sRGB constants exactly as the backend uses
+    them, so clients can run the forward model locally (see ``GET /models/{v}/spectra``)."""
+    return Colorimetry.model_validate(colorimetry())
 
 
 @router.get("/settings", response_model=AppSettings)

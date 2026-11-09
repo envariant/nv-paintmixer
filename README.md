@@ -234,6 +234,10 @@ geometry, UV-cut).
   Levenberg–Marquardt (pools of 14 or fewer; larger pools use greedy-beam + swap search). The best
   are refined with SLSQP on dE2000 + paint count + cost + metamerism, then quantised to dispenser
   steps. Measured times: 12 paints ~0.7 s, 20 paints ~0.8 s.
+* **Browser preview:** `frontend/src/lib/km.ts` runs the same forward model (K-M, colorimetry,
+  dE2000, gamut-mapped swatches, ramps) in the browser from `GET /models/{v}/spectra` and
+  `GET /colorimetry`, so recipe edits preview instantly; a backend-generated parity fixture
+  keeps it identical to the Python implementation (byte-for-byte swatches in the tests).
 * **Why 5 paints:** colour has 3 degrees of freedom, but white (the only source of scattering, for
   pale colours) and black (for darks and clean neutrals) are separate physical needs. W, K + 3
   chromatics is the minimum full-range set.
