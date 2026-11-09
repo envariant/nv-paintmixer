@@ -120,7 +120,9 @@ def test_multimix_api(fitted_client: TestClient) -> None:
     assert str(MAX_CELLS) in bad.json()["error"]["message"]
     r = c.post(f"{API}/multimix", json={"paint_ids": ["phthalo-blue", "phthalo-blue"]})
     assert r.status_code == 422
-    r = c.post(f"{API}/multimix", json={"paint_ids": ["phthalo-blue", "arylide-yellow"], "mode": "grid"})
+    r = c.post(
+        f"{API}/multimix", json={"paint_ids": ["phthalo-blue", "arylide-yellow"], "mode": "grid"}
+    )
     assert r.status_code == 422
     r = c.post(f"{API}/multimix", json={"paint_ids": ["phthalo-blue", "pyrrole-red"]})
     assert r.json()["error"]["code"] == "uncalibrated_paint"
