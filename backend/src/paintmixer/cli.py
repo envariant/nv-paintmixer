@@ -321,7 +321,7 @@ def simulated_selftest_source(
 
     from paintmixer.calibration.synthetic import STARTER_IDS, synthetic_paints
     from paintmixer.colorsci.km import KMModel
-    from paintmixer.colorsci.spectral import WAVELENGTHS
+    from paintmixer.colorsci.spectral import N_BANDS, WAVELENGTHS
     from paintmixer.measurement.sources import SimulatedSource
 
     ps = synthetic_paints(STARTER_IDS)
@@ -329,9 +329,9 @@ def simulated_selftest_source(
     tile = 0.88 - 0.06 * np.exp(-(WAVELENGTHS - 400.0) / 25.0)
     fixed = {
         "WHITE-TILE": tile,
-        "REF-WHITE": np.full(31, 0.86),
-        "REF-GREY": np.full(31, 0.19),
-        "REF-BLACK": np.full(31, 0.03),
+        "REF-WHITE": np.full(N_BANDS, 0.86),
+        "REF-GREY": np.full(N_BANDS, 0.19),
+        "REF-BLACK": np.full(N_BANDS, 0.03),
     }
     return SimulatedSource(
         km, [p.info.id for p in ps], noise=noise, drift_per_read=drift, seed=seed, fixed=fixed

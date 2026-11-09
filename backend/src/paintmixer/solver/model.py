@@ -73,7 +73,7 @@ class PoolModel:
     # -- forward ------------------------------------------------------------------------------
 
     def reflectance(self, idx: IntArray, c: FloatArray) -> FloatArray:
-        K = self.km.K[idx]  # (m, k, 31)
+        K = self.km.K[idx]  # (m, k, N_BANDS)
         S = self.km.S[idx]
         num = np.einsum("mk,mkb->mb", c, K)
         den = np.einsum("mk,mkb->mb", c, S)
@@ -92,8 +92,8 @@ class PoolModel:
         den = np.einsum("mk,mkb->mb", c, S)
         ks = num / den
         ri = r_inf(ks)
-        dr = dsaunderson_dr(ri, self.km.k1, self.km.k2) * dr_inf_dks(ks)  # (m, 31)
-        dks = (K - ks[:, None, :] * S) / den[:, None, :]  # (m, k, 31)
+        dr = dsaunderson_dr(ri, self.km.k1, self.km.k2) * dr_inf_dks(ks)  # (m, N_BANDS)
+        dks = (K - ks[:, None, :] * S) / den[:, None, :]  # (m, k, N_BANDS)
         dR = dks * dr[:, None, :]
         R = saunderson(ri, self.km.k1, self.km.k2)
         W = self.W(ill)

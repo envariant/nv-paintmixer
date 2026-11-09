@@ -106,3 +106,9 @@ introduced it.
 - **Self-test** Exit codes: 0 PASS, 3 WARN, 1 FAIL, 2 instrument not found / measurement error.
 - **Self-test** Run outputs go to `sample_data/selftests/` (when run inside the repo) and are not
   git-ignored; commit them if you want an instrument history.
+- **380–730 nm grid** The canonical grid is now 36 bands, 380–730 nm (was 31 bands, 400–700 nm),
+  so the ColorMunki's full range is used. Files covering only 400–700 nm are still accepted:
+  their edge bands are held flat, which is colorimetrically equivalent to the old end-folding.
+  Migration `0002` extends stored spectra and K/S curves the same way (its downgrade slices them
+  back). The white-tile sanity checks in the self-test still look only at 400–700 nm, because
+  instruments are noisiest at the 380/730 nm ends.

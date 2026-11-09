@@ -151,7 +151,7 @@ def test_worksheet_json_csv_html(client: TestClient) -> None:
     csv = client.post(f"{API}/worksheet/csv", json=body)
     assert csv.headers["content-type"].startswith("text/csv")
     assert csv.text.splitlines()[0].startswith(
-        "sample_id,type,substrate,components,notes,components_mass_g,r400"
+        "sample_id,type,substrate,components,notes,components_mass_g,r380"
     )
     assert len(csv.text.splitlines()) == 125
     html = client.post(f"{API}/worksheet/html", json=body)
@@ -210,8 +210,8 @@ def test_upload_fit_activate(client: TestClient) -> None:
     assert client.get(f"{API}/health").json()["active_model_version"] == 2
     assert client.get(f"{API}/models/active").json()["k2"] == 0.55
     spectra = client.get(f"{API}/models/1/spectra").json()
-    assert len(spectra["wavelengths"]) == 31 and len(spectra["paints"]) == 5
-    assert spectra["paints"][0]["S"] == [1.0] * 31
+    assert len(spectra["wavelengths"]) == 36 and len(spectra["paints"]) == 5
+    assert spectra["paints"][0]["S"] == [1.0] * 36
     paints = {p["id"]: p for p in client.get(f"{API}/paints").json()}
     assert paints["phthalo-blue"]["calibrated"] and not paints["pyrrole-red"]["calibrated"]
     # deleting a paint used by samples is refused

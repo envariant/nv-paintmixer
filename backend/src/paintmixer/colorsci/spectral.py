@@ -1,10 +1,12 @@
 """Spectral grid, resampling and tristimulus weighting.
 
-Convention: reflectance in 0-1 on 31 bands, 400-700 nm at 10 nm (:data:`WAVELENGTHS`).
-Spectra measured on other grids (the ColorMunki reports 380-730 nm) are resampled by linear
-interpolation. Tristimulus weights follow ASTM E2022 at 10 nm intervals; the weight of bands
-outside 400-700 nm is folded into the end bands (the ASTM E308 convention for truncated data,
-i.e. reflectance is assumed constant beyond the measured range).
+Convention: reflectance in 0-1 on 36 bands, 380-730 nm at 10 nm (:data:`WAVELENGTHS`) -- the
+full range the ColorMunki / i1Studio report. Inputs must cover at least 400-700 nm
+(:data:`REQUIRED_RANGE`); other grids are resampled by linear interpolation and bands outside the
+input's range are held at its edge value. Tristimulus weights follow ASTM E2022 at 10 nm; the
+weight of wavelengths outside 380-730 nm is folded into the end bands (the ASTM E308 convention
+for truncated data). Holding a 400-700 nm spectrum flat to 380-730 nm therefore gives the same
+colorimetry as folding at 400/700 nm.
 """
 
 from __future__ import annotations
@@ -17,8 +19,11 @@ import numpy as np
 
 from paintmixer.colorsci.types import ArrayLike, FloatArray
 
-WAVELENGTHS: FloatArray = np.arange(400.0, 701.0, 10.0)
-N_BANDS = WAVELENGTHS.size  # 31
+WAVELENGTHS: FloatArray = np.arange(380.0, 731.0, 10.0)
+N_BANDS = WAVELENGTHS.size  # 36
+REQUIRED_RANGE = (400.0, 700.0)  # minimum coverage of an input spectrum
+# bands inside 400-700 nm, e.g. for checks that only make sense in the visible core
+CORE = (REQUIRED_RANGE[0] <= WAVELENGTHS) & (REQUIRED_RANGE[1] >= WAVELENGTHS)
 
 OBSERVER = "CIE 1931 2 Degree Standard Observer"
 
@@ -43,8 +48,9 @@ def resample(
 ) -> FloatArray:
     """Linearly resample spectra ``values[..., len(wavelengths)]`` onto :data:`WAVELENGTHS`.
 
-    Values beyond the input range are held at the edge value, but only up to
-    ``max_extrapolation_nm``; larger gaps raise ``ValueError``.
+    The input must cover :data:`REQUIRED_RANGE` (400-700 nm) to within
+    ``max_extrapolation_nm``; otherwise ``ValueError``. Bands beyond the input range (e.g.
+    380-390 and 710-730 nm for a 400-700 nm file) are held at the edge value.
     """
     wl = np.asarray(wavelengths, dtype=np.float64)
     v = np.asarray(values, dtype=np.float64)
@@ -52,8 +58,8 @@ def resample(
         raise ValueError(f"values last axis ({v.shape[-1]}) must match wavelengths ({wl.size})")
     order = np.argsort(wl)
     wl, v = wl[order], v[..., order]
-    if wl[0] - WAVELENGTHS[0] > max_extrapolation_nm or (
-        WAVELENGTHS[-1] - wl[-1] > max_extrapolation_nm
+    if wl[0] - REQUIRED_RANGE[0] > max_extrapolation_nm or (
+        REQUIRED_RANGE[1] - wl[-1] > max_extrapolation_nm
     ):
         raise ValueError(
             f"input covers {wl[0]:.0f}-{wl[-1]:.0f} nm; need 400-700 nm "
@@ -76,22 +82,23 @@ def _weights(illuminant: Illuminant) -> FloatArray:
         cmfs = colour.MSDS_CMFS[OBSERVER].copy().align(full)
         sd = colour.SDS_ILLUMINANTS[_COLOUR_ILLUMINANT_NAMES[illuminant]].copy().align(full)
         w = colour.colorimetry.tristimulus_weighting_factors_ASTME2022(
-            cmfs, sd, colour.SpectralShape(400, 700, 10)
+            cmfs, sd, colour.SpectralShape(380, 730, 10)
         )
     w = np.asarray(w, dtype=np.float64)  # (48, 3) on 360..830 / 10 nm
     wl_full = np.arange(360.0, 831.0, 10.0)
-    inside = (wl_full >= 400) & (wl_full <= 700)
+    lo, hi = WAVELENGTHS[0], WAVELENGTHS[-1]
+    inside = (wl_full >= lo) & (wl_full <= hi)
     out = w[inside].copy()
-    out[0] += w[wl_full < 400].sum(axis=0)
-    out[-1] += w[wl_full > 700].sum(axis=0)
+    out[0] += w[wl_full < lo].sum(axis=0)
+    out[-1] += w[wl_full > hi].sum(axis=0)
     out *= 100.0 / out[:, 1].sum()
-    result: FloatArray = np.ascontiguousarray(out.T, dtype=np.float64)  # (3, 31)
+    result: FloatArray = np.ascontiguousarray(out.T, dtype=np.float64)  # (3, N_BANDS)
     result.flags.writeable = False  # cached: shared between callers
     return result
 
 
 def weighting_matrix(illuminant: Illuminant | str = Illuminant.D65) -> FloatArray:
-    """Return ``W`` (3, 31) such that ``XYZ = R @ W.T``, with Y(perfect white) = 100."""
+    """Return ``W`` (3, N_BANDS) such that ``XYZ = R @ W.T``, with Y(perfect white) = 100."""
     return _weights(Illuminant(illuminant))
 
 
@@ -103,7 +110,7 @@ def white_point(illuminant: Illuminant | str = Illuminant.D65) -> FloatArray:
 def reflectance_to_xyz(
     reflectance: ArrayLike, illuminant: Illuminant | str = Illuminant.D65
 ) -> FloatArray:
-    """Integrate reflectance ``(..., 31)`` to XYZ ``(..., 3)`` on the 0-100 scale."""
+    """Integrate reflectance ``(..., N_BANDS)`` to XYZ ``(..., 3)`` on the 0-100 scale."""
     r = np.asarray(reflectance, dtype=np.float64)
     if r.shape[-1] != N_BANDS:
         raise ValueError(f"reflectance must have {N_BANDS} bands, got {r.shape[-1]}")

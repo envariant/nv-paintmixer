@@ -13,6 +13,7 @@ from typing import Any
 
 from paintmixer.calibration.format import (
     OPTIONAL_COLUMNS,
+    REQUIRED_SPECTRUM_COLUMNS,
     SPECTRUM_COLUMNS,
     SPREAD_COLUMNS,
     SampleType,
@@ -64,7 +65,15 @@ def calibration_row_schema() -> dict[str, Any]:
         "$id": "https://paintmixer.local/schemas/calibration_row.schema.json",
         "title": "PaintMixer calibration CSV row",
         "type": "object",
-        "required": ["sample_id", "type", "substrate", "components", "notes", *SPECTRUM_COLUMNS],
+        # r400..r700 are the minimum; r380, r390 and r710..r730 are optional (canonical grid)
+        "required": [
+            "sample_id",
+            "type",
+            "substrate",
+            "components",
+            "notes",
+            *REQUIRED_SPECTRUM_COLUMNS,
+        ],
         "properties": props,
         "additionalProperties": False,
     }

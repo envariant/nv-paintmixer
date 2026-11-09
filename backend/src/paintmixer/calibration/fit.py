@@ -130,10 +130,10 @@ class FitError(ValueError):
 class _Problem:
     paint_ids: list[str]
     C: FloatArray  # (n_samples, n_paints)
-    R: FloatArray  # (n_samples, 31) measured
+    R: FloatArray  # (n_samples, N_BANDS) measured
     gap: FloatArray  # (n_samples,)
-    rg: FloatArray  # (n_samples, 31) internal substrate reflectance
-    weight: FloatArray  # (n_samples, 31)
+    rg: FloatArray  # (n_samples, N_BANDS) internal substrate reflectance
+    weight: FloatArray  # (n_samples, N_BANDS)
     fixed_s: int  # index of the paint whose S is fixed to 1
     k1: float
     k2: float
@@ -201,7 +201,7 @@ class _Packer:
         return K, S, tau
 
     def raw(self, x: FloatArray) -> FloatArray:
-        return x.reshape(N_BANDS, self.per_band).T  # (per_band, 31) log-params
+        return x.reshape(N_BANDS, self.per_band).T  # (per_band, N_BANDS) log-params
 
 
 def _predict(p: _Problem, K: FloatArray, S: FloatArray, tau: FloatArray) -> FloatArray:

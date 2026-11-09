@@ -206,7 +206,7 @@ geometry, UV-cut).
 
 ## How it works (short)
 
-* **Colour maths** (`colorsci`): 31 bands 400–700 nm; ASTM E2022 weights (D65, D50, A, F11, CIE
+* **Colour maths** (`colorsci`): 36 bands 380–730 nm (the instrument's full range; 400–700 nm files are edge-extended); ASTM E2022 weights (D65, D50, A, F11, CIE
   1931 2°); dE2000 verified on all 34 Sharma pairs and against colour-science.
 * **Model:** `k = Σc·K / Σc·S`, `R∞ = 1 + k − √(k² + 2k)`, Saunderson correction (k1, k2
   configurable). Drawdowns use the finite-thickness form over the measured black/white substrate.

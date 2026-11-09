@@ -50,7 +50,7 @@ def test_result_structure_and_quantisation() -> None:
         assert np.all(v >= 0.05 - 1e-12)  # min dose
         assert abs(v.sum() - 50.0) <= 0.1 * len(v) + 1e-9
         assert abs(sum(c.fractions_quantised) - 1) < 1e-9
-        assert len(c.predicted_spectrum) == 31
+        assert len(c.predicted_spectrum) == 36
         assert set(c.metamerism) == {"A", "F11"}
         assert c.cost == pytest.approx(c.cost_per_ml * v.sum())
         assert c.predicted_hex.startswith("#")

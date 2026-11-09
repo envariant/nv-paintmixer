@@ -144,7 +144,7 @@ def test_csv_skeleton_round_trips_through_validator(paints: dict[str, PaintInfo]
     filled = [lines[0]]
     for ln in lines[1:]:
         cells = ln.split(",")
-        cells[-31:] = ["0.5"] * 31
+        cells[-36:] = ["0.5"] * 36
         filled.append(",".join(cells))
     rep = parse_calibration_csv("\n".join(filled), paints)
     assert rep.ok, rep.errors[:3]

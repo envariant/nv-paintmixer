@@ -27,7 +27,7 @@ dataclasses/arrays.
 
 | Topic | Decision |
 |---|---|
-| Spectral grid | 31 bands, 400–700 nm at 10 nm; inputs on other grids are linearly resampled. |
+| Spectral grid | 36 bands, 380–730 nm at 10 nm (the ColorMunki/i1Studio range; was 400–700 nm until the "380–730" change, migration `0002`); inputs must cover 400–700 nm, other grids are linearly resampled and edge-held. |
 | Colorimetry | Weighting matrix `W[3,31]` per illuminant from colour-science CMFs (CIE 1931 2°) and SPDs, normalised so a perfect reflector has Y = 100. Lab white = that reflector. |
 | dE2000 | Own vectorised implementation, verified against Sharma et al. (2005) data and cross-checked with `colour.delta_E`. |
 | K-M | `k = Σc K / Σc S`, `R∞ = 1 + k − √(k² + 2k)`, Saunderson with configurable k1, k2. Finite-thickness (Kubelka 1948 hyperbolic) form for drawdowns over the black/white substrates. |
@@ -105,3 +105,6 @@ Progress notes per milestone are appended below as work completes.
   white/grey/black reference check, PASS/WARN/FAIL from `selftest_*` settings, JSON + CSV output
   under `sample_data/selftests/`. CLI only (operator-driven). Also fixed: `PATCH /settings` now
   returns a 422 error envelope for cross-field violations instead of a 500.
+- **380–730 nm grid** Canonical grid widened to 36 bands (380–730 nm). 400–700 nm inputs are
+  edge-held; data migration `0002` converts stored spectra; sample data and JSON schema
+  regenerated (r400–r700 are the required minimum).

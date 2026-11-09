@@ -18,15 +18,18 @@ or `POST /api/v1/calibration/validate`).
 | `components` | yes | `paint_id:fraction;paint_id:fraction` — **volume** fractions summing to 1 (±0.002). Empty for substrate rows. Masstones have one paint at 1; tints have one paint plus a white. |
 | `notes` | yes (may be empty) | Semicolon-separated tokens: `gap_um=150` (applicator gap in µm; default 150), `holdout` (exclude from the fit; use for validation), any other bare words are a free-text comment. Unknown `key=value` tokens produce a warning. |
 | `components_mass_g` | no | Actually weighed masses, `paint_id:grams;...`. When present it **overrides** `components`: masses are converted to volume fractions with each paint's density. A warning is issued when any fraction differs from the planned one by more than 2 percentage points. |
-| `r400` … `r700` | yes | Reflectance, 0–1 (values up to 1.2 accepted), 31 columns at 10 nm. |
+| `r380` … `r730` | `r400` … `r700` required | Reflectance, 0–1 (values up to 1.2 accepted), 36 columns at 10 nm. `r380`, `r390` and `r710`–`r730` are optional. |
 | `sd400` … `sd700` | no | Per-band standard deviation of the repeat readings (written by `paintmixer measure session`). |
 | `measured_at`, `n_readings` | no | ISO timestamp, number of readings averaged. |
 
 ### Wavelengths
 
-The canonical grid is 400–700 nm at 10 nm. Files may use any evenly spaced `r<nm>` grid that
-covers 400–700 nm (e.g. the ColorMunki's 380–730 nm); such spectra are resampled by linear
-interpolation and a `resampled` warning is reported. Header errors (`r55O`, missing `r700`,
+The canonical grid is 380–730 nm at 10 nm, the range the ColorMunki / i1Studio report. Files
+may use any evenly spaced `r<nm>` grid that covers at least 400–700 nm; other grids are
+resampled by linear interpolation, and bands outside the file's range (e.g. 380–390 and
+710–730 nm for a 400–700 nm file) are held at the edge value. Colorimetrically, holding the edges
+is the same as the ASTM E308 end-folding the 400–700 nm grid used before, so older files give
+the same colours. Any non-canonical grid produces a `resampled` warning. Header errors (`r55O`, missing `r700`,
 duplicate, out-of-order or unevenly spaced columns) stop validation.
 
 ## Sample types and what they teach the model
@@ -59,7 +62,7 @@ Rows with errors are excluded; the rest of the file is still reported.
 ## Example
 
 ```csv
-sample_id,type,substrate,components,notes,components_mass_g,r400,r410,...,r700
+sample_id,type,substrate,components,notes,components_mass_g,r380,r390,...,r730
 SUB-W,substrate_white,white,,,,0.8187,0.8301,...,0.8697
 SUB-B,substrate_black,black,,,,0.0262,0.0270,...,0.0339
 MT-titanium-white-75-W,masstone_over_white,white,titanium-white:1,gap_um=75,,0.8050,...

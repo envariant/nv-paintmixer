@@ -34,8 +34,8 @@ def _sharma() -> np.ndarray:
 
 
 def test_grid() -> None:
-    assert WAVELENGTHS.size == 31
-    assert WAVELENGTHS[0] == 400 and WAVELENGTHS[-1] == 700
+    assert WAVELENGTHS.size == 36
+    assert WAVELENGTHS[0] == 380 and WAVELENGTHS[-1] == 730
 
 
 def test_de2000_sharma_all_pairs() -> None:
@@ -83,13 +83,13 @@ def test_reflectance_to_xyz_matches_colour_integration() -> None:
 
 
 def test_perfect_reflector_is_white() -> None:
-    lab = reflectance_to_lab(np.ones(31))
+    lab = reflectance_to_lab(np.ones(36))
     np.testing.assert_allclose(lab, [100, 0, 0], atol=1e-9)
-    srgb = reflectance_to_srgb(np.ones(31))
+    srgb = reflectance_to_srgb(np.ones(36))
     np.testing.assert_allclose(srgb.rgb, [1, 1, 1], atol=1e-6)
     assert not srgb.out_of_gamut
     for ill in Illuminant:
-        np.testing.assert_allclose(reflectance_to_lab(np.ones(31), ill), [100, 0, 0], atol=1e-9)
+        np.testing.assert_allclose(reflectance_to_lab(np.ones(36), ill), [100, 0, 0], atol=1e-9)
 
 
 def test_lab_xyz_round_trip() -> None:
@@ -141,6 +141,6 @@ def test_resample_colormunki_grid() -> None:
 def test_recovery_reproduces_lab() -> None:
     for lab in ([50, 40, 30], [80, -10, 20], [30, 5, -40], [95, 0, 2]):
         r = lab_to_reflectance(lab)
-        assert r.shape == (31,)
+        assert r.shape == (36,)
         assert np.all((r > 0) & (r <= 1))
         assert delta_e_2000(reflectance_to_lab(r), lab) < 0.5

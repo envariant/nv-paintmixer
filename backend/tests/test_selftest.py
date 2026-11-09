@@ -104,7 +104,7 @@ def test_clean_run_passes_and_writes_outputs(tmp_path: Path) -> None:
     run = quiet(source=simulated_selftest_source(noise=0.001, seed=1), n=10, replace=True)
     r = run.report
     assert r.verdict == PASS, format_report(r)
-    assert r.n == 10 and len(r.de_vs_mean) == 10 and len(r.mean) == len(r.std) == 31
+    assert r.n == 10 and len(r.de_vs_mean) == 10 and len(r.mean) == len(r.std) == len(WAVELENGTHS)
     assert r.repeat_max_de < 0.5 and r.repeat_mean_de <= r.repeat_max_de
     assert abs(r.drift_de) < 0.2
     out = write_outputs(run, tmp_path)
@@ -169,14 +169,14 @@ def test_negative_values_fail() -> None:
 
 
 def test_implausible_white_and_jumps_fail() -> None:
-    grey = [np.full(31, 0.3) for _ in range(3)]
+    grey = [np.full(len(WAVELENGTHS), 0.3) for _ in range(3)]
     r = quiet(source=FileImportSource(text=tile_csv(grey)), n=3).report
     assert status(r, "white_range") == FAIL and "not a plausible white tile" in format_report(r)
     spiky = _white().copy()
-    spiky[15] += 0.08
+    spiky[list(WAVELENGTHS).index(550)] += 0.08
     r = quiet(source=FileImportSource(text=tile_csv([spiky] * 3)), n=3).report
     assert status(r, "band_jumps") == FAIL and "540-550 nm" in format_report(r)
-    rough = _white() + 0.012 * (-1) ** np.arange(31)
+    rough = _white() + 0.012 * (-1) ** np.arange(len(WAVELENGTHS))
     s = analyse_tile(np.stack([rough] * 3), SelftestThresholds())[1]
     assert next(c for c in s if c.name == "smoothness").status == WARN
     with pytest.raises(ValueError):

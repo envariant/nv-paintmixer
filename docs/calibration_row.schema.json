@@ -86,6 +86,16 @@
       "type": "string",
       "pattern": "^\\s*\\d*\\s*$"
     },
+    "r380": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r390": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
     "r400": {
       "type": "string",
       "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
@@ -241,6 +251,31 @@
       "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
       "description": "reflectance 0-1.2"
     },
+    "r710": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r720": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "r730": {
+      "type": "string",
+      "pattern": "^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "reflectance 0-1.2"
+    },
+    "sd380": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd390": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
     "sd400": {
       "type": "string",
       "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
@@ -392,6 +427,21 @@
       "description": "std 0-1"
     },
     "sd700": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd710": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd720": {
+      "type": "string",
+      "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
+      "description": "std 0-1"
+    },
+    "sd730": {
       "type": "string",
       "pattern": "^\\s*$|^\\s*(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$",
       "description": "std 0-1"

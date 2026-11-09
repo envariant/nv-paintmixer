@@ -26,6 +26,7 @@ from paintmixer.calibration.format import (
 )
 from paintmixer.colorsci.convert import reflectance_to_lab
 from paintmixer.colorsci.delta_e import delta_e_2000
+from paintmixer.colorsci.spectral import N_BANDS
 from paintmixer.colorsci.types import FloatArray
 from paintmixer.measurement.base import MeasurementSource, MeasureRequest
 
@@ -235,7 +236,7 @@ class MeasureSession:
                 from datetime import UTC, datetime
 
                 mean = reads.mean(axis=0)
-                spread = reads.std(axis=0, ddof=1) if len(reads) > 1 else np.zeros(31)
+                spread = reads.std(axis=0, ddof=1) if len(reads) > 1 else np.zeros(N_BANDS)
                 self._write(s, mean, spread, datetime.now(UTC).isoformat(timespec="seconds"))
                 summary.measured.append(SampleResult(s.sample_id, mean, spread, de, warned))
                 self.say(f"  saved {s.sample_id} (max repeat dE2000 {de:.2f})")

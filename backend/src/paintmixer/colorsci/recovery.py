@@ -18,7 +18,7 @@ from paintmixer.colorsci.types import ArrayLike, FloatArray
 
 
 def lab_to_reflectance(lab: ArrayLike) -> FloatArray:
-    """Recover a smooth reflectance (31 bands) whose D65 Lab approximates ``lab``."""
+    """Recover a smooth reflectance (N_BANDS bands) whose D65 Lab approximates ``lab``."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         import colour

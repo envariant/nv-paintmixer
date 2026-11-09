@@ -32,7 +32,7 @@ import numpy as np
 from paintmixer.calibration.format import SPECTRUM_COLUMNS, Substrate
 from paintmixer.colorsci.convert import lab_to_lch, reflectance_to_lab
 from paintmixer.colorsci.delta_e import delta_e_2000
-from paintmixer.colorsci.spectral import WAVELENGTHS
+from paintmixer.colorsci.spectral import CORE, WAVELENGTHS
 from paintmixer.colorsci.types import FloatArray
 from paintmixer.measurement.base import MeasurementSource, MeasureRequest, Reading
 
@@ -124,7 +124,7 @@ def _graded(name: str, value: float, warn: float, fail: float, what: str) -> Che
 def analyse_tile(
     readings: FloatArray, thresholds: SelftestThresholds
 ) -> tuple[dict[str, Any], list[Check]]:
-    """Statistics and checks for ``readings`` (n, 31) of a white tile."""
+    """Statistics and checks for ``readings`` (n, N_BANDS) of a white tile."""
     t = thresholds
     r = np.asarray(readings, dtype=np.float64)
     n = r.shape[0]
@@ -142,12 +142,14 @@ def analyse_tile(
     de_vs_first = delta_e_2000(lab, lab_first[None, :])
     slope = float(np.polyfit(np.arange(n), de_vs_first, 1)[0]) if n > 1 else 0.0
 
-    jumps = np.abs(np.diff(mean))
+    # shape checks use the 400-700 nm core: instruments are noisiest at the 380/730 nm ends
+    core, wl_core = mean[CORE], WAVELENGTHS[CORE]
+    jumps = np.abs(np.diff(core))
     j_max = int(np.argmax(jumps))
-    d2 = mean[:-2] - 2.0 * mean[1:-1] + mean[2:]
+    d2 = core[:-2] - 2.0 * core[1:-1] + core[2:]
     rough = float(np.sqrt(np.mean(d2**2)))
     n_neg = int((r < 0).sum())
-    lo, hi = float(mean.min()), float(mean.max())
+    lo, hi = float(core.min()), float(core.max())
     checks = [
         _graded(
             "repeatability",
@@ -187,7 +189,7 @@ def analyse_tile(
             float(jumps.max()),
             f"<= {t.max_band_jump:g}",
             f"largest adjacent-band step {jumps.max():.4f} at "
-            f"{WAVELENGTHS[j_max]:.0f}-{WAVELENGTHS[j_max + 1]:.0f} nm",
+            f"{wl_core[j_max]:.0f}-{wl_core[j_max + 1]:.0f} nm",
         ),
         _check(
             "smoothness",
@@ -212,7 +214,7 @@ def analyse_tile(
 def analyse_references(
     spectra: dict[str, FloatArray], thresholds: SelftestThresholds
 ) -> tuple[list[ReferenceResult], list[Check]]:
-    """L*, chroma and casts of the white/grey/black references (each ``(m, 31)`` readings)."""
+    """L*, chroma and casts of the white/grey/black references (each ``(m, N_BANDS)`` readings)."""
     labels = dict(REFERENCES)
     out: list[ReferenceResult] = []
     checks: list[Check] = []
@@ -445,7 +447,7 @@ def default_output_root(start: Path | None = None) -> Path:
 
 
 def write_outputs(run: SelftestRun, root: Path) -> Path:
-    """Write ``report.json``, ``spectra.csv`` (400-700 nm) and, when the instrument reported
+    """Write ``report.json``, ``spectra.csv`` (380-730 nm) and, when the instrument reported
     another grid, ``spectra_raw.csv``, into ``root/<UTC timestamp>/``."""
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     out = root / stamp

@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from paintmixer.colorsci.spectral import Illuminant
+from paintmixer.colorsci.spectral import N_BANDS, Illuminant
 from paintmixer.domain import PaintRole
 
 SLUG = r"^[a-z0-9][a-z0-9_.-]*$"
@@ -155,12 +155,12 @@ class AppSettingsUpdate(_Model):
 
 
 class ColorInput(_Model):
-    """Exactly one of ``hex``, ``srgb`` (0-1), ``lab`` (D65) or ``spectrum`` (31 bands)."""
+    """Exactly one of ``hex``, ``srgb`` (0-1), ``lab`` (D65) or ``spectrum`` (380-730 nm, 10 nm)."""
 
     hex: str | None = None
     srgb: list[float] | None = Field(None, min_length=3, max_length=3)
     lab: list[float] | None = Field(None, min_length=3, max_length=3)
-    spectrum: Spectrum | None = Field(None, min_length=31, max_length=31)
+    spectrum: Spectrum | None = Field(None, min_length=N_BANDS, max_length=N_BANDS)
 
     @model_validator(mode="after")
     def _one(self) -> ColorInput:
@@ -182,7 +182,7 @@ class ColorUpdate(_Model):
     notes: str | None = None
     hex: str | None = None
     lab: list[float] | None = Field(None, min_length=3, max_length=3)
-    spectrum: Spectrum | None = Field(None, min_length=31, max_length=31)
+    spectrum: Spectrum | None = Field(None, min_length=N_BANDS, max_length=N_BANDS)
 
 
 class ColorRead(_Out):
@@ -421,7 +421,7 @@ class TargetIn(_Model):
     srgb: list[float] | None = Field(None, min_length=3, max_length=3)
     hex: str | None = None
     library_id: int | None = None
-    spectrum: Spectrum | None = Field(None, min_length=31, max_length=31)
+    spectrum: Spectrum | None = Field(None, min_length=N_BANDS, max_length=N_BANDS)
     name: str = ""
 
     @model_validator(mode="after")
@@ -561,7 +561,7 @@ class DispenseRequest(_Model):
 class MeasurementIn(_Model):
     """A measured spectrum or Lab of the mixed paint, or ``simulate`` to use the simulator."""
 
-    spectrum: Spectrum | None = Field(None, min_length=31, max_length=31)
+    spectrum: Spectrum | None = Field(None, min_length=N_BANDS, max_length=N_BANDS)
     lab: list[float] | None = Field(None, min_length=3, max_length=3)
     simulate: bool = False
     simulate_gain: float = Field(1.0, gt=0, description="Simulated model/instrument bias")

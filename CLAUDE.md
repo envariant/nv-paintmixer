@@ -38,7 +38,8 @@ Inside `backend/`: `uv run pytest tests/test_x.py -k name`, `uv run paintmixer .
 
 ## Conventions
 
-- Reflectance arrays are float64, shape `(..., 31)`, 0–1, on `colorsci.WAVELENGTHS` (400–700/10).
+- Reflectance arrays are float64, shape `(..., N_BANDS)` = 36 bands, 0–1, on `colorsci.WAVELENGTHS`
+  (380–730 nm / 10 nm). Inputs must cover at least 400–700 nm; never hard-code the band count.
   Batch dimensions go first; functions are vectorised — never loop over bands in Python.
 - Mixture fractions are **volume** fractions summing to 1. Masses are converted with density.
 - Lab is CIE 1976 relative to the illuminant's perfect reflector; default D65 / CIE 1931 2°.

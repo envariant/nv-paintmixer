@@ -12,6 +12,7 @@ import numpy as np
 
 from paintmixer.calibration.format import Substrate
 from paintmixer.colorsci.km import KMModel
+from paintmixer.colorsci.spectral import N_BANDS
 from paintmixer.colorsci.types import FloatArray
 from paintmixer.measurement.base import MeasurementError, MeasureRequest, Reading
 
@@ -120,7 +121,7 @@ class SimulatedSource:
     def read(self, request: MeasureRequest) -> Reading:
         drift = 1.0 + self.drift_per_read * self.n_reads
         self.n_reads += 1
-        r = self.clean(request) * drift + self.rng.normal(0.0, self.noise, size=31)
+        r = self.clean(request) * drift + self.rng.normal(0.0, self.noise, size=N_BANDS)
         return Reading(np.clip(r, 0.0, 1.2), source=self.name)
 
     def close(self) -> None:

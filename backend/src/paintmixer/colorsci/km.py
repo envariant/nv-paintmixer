@@ -1,8 +1,8 @@
 """Two-constant Kubelka-Munk mixing model with Saunderson surface correction.
 
 All functions are vectorised: concentrations ``c`` have shape ``(..., n_paints)`` and the
-per-paint coefficients ``K``, ``S`` have shape ``(n_paints, 31)``. Results have shape
-``(..., 31)``.
+per-paint coefficients ``K``, ``S`` have shape ``(n_paints, N_BANDS)``. Results have shape
+``(..., N_BANDS)``.
 
 * Mixing:            ``K_mix = c @ K``, ``S_mix = c @ S``, ``k = K_mix / S_mix``
 * Opaque layer:      ``R_inf = 1 + k - sqrt(k^2 + 2k)``
@@ -109,8 +109,8 @@ def r_layer(ks: ArrayLike, sx: ArrayLike, r_g: ArrayLike) -> FloatArray:
 class KMModel:
     """K/S coefficients for a set of paints plus Saunderson constants."""
 
-    K: FloatArray  # (n_paints, 31)
-    S: FloatArray  # (n_paints, 31)
+    K: FloatArray  # (n_paints, N_BANDS)
+    S: FloatArray  # (n_paints, N_BANDS)
     k1: float = DEFAULT_K1
     k2: float = DEFAULT_K2
 
@@ -138,8 +138,8 @@ class KMModel:
     ) -> FloatArray:
         """Measured reflectance of a finite layer over a substrate.
 
-        ``thickness`` is optical thickness per unit S, broadcastable to ``(..., 31)`` (in the fit
-        this is ``tau(lambda) * gap_um``). ``substrate_meas`` is the *measured* substrate
+        ``thickness`` is optical thickness per unit S, broadcastable to ``(..., N_BANDS)`` (in the
+        fit this is ``tau(lambda) * gap_um``). ``substrate_meas`` is the *measured* substrate
         reflectance; it is converted to internal reflectance with the same Saunderson constants.
         """
         c_a = np.asarray(c, dtype=np.float64)

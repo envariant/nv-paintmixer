@@ -18,7 +18,7 @@ from enum import StrEnum
 
 import numpy as np
 
-from paintmixer.colorsci.spectral import WAVELENGTHS, resample
+from paintmixer.colorsci.spectral import REQUIRED_RANGE, WAVELENGTHS, resample
 from paintmixer.colorsci.types import FloatArray
 from paintmixer.domain import PaintInfo, PaintRole
 
@@ -28,8 +28,12 @@ REFLECTANCE_MAX = 1.2
 DEFAULT_GAP_UM = 150.0
 
 BASE_COLUMNS = ["sample_id", "type", "substrate", "components", "notes"]
-SPECTRUM_COLUMNS = [f"r{int(w)}" for w in WAVELENGTHS]
+SPECTRUM_COLUMNS = [f"r{int(w)}" for w in WAVELENGTHS]  # canonical: r380 ... r730
 SPREAD_COLUMNS = [f"sd{int(w)}" for w in WAVELENGTHS]
+# minimum coverage every file must provide: r400 ... r700
+REQUIRED_SPECTRUM_COLUMNS = [
+    f"r{int(w)}" for w in WAVELENGTHS if REQUIRED_RANGE[0] <= w <= REQUIRED_RANGE[1]
+]
 OPTIONAL_COLUMNS = ["components_mass_g", "measured_at", "n_readings"]
 
 _SPECTRAL_RE = re.compile(r"^r(\d{3,4})$")
@@ -77,7 +81,7 @@ class CalibrationSampleData:
     type: SampleType
     substrate: Substrate
     components: dict[str, float]  # volume fractions (from masses when given)
-    reflectance: FloatArray  # (31,)
+    reflectance: FloatArray  # (N_BANDS,)
     gap_um: float | None = None
     holdout: bool = False
     spread: FloatArray | None = None
@@ -253,7 +257,7 @@ def _check_grid(
         if kind == "spectrum":
             issues.append(
                 ValidationIssue(
-                    1, None, "missing_spectrum", "no spectral columns r400 ... r700 found"
+                    1, None, "missing_spectrum", "no spectral columns (need at least r400 ... r700)"
                 )
             )
         return kind != "spectrum"
@@ -287,8 +291,10 @@ def _check_grid(
                 )
             )
             ok = False
-    if ok and (min(wl) > 400 or max(wl) < 700):
-        missing = [c for c in SPECTRUM_COLUMNS if float(c[1:]) < min(wl) or float(c[1:]) > max(wl)]
+    if ok and (min(wl) > REQUIRED_RANGE[0] or max(wl) < REQUIRED_RANGE[1]):
+        missing = [
+            c for c in REQUIRED_SPECTRUM_COLUMNS if float(c[1:]) < min(wl) or float(c[1:]) > max(wl)
+        ]
         prefix = "r" if kind == "spectrum" else "sd"
         more = "..." if len(missing) > 4 else ""
         issues.append(
@@ -296,7 +302,7 @@ def _check_grid(
                 1,
                 None,
                 "bad_wavelength_header",
-                f"{kind} covers {min(wl):.0f}-{max(wl):.0f} nm; 400-700 nm required "
+                f"{kind} covers {min(wl):.0f}-{max(wl):.0f} nm; at least 400-700 nm required "
                 f"(missing {', '.join(prefix + m[1:] for m in missing[:4])}{more})",
             )
         )
@@ -350,13 +356,15 @@ def parse_calibration_csv(
     wl_in = [c[2] for c in spec_cols]
     report.wavelengths_in = wl_in
     if wl_in != [float(w) for w in WAVELENGTHS]:
+        held = wl_in[0] > WAVELENGTHS[0] or wl_in[-1] < WAVELENGTHS[-1]
         issues.append(
             ValidationIssue(
                 header_line,
                 None,
                 "resampled",
                 f"spectra on {wl_in[0]:.0f}-{wl_in[-1]:.0f} nm / {len(wl_in)} bands "
-                "are resampled to 400-700 nm / 10 nm",
+                f"are resampled to {WAVELENGTHS[0]:.0f}-{WAVELENGTHS[-1]:.0f} nm / 10 nm"
+                + ("; bands outside the measured range are held at the edge value" if held else ""),
                 "warning",
             )
         )

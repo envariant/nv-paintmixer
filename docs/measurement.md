@@ -30,7 +30,7 @@ to the calibration position, then press a key). Afterwards, for each reading, it
 "Place instrument on spot to be measured, ... any other key to take a reading"; a key press or the
 instrument button takes the reading and prints `Result is XYZ: …, D50 Lab: …` followed by
 `Spectrum from 380.000 to 730.000 nm in 36 steps` and the values in percent. PaintMixer resamples
-380–730 nm to 400–700 nm / 10 nm and converts percent to 0–1. If spotread asks to recalibrate or
+in percent; PaintMixer converts it to 0–1 and keeps the full 380–730 nm, which is its canonical grid. If spotread asks to recalibrate or
 reports "sensor in the wrong position", the session tells the operator what to do and retries.
 
 ## Instrument self-test
@@ -81,7 +81,7 @@ cd backend && uv run paintmixer measure selftest --replace --reference-check
    once you have a few runs from your own instrument.
 7. **Output.** A console report, plus a folder `sample_data/selftests/<UTC timestamp>/` with
    `report.json` (all statistics, checks and thresholds), `spectra.csv` (every reading on the
-   400–700 nm grid, replayable with `--source file --file spectra.csv`) and, for spotread,
+   canonical 380–730 nm grid, replayable with `--source file --file spectra.csv`) and, for spotread,
    `spectra_raw.csv` (values as reported, e.g. 380–730 nm in %). `--out-dir` changes the root.
 
 Exit codes: 0 PASS, 3 WARN, 1 FAIL, 2 instrument not found or measurement error.

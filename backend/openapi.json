@@ -3288,8 +3288,8 @@
                   "type": "number"
                 },
                 "type": "array",
-                "maxItems": 31,
-                "minItems": 31
+                "maxItems": 36,
+                "minItems": 36
               },
               {
                 "type": "null"
@@ -3487,8 +3487,8 @@
                   "type": "number"
                 },
                 "type": "array",
-                "maxItems": 31,
-                "minItems": 31
+                "maxItems": 36,
+                "minItems": 36
               },
               {
                 "type": "null"
@@ -4236,8 +4236,8 @@
                   "type": "number"
                 },
                 "type": "array",
-                "maxItems": 31,
-                "minItems": 31
+                "maxItems": 36,
+                "minItems": 36
               },
               {
                 "type": "null"
@@ -5628,8 +5628,8 @@
                   "type": "number"
                 },
                 "type": "array",
-                "maxItems": 31,
-                "minItems": 31
+                "maxItems": 36,
+                "minItems": 36
               },
               {
                 "type": "null"

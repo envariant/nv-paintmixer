@@ -28,10 +28,9 @@ def test_parse_recorded_session() -> None:
     assert s0.xyz == pytest.approx((84.651218, 87.817744, 73.064377))
     assert s0.lab == pytest.approx((95.093102, 0.398281, -1.127663)) and s0.lab_white == "D50"
     r = s0.reading()
-    assert r.reflectance.shape == (31,)
-    # percent -> 0-1 and resampled 380-730 -> 400-700
-    np.testing.assert_allclose(r.reflectance[0], s0.values[2] / 100)
-    np.testing.assert_allclose(r.reflectance[-1], s0.values[-4] / 100)
+    assert r.reflectance.shape == (36,)
+    # percent -> 0-1; the ColorMunki's 380-730 nm grid is the canonical grid
+    np.testing.assert_allclose(r.reflectance, np.array(s0.values) / 100)
     # the failed-then-retried read still yields its spectrum
     assert spectra[2].lab is not None and spectra[2].lab[2] < 0
 
@@ -79,7 +78,7 @@ def test_spotread_wrapper_retry_and_missing_instrument() -> None:
     src.open()
     r = src.read(MeasureRequest("X"))
     src.close()
-    assert r.reflectance.shape == (31,)
+    assert r.reflectance.shape == (36,)
     assert any("Reading failed" in p for p in prompts)
     bad = ArgyllSpotread(str(DATA / "fake_spotread.py"), ("--none",), timeout=10)
     with pytest.raises(MeasurementError, match="spotread -\\?"):
@@ -207,11 +206,11 @@ def test_session_skip_and_masses(tmp_path: Path, paints: dict[str, PaintInfo]) -
 
 
 def test_max_pairwise_de() -> None:
-    r = np.full((3, 31), 0.5)
+    r = np.full((3, 36), 0.5)
     assert max_pairwise_de(r) == 0.0
     r[2] += 0.05
     assert max_pairwise_de(r) > 1.0
-    assert WAVELENGTHS.size == 31
+    assert WAVELENGTHS.size == 36
 
 
 def test_cli_measure_session_simulated(tmp_path: Path, paints: dict[str, PaintInfo]) -> None:

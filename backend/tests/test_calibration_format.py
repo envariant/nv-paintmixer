@@ -16,13 +16,14 @@ from paintmixer.calibration.format import (
     parse_calibration_csv,
 )
 from paintmixer.calibration.schema import calibration_row_schema, schema_json
+from paintmixer.colorsci.spectral import N_BANDS
 from paintmixer.domain import PaintInfo
 from tests.helpers import ROOT, SAMPLE_DATA
 
 HEADER = "sample_id,type,substrate,components,notes," + ",".join(SPECTRUM_COLUMNS)
 
 
-def spec(v: float = 0.5, n: int = 31) -> str:
+def spec(v: float = 0.5, n: int = N_BANDS) -> str:
     return ",".join([f"{v}"] * n)
 
 
@@ -65,7 +66,7 @@ def test_good_rows(paints: dict[str, PaintInfo]) -> None:
     mx = [s for s in rep.samples if s.sample_id == "MX-1-W"][0]
     assert mx.holdout and mx.gap_um == 100 and mx.substrate == Substrate.WHITE
     assert mx.drawdown_id == "MX-1"
-    assert mx.reflectance.shape == (31,)
+    assert mx.reflectance.shape == (N_BANDS,)
     assert rep.samples[0].components == {}
     assert rep.samples[2].effective_gap_um == 150
 
@@ -85,18 +86,19 @@ def test_unknown_paint_and_sum(paints: dict[str, PaintInfo]) -> None:
 
 
 def test_spectrum_cell_errors(paints: dict[str, PaintInfo]) -> None:
-    cells = [0.5] * 31
+    cells = [0.5] * N_BANDS
+    col = SPECTRUM_COLUMNS.index
     row_missing = "MX-5-W,mixture,white,phthalo-blue:1,," + ",".join(
-        "" if i == 3 else str(v) for i, v in enumerate(cells)
+        "" if i == col("r430") else str(v) for i, v in enumerate(cells)
     )
     row_text = "MX-6-W,mixture,white,phthalo-blue:1,," + ",".join(
-        "abc" if i == 30 else str(v) for i, v in enumerate(cells)
+        "abc" if i == col("r700") else str(v) for i, v in enumerate(cells)
     )
     row_range = "MX-7-W,mixture,white,phthalo-blue:1,," + ",".join(
-        "45.2" if i == 10 else str(v) for i, v in enumerate(cells)
+        "45.2" if i == col("r500") else str(v) for i, v in enumerate(cells)
     )
     row_neg = "MX-8-W,mixture,white,phthalo-blue:1,," + ",".join(
-        "-0.01" if i == 0 else str(v) for i, v in enumerate(cells)
+        "-0.01" if i == col("r400") else str(v) for i, v in enumerate(cells)
     )
     rep = parse_calibration_csv(csv_text(row_missing, row_text, row_range, row_neg), paints)
     errs = codes(rep)
@@ -113,9 +115,9 @@ def test_wrong_wavelength_headers(paints: dict[str, PaintInfo]) -> None:
     bad = HEADER.replace("r550", "r55O")
     rep = parse_calibration_csv(csv_text(f"SUB-W,substrate_white,white,,,{spec()}", header=bad))
     assert (1, "r55O", "bad_wavelength_header") in codes(rep)
-    short = ",".join(HEADER.split(",")[:-1])  # drop r700
+    short = ",".join(HEADER.split(",")[:-4])  # drop r700 ... r730
     rep = parse_calibration_csv(
-        csv_text(f"SUB-W,substrate_white,white,,,{spec(n=30)}", header=short)
+        csv_text(f"SUB-W,substrate_white,white,,,{spec(n=N_BANDS - 4)}", header=short)
     )
     err = [i for i in rep.errors if i.code == "bad_wavelength_header"][0]
     assert "r700" in err.message
@@ -130,14 +132,35 @@ def test_wrong_wavelength_headers(paints: dict[str, PaintInfo]) -> None:
     assert (1, "substrate", "missing_column") in codes(rep)
 
 
-def test_colormunki_grid_is_resampled(paints: dict[str, PaintInfo]) -> None:
+def test_colormunki_grid_is_canonical() -> None:
     wl = list(range(380, 731, 10))
     header = "sample_id,type,substrate,components,notes," + ",".join(f"r{w}" for w in wl)
     vals = ",".join(f"{(w - 380) / 1000:.3f}" for w in wl)
     rep = parse_calibration_csv(csv_text(f"SUB-W,substrate_white,white,,,{vals}", header=header))
-    assert rep.ok
-    assert [i.code for i in rep.warnings] == ["resampled"]
-    np.testing.assert_allclose(rep.samples[0].reflectance, (np.arange(400, 701, 10) - 380) / 1000)
+    assert rep.ok and not rep.warnings
+    np.testing.assert_allclose(rep.samples[0].reflectance, (np.arange(380, 731, 10) - 380) / 1000)
+
+
+def test_400_700_file_is_extended_by_holding_edges() -> None:
+    wl = list(range(400, 701, 10))
+    header = "sample_id,type,substrate,components,notes," + ",".join(f"r{w}" for w in wl)
+    vals = ",".join(f"{(w - 380) / 1000:.3f}" for w in wl)
+    rep = parse_calibration_csv(csv_text(f"SUB-W,substrate_white,white,,,{vals}", header=header))
+    assert rep.ok and [i.code for i in rep.warnings] == ["resampled"]
+    assert "held at the edge" in rep.warnings[0].message
+    r = rep.samples[0].reflectance
+    assert r.shape == (N_BANDS,)
+    np.testing.assert_allclose(r[:3], 0.02)  # 380, 390 held at the 400 nm value
+    np.testing.assert_allclose(r[-4:], 0.32)  # 710-730 held at the 700 nm value
+
+
+def test_5nm_grid_is_resampled() -> None:
+    wl = list(range(380, 731, 5))
+    header = "sample_id,type,substrate,components,notes," + ",".join(f"r{w}" for w in wl)
+    vals = ",".join(f"{(w - 380) / 1000:.4f}" for w in wl)
+    rep = parse_calibration_csv(csv_text(f"SUB-W,substrate_white,white,,,{vals}", header=header))
+    assert rep.ok and [i.code for i in rep.warnings] == ["resampled"]
+    assert "held" not in rep.warnings[0].message
 
 
 def test_masses_override_components(paints: dict[str, PaintInfo]) -> None:

@@ -56,7 +56,7 @@ def nnls_init(
 ) -> FloatArray:
     """Initial fractions from NNLS in K/S space: ``sum c_i (K_i - ks_t S_i) ≈ 0``, ``sum c = 1``."""
     ks_t = ks_from_r(inverse_saunderson(target_spectrum, model.km.k1, model.km.k2))
-    A_all = model.km.K - ks_t[None, :] * model.km.S  # (n, 31)
+    A_all = model.km.K - ks_t[None, :] * model.km.S  # (n, N_BANDS)
     scale = 1.0 / np.maximum(np.abs(A_all).max(axis=0), 1e-6)  # band balance
     A_all = A_all * scale
     m, k = idx.shape

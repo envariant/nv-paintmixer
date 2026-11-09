@@ -25,7 +25,7 @@ class MeasureRequest:
 
 @dataclass(frozen=True)
 class Reading:
-    reflectance: FloatArray  # (31,) on the canonical grid, 0-1
+    reflectance: FloatArray  # (N_BANDS,) on the canonical grid, 0-1
     wavelengths_in: tuple[float, ...] = ()
     raw: tuple[float, ...] = ()
     source: str = ""
