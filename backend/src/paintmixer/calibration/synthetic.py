@@ -71,7 +71,7 @@ def _catalogue() -> list[tuple[SyntheticPaint, str]]:
     return [
         _paint(
             "titanium-white",
-            "Titanium White",
+            "White (Titanium)",
             PaintRole.WHITE,
             0.003 + 0.004 * _g(400, 30) + 0.25 * _sig(405, 6),
             1.0,
@@ -81,7 +81,7 @@ def _catalogue() -> list[tuple[SyntheticPaint, str]]:
         ),
         _paint(
             "carbon-black",
-            "Carbon Black",
+            "Black (Carbon)",
             PaintRole.BLACK,
             10.0 * (1.0 - 0.06 * lam),
             0.30,
@@ -91,7 +91,7 @@ def _catalogue() -> list[tuple[SyntheticPaint, str]]:
         ),
         _paint(
             "phthalo-blue",
-            "Phthalo Blue (cyan)",
+            "Cyan (Phthalo Blue)",
             PaintRole.CHROMATIC,
             0.05 + 16.0 * _g(625, 45) + 7.0 * _g(690, 35) + 0.6 * _sig(420, 10),
             0.12 + 0.04 * _g(450, 60),
@@ -101,7 +101,7 @@ def _catalogue() -> list[tuple[SyntheticPaint, str]]:
         ),
         _paint(
             "quinacridone-magenta",
-            "Quinacridone Magenta",
+            "Magenta (Quinacridone)",
             PaintRole.CHROMATIC,
             0.08 + 13.0 * _g(545, 38) + 2.0 * _g(420, 30),
             0.15 + 0.03 * _g(650, 80),
@@ -111,7 +111,7 @@ def _catalogue() -> list[tuple[SyntheticPaint, str]]:
         ),
         _paint(
             "arylide-yellow",
-            "Arylide Yellow",
+            "Yellow (Arylide)",
             PaintRole.CHROMATIC,
             0.03 + 15.0 * _sig(482, 11),
             0.35 + 0.05 * _g(600, 80),

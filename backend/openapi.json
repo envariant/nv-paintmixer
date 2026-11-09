@@ -884,7 +884,7 @@
           "color library"
         ],
         "summary": "Import Colors",
-        "description": "CSV columns: ``name``, ``source`` (optional) and one of ``hex`` | ``r,g,b`` (0-255) |\n``L,a,b`` (D65) | ``r400..r700``. Existing (source, name) pairs are updated.",
+        "description": "CSV columns: ``name``, ``source`` (optional) and one of ``hex`` | ``r,g,b`` (0-255) |\n``L,a,b`` (D65) | ``r380..r730``. Existing (source, name) pairs are updated.",
         "operationId": "import_colors_api_v1_colors_import_post",
         "parameters": [
           {
@@ -2129,6 +2129,238 @@
         }
       }
     },
+    "/api/v1/models/{version}/gamut": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Model Gamut",
+        "description": "Colour reachability of any model version (active or not): the a*b* boundary per L*\nslice, with each boundary point's display colour, for charting or comparing versions.",
+        "operationId": "model_gamut_api_v1_models__version__gamut_get",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version"
+            }
+          },
+          {
+            "name": "pool",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated paint ids; default = every paint in the model",
+              "title": "Pool"
+            },
+            "description": "Comma-separated paint ids; default = every paint in the model"
+          },
+          {
+            "name": "max_paints",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 8,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Most paints per mixture; default = settings",
+              "title": "Max Paints"
+            },
+            "description": "Most paints per mixture; default = settings"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GamutResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/models/{version}/gamut.svg": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Model Gamut Svg",
+        "description": "The same gamut as a ready-to-view SVG: one a*b* panel per L* slice on a neutral grey\nsurround, wedges coloured from neutral to the boundary colour.",
+        "operationId": "model_gamut_svg_api_v1_models__version__gamut_svg_get",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version"
+            }
+          },
+          {
+            "name": "pool",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated paint ids; default = every paint in the model",
+              "title": "Pool"
+            },
+            "description": "Comma-separated paint ids; default = every paint in the model"
+          },
+          {
+            "name": "max_paints",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 8,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Most paints per mixture; default = settings",
+              "title": "Max Paints"
+            },
+            "description": "Most paints per mixture; default = settings"
+          },
+          {
+            "name": "columns",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 12,
+              "minimum": 1,
+              "description": "Panels per row",
+              "default": 5,
+              "title": "Columns"
+            },
+            "description": "Panels per row"
+          },
+          {
+            "name": "chroma_scale",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "maximum": 250,
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "C* at the panel edge; fix it to compare versions",
+              "title": "Chroma Scale"
+            },
+            "description": "C* at the panel edge; fix it to compare versions"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SVG chart",
+            "content": {
+              "image/svg+xml": {}
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/solve": {
       "post": {
         "tags": [
@@ -2382,7 +2614,7 @@
           "mixing"
         ],
         "summary": "Gamut",
-        "description": "a*b* boundary (max chroma per 10\u00b0 hue bin) at L* slices every 10 units.",
+        "description": "a*b* boundary (max chroma per 10\u00b0 hue bin) at L* slices every 10 units, for the active\nmodel. ``GET /models/{version}/gamut`` does the same for any model version.",
         "operationId": "gamut_api_v1_gamut_get",
         "parameters": [
           {
@@ -4093,6 +4325,14 @@
           "model_version": {
             "type": "integer",
             "title": "Model Version"
+          },
+          "model_source": {
+            "type": "string",
+            "title": "Model Source"
+          },
+          "max_paints": {
+            "type": "integer",
+            "title": "Max Paints"
           }
         },
         "type": "object",
@@ -4102,7 +4342,9 @@
           "L_max",
           "n_samples",
           "slices",
-          "model_version"
+          "model_version",
+          "model_source",
+          "max_paints"
         ],
         "title": "GamutResponse"
       },
@@ -4139,6 +4381,21 @@
             },
             "type": "array",
             "title": "B"
+          },
+          "hex": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Hex",
+            "description": "D65 sRGB colour of each boundary point (gamut-mapped); null = no samples"
           }
         },
         "type": "object",
@@ -4147,7 +4404,8 @@
           "hue_deg",
           "chroma",
           "a",
-          "b"
+          "b",
+          "hex"
         ],
         "title": "GamutSliceOut"
       },

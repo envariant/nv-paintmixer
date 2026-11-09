@@ -567,6 +567,9 @@ class GamutSliceOut(_Out):
     chroma: list[float]
     a: list[float]
     b: list[float]
+    hex: list[str | None] = Field(
+        description="D65 sRGB colour of each boundary point (gamut-mapped); null = no samples"
+    )
 
 
 class GamutResponse(_Out):
@@ -576,6 +579,8 @@ class GamutResponse(_Out):
     n_samples: int
     slices: list[GamutSliceOut]
     model_version: int
+    model_source: str
+    max_paints: int
 
 
 class RampRequest(_Model):

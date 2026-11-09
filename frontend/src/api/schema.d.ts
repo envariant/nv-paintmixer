@@ -166,7 +166,7 @@ export interface paths {
         /**
          * Import Colors
          * @description CSV columns: ``name``, ``source`` (optional) and one of ``hex`` | ``r,g,b`` (0-255) |
-         *     ``L,a,b`` (D65) | ``r400..r700``. Existing (source, name) pairs are updated.
+         *     ``L,a,b`` (D65) | ``r380..r730``. Existing (source, name) pairs are updated.
          */
         post: operations["import_colors_api_v1_colors_import_post"];
         delete?: never;
@@ -474,6 +474,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models/{version}/gamut": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Model Gamut
+         * @description Colour reachability of any model version (active or not): the a*b* boundary per L*
+         *     slice, with each boundary point's display colour, for charting or comparing versions.
+         */
+        get: operations["model_gamut_api_v1_models__version__gamut_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/models/{version}/gamut.svg": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Model Gamut Svg
+         * @description The same gamut as a ready-to-view SVG: one a*b* panel per L* slice on a neutral grey
+         *     surround, wedges coloured from neutral to the boundary colour.
+         */
+        get: operations["model_gamut_svg_api_v1_models__version__gamut_svg_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/solve": {
         parameters: {
             query?: never;
@@ -568,7 +610,8 @@ export interface paths {
         };
         /**
          * Gamut
-         * @description a*b* boundary (max chroma per 10° hue bin) at L* slices every 10 units.
+         * @description a*b* boundary (max chroma per 10° hue bin) at L* slices every 10 units, for the active
+         *     model. ``GET /models/{version}/gamut`` does the same for any model version.
          */
         get: operations["gamut_api_v1_gamut_get"];
         put?: never;
@@ -1114,6 +1157,10 @@ export interface components {
             slices: components["schemas"]["GamutSliceOut"][];
             /** Model Version */
             model_version: number;
+            /** Model Source */
+            model_source: string;
+            /** Max Paints */
+            max_paints: number;
         };
         /** GamutSliceOut */
         GamutSliceOut: {
@@ -1127,6 +1174,11 @@ export interface components {
             a: number[];
             /** B */
             b: number[];
+            /**
+             * Hex
+             * @description D65 sRGB colour of each boundary point (gamut-mapped); null = no samples
+             */
+            hex: (string | null)[];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -3849,6 +3901,118 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelSpectra"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    model_gamut_api_v1_models__version__gamut_get: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated paint ids; default = every paint in the model */
+                pool?: string | null;
+                /** @description Most paints per mixture; default = settings */
+                max_paints?: number | null;
+            };
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GamutResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    model_gamut_svg_api_v1_models__version__gamut_svg_get: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated paint ids; default = every paint in the model */
+                pool?: string | null;
+                /** @description Most paints per mixture; default = settings */
+                max_paints?: number | null;
+                /** @description Panels per row */
+                columns?: number;
+                /** @description C* at the panel edge; fix it to compare versions */
+                chroma_scale?: number | null;
+            };
+            header?: never;
+            path: {
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description SVG chart */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/svg+xml": unknown;
                 };
             };
             /** @description Not found */

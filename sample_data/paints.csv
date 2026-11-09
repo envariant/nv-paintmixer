@@ -1,9 +1,9 @@
 id,name,brand,pigment_code,role,density_g_per_ml,cost_per_ml,min_dose_ml,dispenser_channel,loaded,swatch_hex,tint_hex,tint_fraction
-titanium-white,Titanium White,Synthetic,PW6,white,1.4,0.06,0.05,1,true,#eeefe9,,
-carbon-black,Carbon Black,Synthetic,PBk7,black,1.15,0.08,0.05,2,true,#151514,#6c6b69,0.1
-phthalo-blue,Phthalo Blue (cyan),Synthetic,PB15:3,chromatic,1.1,0.095,0.05,3,true,#002967,#009ae0,0.1
-quinacridone-magenta,Quinacridone Magenta,Synthetic,PR122,chromatic,1.1,0.12,0.05,4,true,#360124,#a660a0,0.1
-arylide-yellow,Arylide Yellow,Synthetic,PY74,chromatic,1.2,0.085,0.05,5,true,#d39600,#f6d846,0.1
+titanium-white,White (Titanium),Synthetic,PW6,white,1.4,0.06,0.05,1,true,#eeefe9,,
+carbon-black,Black (Carbon),Synthetic,PBk7,black,1.15,0.08,0.05,2,true,#151514,#6c6b69,0.1
+phthalo-blue,Cyan (Phthalo Blue),Synthetic,PB15:3,chromatic,1.1,0.095,0.05,3,true,#002967,#009ae0,0.1
+quinacridone-magenta,Magenta (Quinacridone),Synthetic,PR122,chromatic,1.1,0.12,0.05,4,true,#360124,#a660a0,0.1
+arylide-yellow,Yellow (Arylide),Synthetic,PY74,chromatic,1.2,0.085,0.05,5,true,#d39600,#f6d846,0.1
 pyrrole-red,Pyrrole Red (warm),Synthetic,PR254,chromatic,1.25,0.15,0.05,,false,#7a0009,#cb5252,0.1
 pyrrole-orange,Pyrrole Orange,Synthetic,PO73,chromatic,1.25,0.14,0.05,,false,#b01a00,#f67b4c,0.1
 phthalo-green,Phthalo Green,Synthetic,PG7,chromatic,1.1,0.095,0.05,,false,#002619,#2ca78a,0.1

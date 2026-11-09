@@ -93,7 +93,52 @@ def sample_mixtures(model: PoolModel, max_paints: int = 5, seed: int = 0) -> Flo
         idx = np.repeat(np.array(combos), per, axis=0)
         w = np.exp(rng.uniform(-6.0, 0.0, size=idx.shape))
         labs.append(model.lab(idx, w / w.sum(axis=1, keepdims=True)))
+    labs.extend(_tints(model, labs[0], max_paints, rng))
     return np.concatenate(labs)
+
+
+TINT_LEVELS = 1.0 - np.logspace(np.log10(0.005), np.log10(0.5), 14)  # lightener 50 % .. 99.5 %
+
+
+def _tints(
+    model: PoolModel, singles: FloatArray, max_paints: int, rng: np.random.Generator
+) -> list[FloatArray]:
+    """Chromatic pairs and triples let down with the lightest paint (normally the white).
+
+    Random mixtures rarely land above L* 70, so without these the light slices only contain
+    the two-paint tint lines and look spiky: pale colours *between* two hues (lilac, pale
+    teal, ...) were reachable but missing from the boundary.
+    """
+    n = model.n
+    light = int(np.argmax(singles[:, 0]))
+    others = [i for i in range(n) if i != light]
+    out: list[FloatArray] = []
+    for k in (2, 3):
+        if k + 1 > max_paints or len(others) < k:
+            break
+        combos = list(itertools.combinations(others, k))
+        per = 24 if k == 2 else 48
+        budget = 6000 // (per * TINT_LEVELS.size) + 1
+        if len(combos) > budget:
+            pick = rng.choice(len(combos), budget, replace=False)
+            combos = [combos[i] for i in pick]
+        if k == 2:
+            t = np.linspace(0.02, 0.98, per)
+            mix = np.tile(np.stack([t, 1.0 - t], axis=1), (len(combos), 1))
+        else:
+            w = np.exp(rng.uniform(-4.0, 0.0, size=(len(combos) * per, k)))
+            mix = w / w.sum(axis=1, keepdims=True)
+        chrom = np.repeat(np.array(combos), per, axis=0)  # (m, k)
+        m = chrom.shape[0]
+        lv = np.repeat(TINT_LEVELS[None, :], m, axis=0).ravel()  # (m * levels,)
+        idx = np.concatenate(
+            [np.full((lv.size, 1), light), np.repeat(chrom, TINT_LEVELS.size, axis=0)], axis=1
+        )
+        c = np.concatenate(
+            [lv[:, None], (1.0 - lv)[:, None] * np.repeat(mix, TINT_LEVELS.size, axis=0)], axis=1
+        )
+        out.append(model.lab(idx, c))
+    return out
 
 
 def compute_gamut(model: PoolModel, max_paints: int = 5, seed: int = 0) -> Gamut:

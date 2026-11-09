@@ -8,7 +8,7 @@ import numpy as np
 from sqlmodel import Session, col, select
 
 from paintmixer.api.errors import ApiError, bad_request, not_found
-from paintmixer.api.schemas import AppSettings, TargetIn
+from paintmixer.api.schemas import AppSettings, GamutResponse, GamutSliceOut, TargetIn
 from paintmixer.calibration.format import CalibrationSampleData, SampleType, Substrate
 from paintmixer.calibration.strength import PaintStrength, tinting_strengths
 from paintmixer.colorsci.convert import (
@@ -23,6 +23,8 @@ from paintmixer.colorsci.spectral import Illuminant
 from paintmixer.db import models as m
 from paintmixer.domain import PaintInfo, PaintRole
 from paintmixer.measurement.selftest import SelftestThresholds
+from paintmixer.solver.gamut import Gamut
+from paintmixer.solver.gamut_chart import boundary_hex
 from paintmixer.solver.model import PoolModel
 from paintmixer.solver.solve import Target
 
@@ -118,11 +120,21 @@ def km_of(fm: m.FittedModel) -> KMModel:
     return KMModel(np.array(fm.K), np.array(fm.S), fm.k1, fm.k2)
 
 
-def pool_model(session: Session, pool: list[str] | None) -> tuple[PoolModel, m.FittedModel]:
-    fm = active_model(session)
+def pool_model(
+    session: Session, pool: list[str] | None, fm: m.FittedModel | None = None
+) -> tuple[PoolModel, m.FittedModel]:
+    """Forward model of ``pool`` under ``fm`` (default: the active model).
+
+    With no pool: the loaded paints for the active model, or every paint of ``fm`` when a
+    specific model is given."""
+    explicit = fm is not None
+    fm = fm if fm is not None else active_model(session)
     paints = {p.id: p for p in all_paints(session)}
     if pool is None:
-        pool = [p.id for p in paints.values() if p.loaded and p.active]
+        if explicit:
+            pool = [p for p in fm.paint_ids if p in paints]
+        else:
+            pool = [p.id for p in paints.values() if p.loaded and p.active]
         if not pool:
             raise bad_request(
                 "empty_pool", "No loaded paints: mark paints as loaded or pass an explicit pool."
@@ -132,9 +144,10 @@ def pool_model(session: Session, pool: list[str] | None) -> tuple[PoolModel, m.F
         raise bad_request("unknown_paint", f"unknown paint ids: {', '.join(unknown)}")
     uncal = [p for p in pool if p not in fm.paint_ids]
     if uncal:
+        which = f"model v{fm.version}" if explicit else f"the active model (v{fm.version})"
         raise bad_request(
             "uncalibrated_paint",
-            f"paints not in the active model (v{fm.version}): {', '.join(uncal)}",
+            f"paints not in {which}: {', '.join(uncal)}",
             {"paint_ids": uncal},
         )
     seen: list[str] = []
@@ -143,6 +156,29 @@ def pool_model(session: Session, pool: list[str] | None) -> tuple[PoolModel, m.F
             seen.append(p)
     infos = [paint_info(paints[p]) for p in seen]
     return PoolModel.from_model(km_of(fm), fm.paint_ids, infos), fm
+
+
+def gamut_response(model: PoolModel, fm: m.FittedModel, g: Gamut, max_paints: int) -> GamutResponse:
+    return GamutResponse(
+        pool=model.ids,
+        L_min=g.L_min,
+        L_max=g.L_max,
+        n_samples=g.n_samples,
+        model_version=fm.version,
+        model_source=fm.source,
+        max_paints=max_paints,
+        slices=[
+            GamutSliceOut(
+                L=sl.L,
+                hue_deg=sl.hue_deg.tolist(),
+                chroma=np.round(sl.chroma, 3).tolist(),
+                a=np.round(sl.a, 3).tolist(),
+                b=np.round(sl.b, 3).tolist(),
+                hex=boundary_hex(sl),
+            )
+            for sl in g.slices
+        ],
+    )
 
 
 def model_strengths(session: Session, fm: m.FittedModel) -> dict[str, PaintStrength]:
