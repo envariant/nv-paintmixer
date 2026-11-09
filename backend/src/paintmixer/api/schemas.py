@@ -620,6 +620,50 @@ class Colorimetry(_Out):
     srgb: SrgbTables
 
 
+class MultimixRequest(_Model):
+    paint_ids: list[str] = Field(min_length=2, max_length=6)
+    mode: Literal["simplex", "grid"] = Field(
+        "simplex",
+        description="simplex: every mix in steps of 1/divisions; grid: N-D product of levels",
+    )
+    divisions: int = Field(6, ge=1, le=60, description="simplex: steps per paint")
+    interior_only: bool = Field(False, description="simplex: every paint present in every cell")
+    levels: list[list[float]] | None = Field(
+        None, description="grid: parts of each paint along its axis, one list per paint"
+    )
+    include_spectra: bool = False
+
+    @model_validator(mode="after")
+    def _check(self) -> MultimixRequest:
+        if len(set(self.paint_ids)) != len(self.paint_ids):
+            raise ValueError("paint_ids must be distinct")
+        if self.mode == "grid" and (self.levels is None or len(self.levels) != len(self.paint_ids)):
+            raise ValueError("grid mode needs one list of levels per paint")
+        return self
+
+
+class MixCellOut(_Out):
+    index: list[float] = Field(description="Array coordinate: grid indices, or simplex parts")
+    parts: list[float]
+    fractions: list[float] | None = Field(None, description="None for the empty all-zero cell")
+    lab: list[float] | None = None
+    hex: str | None = None
+    out_of_srgb_gamut: bool | None = None
+    xy: list[float] | None = Field(None, description="2-D layout (paints on a regular polygon)")
+    spectrum: Spectrum | None = None
+
+
+class MultimixResponse(_Out):
+    paints: list[str]
+    mode: str
+    shape: list[int]
+    n_cells: int
+    model_version: int
+    model_source: str
+    vertices: list[list[float]] = Field(description="Layout position of each pure paint")
+    cells: list[MixCellOut]
+
+
 class Health(_Out):
     status: str
     version: str

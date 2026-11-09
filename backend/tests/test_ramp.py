@@ -42,6 +42,21 @@ def test_tint_ladder_gets_lighter_and_ends_on_the_paints() -> None:
     assert lin[1].lab[1] < -10  # the middle of blue + yellow is green (a* < 0)
 
 
+def test_linear_ramp_is_a_two_paint_simplex() -> None:
+    from paintmixer.solver.multimix import multimix, simplex_lattice
+
+    m = _model()
+    steps = ramp(m, 2, 4, ramp_fractions(7))  # phthalo blue -> arylide yellow, 7 steps
+    cells = multimix(m, [2, 4], simplex_lattice(2, 6))
+    assert [s.hex for s in steps] == [c.hex for c in cells]
+    for s_, c in zip(steps, cells, strict=True):
+        np.testing.assert_allclose(s_.reflectance, c.reflectance)  # type: ignore[arg-type]
+    with pytest.raises(ValueError):
+        ramp(m, 2, 2, [0.5])
+    with pytest.raises(ValueError):
+        ramp(m, 2, 4, [1.5])
+
+
 def test_worksheet_preview_matches_layer_model(paints: dict[str, PaintInfo]) -> None:
     from paintmixer.calibration.synthetic import substrate_black, substrate_white, true_tau
 

@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import fixture from './km.parity.json'
-import { deltaE2000, ForwardModel, gamutMapLrgb, lrgbToOklab, rampFractions, type ModelTables } from './km'
+import {
+  deltaE2000,
+  ForwardModel,
+  gamutMapLrgb,
+  gridParts,
+  latticeSize,
+  lrgbToOklab,
+  multimix,
+  polygonLayout,
+  rampFractions,
+  simplexLattice,
+  type ModelTables,
+} from './km'
 
 const model = new ForwardModel(fixture.model as ModelTables, fixture.colorimetry)
 
@@ -98,5 +110,37 @@ describe('colour maths', () => {
   it('rejects unknown paints and empty mixtures', () => {
     expect(() => model.reflectance({ nope: 1 })).toThrow(/not in the model/)
     expect(() => model.reflectance({ 'titanium-white': 0 })).toThrow(/positive sum/)
+  })
+})
+
+describe('multimix parity with the backend', () => {
+  const mm = fixture.multimix
+
+  it('generates the same simplex lattice, swatches and layout', () => {
+    const parts = simplexLattice(mm.paints.length, mm.simplex.divisions)
+    expect(parts).toEqual(mm.simplex.parts)
+    const cells = multimix(model, mm.paints, parts)
+    expect(cells.map((c) => c.prediction?.hex)).toEqual(mm.simplex.hex)
+    cells.forEach((c, i) => close(c.xy!, mm.simplex.xy[i]!, 1e-9))
+  })
+
+  it('generates the same N-D grid, keeping the empty cell', () => {
+    const { shape, parts } = gridParts(mm.grid.levels)
+    expect(shape).toEqual(mm.grid.shape)
+    expect(parts).toEqual(mm.grid.parts)
+    const cells = multimix(model, mm.paints, parts)
+    expect(cells.map((c) => c.prediction?.hex ?? null)).toEqual(mm.grid.hex)
+    expect(cells[0]!.fractions).toBeNull()
+  })
+
+  it('counts and limits cells like the backend', () => {
+    expect(latticeSize(6, 10)).toBe(3003)
+    expect(simplexLattice(6, 10)).toHaveLength(3003)
+    expect(latticeSize(3, 6, true)).toBe(10)
+    expect(simplexLattice(3, 6, true).every((r) => r.every((x) => x >= 1))).toBe(true)
+    expect(() => simplexLattice(6, 20)).toThrow(/limit/)
+    expect(() => simplexLattice(7, 2)).toThrow()
+    expect(() => gridParts(Array.from({ length: 4 }, () => Array.from({ length: 11 }, (_, i) => i)))).toThrow(/limit/)
+    expect(polygonLayout([1, 0, 0])[1]).toBeCloseTo(1)
   })
 })

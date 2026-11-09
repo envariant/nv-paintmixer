@@ -17,6 +17,9 @@ from paintmixer.api.schemas import (
     ComponentOut,
     GamutResponse,
     GamutSliceOut,
+    MixCellOut,
+    MultimixRequest,
+    MultimixResponse,
     PredictRequest,
     PredictResponse,
     RampRequest,
@@ -35,6 +38,13 @@ from paintmixer.api.services import (
 )
 from paintmixer.colorsci.convert import reflectance_to_lab, reflectance_to_srgb, srgb_to_hex
 from paintmixer.colorsci.spectral import WAVELENGTHS
+from paintmixer.solver.multimix import (
+    MultimixError,
+    grid_parts,
+    multimix,
+    polygon_layout,
+    simplex_lattice,
+)
 from paintmixer.solver.ramp import ramp, ramp_fractions
 from paintmixer.solver.refine import Weights
 from paintmixer.solver.solve import Candidate, SolveOptions, gamut_for, predict, solve
@@ -151,7 +161,12 @@ def predict_mixture(body: PredictRequest, session: SessionDep) -> PredictRespons
 
 @router.post("/ramp", response_model=RampResponse)
 def palette_ramp(body: RampRequest, session: SessionDep) -> RampResponse:
-    """Predicted swatches mixing paint A into paint B (default: white, i.e. a tint ladder)."""
+    """Predicted swatches mixing paint A into paint B (default: white, i.e. a tint ladder).
+
+    A shortcut for the commonest two-paint preview. ``scale: "log"`` dilutes paint A by the same
+    factor at every step (a tint ladder); a ``linear`` ramp of ``n`` steps equals
+    ``POST /multimix`` with these two paints and ``divisions = n - 1``.
+    """
     fm = active_model(session)
     roles = {p.id: p.role for p in all_paints(session)}
     b = body.paint_b
@@ -182,6 +197,57 @@ def palette_ramp(body: RampRequest, session: SessionDep) -> RampResponse:
                 spectrum=s.reflectance.round(6).tolist(),
             )
             for s in steps
+        ],
+    )
+
+
+@router.post("/multimix", response_model=MultimixResponse)
+def multimix_array(body: MultimixRequest, session: SessionDep) -> MultimixResponse:
+    """Predicted swatches for every mix of 2-6 paints: a simplex lattice or an N-D grid of levels.
+
+    Use it to explore a palette: e.g. ``simplex`` with 3 paints and 10 divisions is the classic
+    mixing triangle (66 cells); ``grid`` with ``levels`` per paint is an N-dimensional array that
+    keeps its shape for slicing (``shape``, cell ``index``).
+    """
+    model, fm = pool_model(session, body.paint_ids)
+    try:
+        if body.mode == "simplex":
+            parts = simplex_lattice(len(body.paint_ids), body.divisions, body.interior_only)
+            shape = [int(parts.shape[0])]
+            index = parts.astype(float)
+        else:
+            assert body.levels is not None
+            grid_shape, parts = grid_parts(body.levels)
+            shape = list(grid_shape)
+            index = np.array(list(np.ndindex(*grid_shape)), dtype=float).reshape(len(parts), -1)
+    except MultimixError as e:
+        raise bad_request("bad_multimix", str(e)) from e
+    cells = multimix(model.km, list(range(model.n)), parts)
+    k = len(body.paint_ids)
+    return MultimixResponse(
+        paints=model.ids,
+        mode=body.mode,
+        shape=shape,
+        n_cells=len(cells),
+        model_version=fm.version,
+        model_source=fm.source,
+        vertices=np.round(polygon_layout(np.eye(k)), 9).tolist(),
+        cells=[
+            MixCellOut(
+                index=index[i].tolist(),
+                parts=list(c.parts),
+                fractions=None if c.fractions is None else [round(x, 9) for x in c.fractions],
+                lab=None if c.lab is None else [round(x, 4) for x in c.lab],
+                hex=c.hex,
+                out_of_srgb_gamut=c.out_of_srgb_gamut,
+                xy=None if c.xy is None else [round(x, 6) for x in c.xy],
+                spectrum=(
+                    c.reflectance.round(6).tolist()
+                    if body.include_spectra and c.reflectance is not None
+                    else None
+                ),
+            )
+            for i, c in enumerate(cells)
         ],
     )
 

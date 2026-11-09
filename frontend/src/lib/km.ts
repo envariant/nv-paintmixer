@@ -283,3 +283,87 @@ export function rampFractions(steps: number, scale: 'linear' | 'log' = 'linear',
   if (scale === 'linear') return Array.from({ length: steps }, (_, i) => 1 - i / (steps - 1))
   return Array.from({ length: steps }, (_, i) => Math.exp((Math.log(minFraction) * i) / (steps - 1)))
 }
+
+// --- multi-paint mixture arrays (mirrors backend solver/multimix.py) -------------------------
+
+export const MAX_MULTIMIX_PAINTS = 6
+export const MAX_MULTIMIX_CELLS = 10_000
+
+function binom(n: number, k: number): number {
+  if (k < 0 || k > n) return 0
+  let r = 1
+  for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i
+  return Math.round(r)
+}
+
+export function latticeSize(k: number, divisions: number, interior = false): number {
+  return interior ? (divisions >= k ? binom(divisions - 1, k - 1) : 0) : binom(divisions + k - 1, k - 1)
+}
+
+/** All mixes of k paints in steps of 1/divisions (integer parts summing to divisions), in the
+ * backend's order: lexicographic with the first paint's parts descending. */
+export function simplexLattice(k: number, divisions: number, interior = false): number[][] {
+  if (k < 1 || k > MAX_MULTIMIX_PAINTS) throw new Error(`1 to ${MAX_MULTIMIX_PAINTS} paints`)
+  const n = latticeSize(k, divisions, interior)
+  if (n > MAX_MULTIMIX_CELLS) throw new Error(`${n} cells exceed the limit of ${MAX_MULTIMIX_CELLS}`)
+  const low = interior ? 1 : 0
+  const out: number[][] = []
+  const rec = (total: number, left: number, prefix: number[]): void => {
+    if (left === 1) {
+      if (total >= low) out.push([...prefix, total])
+      return
+    }
+    for (let first = total - low * (left - 1); first >= low; first--) rec(total - first, left - 1, [...prefix, first])
+  }
+  rec(divisions, k, [])
+  return out
+}
+
+/** N-D product of per-paint levels (parts), C order (last paint fastest). */
+export function gridParts(levels: number[][]): { shape: number[]; parts: number[][] } {
+  if (levels.length < 1 || levels.length > MAX_MULTIMIX_PAINTS) throw new Error(`1 to ${MAX_MULTIMIX_PAINTS} paints`)
+  const shape = levels.map((l) => l.length)
+  const n = shape.reduce((a, b) => a * b, 1)
+  if (n === 0) throw new Error('every paint needs at least one level')
+  if (n > MAX_MULTIMIX_CELLS) throw new Error(`${n} cells exceed the limit of ${MAX_MULTIMIX_CELLS}`)
+  const parts: number[][] = []
+  for (let i = 0; i < n; i++) {
+    let rem = i
+    const row = new Array<number>(levels.length)
+    for (let j = levels.length - 1; j >= 0; j--) {
+      row[j] = levels[j]![rem % shape[j]!]!
+      rem = Math.floor(rem / shape[j]!)
+    }
+    parts.push(row)
+  }
+  return { shape, parts }
+}
+
+/** 2-D position of a mixture: paints on a regular polygon's vertices, first paint at the top. */
+export function polygonLayout(fractions: number[]): [number, number] {
+  const k = fractions.length
+  if (k === 1) return [0, 0]
+  const angle = (j: number): number => (k === 2 ? (j === 0 ? Math.PI : 0) : Math.PI / 2 + (2 * Math.PI * j) / k)
+  return fractions.reduce<[number, number]>(
+    (acc, f, j) => [acc[0] + f * Math.cos(angle(j)), acc[1] + f * Math.sin(angle(j))],
+    [0, 0],
+  )
+}
+
+export interface MixCell {
+  parts: number[]
+  fractions: number[] | null // null for the empty all-zero cell
+  prediction: Prediction | null
+  xy: [number, number] | null
+}
+
+/** Predict every row of `parts` for `paints` (same order) — e.g. from simplexLattice/gridParts. */
+export function multimix(model: ForwardModel, paints: string[], parts: number[][]): MixCell[] {
+  return parts.map((row) => {
+    const total = row.reduce((a, b) => a + b, 0)
+    if (total <= 0) return { parts: row, fractions: null, prediction: null, xy: null }
+    const fractions = row.map((x) => x / total)
+    const mix = Object.fromEntries(paints.map((p, i) => [p, fractions[i]!]).filter(([, f]) => (f as number) > 0))
+    return { parts: row, fractions, prediction: model.predict(mix), xy: polygonLayout(fractions) }
+  })
+}

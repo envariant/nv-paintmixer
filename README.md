@@ -190,6 +190,28 @@ for a calibrated model. Every solve result says `"model_source": "swatches"` and
 warning. Tint swatches matter: without them, scattering is assumed and the 90th percentile is
 about 16 dE2000.
 
+## Explore mixes of several paints
+
+`POST /api/v1/ramp` previews one paint into another, defaulting to white. Its `log` scale gives a
+tint ladder (the same dilution factor at every step). It is a shortcut built on the multimix
+code: a `linear` ramp of n steps equals a two-paint multimix with `divisions` n − 1.
+`POST /api/v1/multimix` previews whole arrays of mixes of 2–6 paints:
+
+```bash
+curl -s -X POST $API/multimix -H 'content-type: application/json' -d '{"paint_ids":["titanium-white","phthalo-blue","arylide-yellow"],"divisions":10}'
+```
+
+* `"mode": "simplex"` (default): every mix in steps of 1/`divisions`, e.g. the 66-cell mixing
+  triangle above. Six paints at 10 divisions give 3,003 mixes.
+* `"mode": "grid"` with `"levels"`: an N-dimensional array, one axis per paint, levels in
+  parts. For example `[[0,4,8],[0,1],[0,1,2]]` is white × blue × yellow, shape 3×2×3. The array
+  keeps its shape, so a UI can show 2-D slices.
+
+Each cell has its fractions, predicted Lab, gamut-mapped swatch and a 2-D layout position
+(paints on a regular polygon), so arrays of any size can be drawn. Arrays are capped at 10,000
+cells. The same generators run in the browser (`simplexLattice`, `gridParts`, `multimix` in
+`frontend/src/lib/km.ts`) for instant previews.
+
 ## Check a new instrument
 
 Before the first calibration with a spectrophotometer, run the self-test:

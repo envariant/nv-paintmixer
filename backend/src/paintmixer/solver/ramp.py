@@ -1,6 +1,10 @@
 """Palette ramps between two paints (tint ladders when one of them is white).
 
-Predictions are opaque films (R∞ with Saunderson), the same as the solver uses.
+A convenience layer over :mod:`paintmixer.solver.multimix`: a ramp is a two-paint mixture array,
+predicted by :func:`~paintmixer.solver.multimix.multimix`. A *linear* ramp with ``n`` steps is
+exactly a two-paint simplex lattice with ``n - 1`` divisions (same fractions, same order); what
+ramps add is the *log* scale (each step dilutes paint A by the same factor, the usual tint
+ladder), which a simplex lattice cannot express. Predictions are opaque films, like the solver's.
 """
 
 from __future__ import annotations
@@ -11,9 +15,9 @@ from typing import Literal
 
 import numpy as np
 
-from paintmixer.colorsci.convert import reflectance_to_lab, reflectance_to_srgb, srgb_to_hex
 from paintmixer.colorsci.km import KMModel
 from paintmixer.colorsci.types import FloatArray
+from paintmixer.solver.multimix import multimix
 
 RampScale = Literal["linear", "log"]
 
@@ -44,20 +48,20 @@ def ramp_fractions(
 def ramp(
     model: KMModel, index_a: int, index_b: int, fractions: Sequence[float] | FloatArray
 ) -> list[RampStep]:
+    """Predicted swatches for paint A (``index_a``) mixed into paint B at ``fractions`` of A."""
+    if index_a == index_b:
+        raise ValueError("a ramp needs two different paints")
     f = np.asarray(fractions, dtype=np.float64)
-    c = np.zeros((f.size, model.n_paints))
-    c[:, index_a] = f
-    c[:, index_b] += 1.0 - f
-    R = model.reflectance(c)
-    lab = reflectance_to_lab(R)
-    rgb = reflectance_to_srgb(R)
-    return [
-        RampStep(
-            float(f[i]),
-            R[i],
-            (float(lab[i, 0]), float(lab[i, 1]), float(lab[i, 2])),
-            srgb_to_hex(rgb.rgb[i]),
-            bool(rgb.out_of_gamut[i]),
+    if f.ndim != 1 or np.any((f < 0) | (f > 1)):
+        raise ValueError("fractions of paint A must be in [0, 1]")
+    cells = multimix(model, [index_a, index_b], np.column_stack([f, 1.0 - f]))
+    steps = []
+    for frac, cell in zip(f, cells, strict=True):
+        # parts always sum to 1 here, so every cell has a prediction
+        assert cell.reflectance is not None and cell.lab is not None and cell.hex is not None
+        steps.append(
+            RampStep(
+                float(frac), cell.reflectance, cell.lab, cell.hex, bool(cell.out_of_srgb_gamut)
+            )
         )
-        for i in range(f.size)
-    ]
+    return steps
