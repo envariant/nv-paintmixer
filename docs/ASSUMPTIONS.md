@@ -112,3 +112,8 @@ introduced it.
   Migration `0002` extends stored spectra and K/S curves the same way (its downgrade slices them
   back). The white-tile sanity checks in the self-test still look only at 400–700 nm, because
   instruments are noisiest at the 380/730 nm ends.
+- **Gamut-mapped swatches** Out-of-sRGB swatches are gamut-mapped with the CSS Color 4 algorithm
+  (keep OKLab lightness and hue, bisect chroma, stop when clipping moves the colour by < 0.02
+  ΔE_OK), implemented from the spec, not copied. Every `hex` the API returns uses it; the
+  `out_of_gamut` / `in_srgb_gamut` flags still say when a swatch is only an approximation.
+  `lab_to_srgb(..., method="clip")` keeps the old per-channel clipping.

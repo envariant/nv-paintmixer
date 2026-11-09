@@ -108,3 +108,5 @@ Progress notes per milestone are appended below as work completes.
 - **380–730 nm grid** Canonical grid widened to 36 bands (380–730 nm). 400–700 nm inputs are
   edge-held; data migration `0002` converts stored spectra; sample data and JSON schema
   regenerated (r400–r700 are the required minimum).
+- **Gamut-mapped swatches** `colorsci.oklab`: OKLab/OKLCh (checked against Ottosson's table and
+  colour-science) and vectorised CSS Color 4 gamut mapping, now the default for every swatch.

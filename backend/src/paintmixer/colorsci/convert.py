@@ -3,15 +3,18 @@
 XYZ is on the 0-100 scale. Lab is relative to a supplied white (defaults to the perfect
 reflector under D65 from :func:`paintmixer.colorsci.spectral.white_point`). sRGB uses the
 IEC 61966-2-1 primaries and transfer function with its standard D65 white; conversion from
-spectra goes through Lab so a perfect reflector maps exactly to sRGB (1, 1, 1).
+spectra goes through Lab so a perfect reflector maps exactly to sRGB (1, 1, 1). Colours outside
+sRGB are gamut-mapped (CSS Color 4, :mod:`paintmixer.colorsci.oklab`) unless ``method="clip"``.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 
+from paintmixer.colorsci.oklab import gamut_map_lrgb
 from paintmixer.colorsci.spectral import Illuminant, reflectance_to_xyz, white_point
 from paintmixer.colorsci.types import ArrayLike, BoolArray, FloatArray
 
@@ -89,11 +92,25 @@ class SrgbResult:
     out_of_gamut: BoolArray
 
 
-def lab_to_srgb(lab: ArrayLike, *, tolerance: float = 1e-4) -> SrgbResult:
-    """Lab (D65) -> encoded sRGB 0-1, clipped, with an out-of-gamut flag per colour."""
+GamutMethod = Literal["map", "clip"]
+
+
+def lab_to_srgb(
+    lab: ArrayLike, *, tolerance: float = 1e-4, method: GamutMethod = "map"
+) -> SrgbResult:
+    """Lab (D65) -> encoded sRGB 0-1 with an out-of-gamut flag per colour.
+
+    Out-of-gamut colours are brought into sRGB with CSS Color 4 gamut mapping (``"map"``,
+    default: keeps OKLab lightness and hue, reduces chroma) or per-channel clipping (``"clip"``).
+    In-gamut colours are identical either way.
+    """
     xyz = lab_to_xyz(lab, SRGB_WHITE) / 100.0
     lin = xyz @ _M_XYZ_TO_RGB.T
     oog = np.any((lin < -tolerance) | (lin > 1.0 + tolerance), axis=-1)
+    if method == "map":
+        lin = np.where(oog[..., None], gamut_map_lrgb(lin), lin)
+    elif method != "clip":
+        raise ValueError(f"unknown gamut method {method!r}")
     rgb = _srgb_encode(np.clip(lin, 0.0, 1.0))
     return SrgbResult(rgb=np.clip(rgb, 0.0, 1.0), out_of_gamut=np.asarray(oog))
 
@@ -104,9 +121,9 @@ def reflectance_to_lab(
     return xyz_to_lab(reflectance_to_xyz(reflectance, illuminant), white_point(illuminant))
 
 
-def reflectance_to_srgb(reflectance: ArrayLike) -> SrgbResult:
-    """Swatch colour for a reflectance (rendered under D65)."""
-    return lab_to_srgb(reflectance_to_lab(reflectance, Illuminant.D65))
+def reflectance_to_srgb(reflectance: ArrayLike, *, method: GamutMethod = "map") -> SrgbResult:
+    """Swatch colour for a reflectance (rendered under D65, gamut-mapped by default)."""
+    return lab_to_srgb(reflectance_to_lab(reflectance, Illuminant.D65), method=method)
 
 
 def hex_to_srgb(hex_str: str) -> FloatArray:
