@@ -531,6 +531,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/multimix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Multimix Array
+         * @description Predicted swatches for every mix of 2-6 paints: a simplex lattice or an N-D grid of levels.
+         *
+         *     Use it to explore a palette: e.g. ``simplex`` with 3 paints and 10 divisions is the classic
+         *     mixing triangle (66 cells); ``grid`` with ``levels`` per paint is an N-dimensional array that
+         *     keeps its shape for slicing (``shape``, cell ``index``).
+         */
+        post: operations["multimix_array_api_v1_multimix_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/gamut": {
         parameters: {
             query?: never;
@@ -1270,6 +1294,34 @@ export interface components {
             /** Seed */
             seed?: number | null;
         };
+        /** MixCellOut */
+        MixCellOut: {
+            /**
+             * Index
+             * @description Array coordinate: grid indices, or simplex parts
+             */
+            index: number[];
+            /** Parts */
+            parts: number[];
+            /**
+             * Fractions
+             * @description None for the empty all-zero cell
+             */
+            fractions?: number[] | null;
+            /** Lab */
+            lab?: number[] | null;
+            /** Hex */
+            hex?: string | null;
+            /** Out Of Srgb Gamut */
+            out_of_srgb_gamut?: boolean | null;
+            /**
+             * Xy
+             * @description 2-D layout (paints on a regular polygon)
+             */
+            xy?: number[] | null;
+            /** Spectrum */
+            spectrum?: number[] | null;
+        };
         /** ModelDetail */
         ModelDetail: {
             /** Version */
@@ -1368,6 +1420,62 @@ export interface components {
             warnings: string[];
             /** Notes */
             notes: string;
+        };
+        /** MultimixRequest */
+        MultimixRequest: {
+            /** Paint Ids */
+            paint_ids: string[];
+            /**
+             * Mode
+             * @description simplex: every mix in steps of 1/divisions; grid: N-D product of levels
+             * @default simplex
+             * @enum {string}
+             */
+            mode?: "simplex" | "grid";
+            /**
+             * Divisions
+             * @description simplex: steps per paint
+             * @default 6
+             */
+            divisions?: number;
+            /**
+             * Interior Only
+             * @description simplex: every paint present in every cell
+             * @default false
+             */
+            interior_only?: boolean;
+            /**
+             * Levels
+             * @description grid: parts of each paint along its axis, one list per paint
+             */
+            levels?: number[][] | null;
+            /**
+             * Include Spectra
+             * @default false
+             */
+            include_spectra?: boolean;
+        };
+        /** MultimixResponse */
+        MultimixResponse: {
+            /** Paints */
+            paints: string[];
+            /** Mode */
+            mode: string;
+            /** Shape */
+            shape: number[];
+            /** N Cells */
+            n_cells: number;
+            /** Model Version */
+            model_version: number;
+            /** Model Source */
+            model_source: string;
+            /**
+             * Vertices
+             * @description Layout position of each pure paint
+             */
+            vertices: number[][];
+            /** Cells */
+            cells: components["schemas"]["MixCellOut"][];
         };
         /** PaintCreate */
         PaintCreate: {
@@ -3890,6 +3998,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RampResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    multimix_array_api_v1_multimix_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MultimixRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MultimixResponse"];
                 };
             };
             /** @description Not found */
