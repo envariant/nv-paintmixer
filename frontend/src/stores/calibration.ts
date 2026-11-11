@@ -72,8 +72,9 @@ export const useCalibrationStore = defineStore('calibration', () => {
     models.value = unwrap(await api.GET('/api/v1/models'))
   }
 
-  async function activate(version: number): Promise<void> {
-    unwrap(await api.POST('/api/v1/models/{version}/activate', { params: { path: { version } } }))
+  /** Activate a model by ref: global version (12), line id, line@3 or line@latest. */
+  async function activate(ref: number | string): Promise<void> {
+    unwrap(await api.POST('/api/v1/models/{ref}/activate', { params: { path: { ref: String(ref) } } }))
     await fetchModels()
   }
 

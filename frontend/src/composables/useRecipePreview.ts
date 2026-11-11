@@ -2,10 +2,10 @@ import { computed, type Ref } from 'vue'
 import { api, type Schemas, unwrap } from '../api/client'
 import { deltaE2000, ForwardModel, type Illuminant, type ModelTables, type Prediction } from '../lib/km'
 
-/** Build a browser forward model for a fitted model version (two small API calls). */
-export async function loadForwardModel(version: number): Promise<ForwardModel> {
+/** Build a browser forward model for a model ref (version, line, line@3; two small API calls). */
+export async function loadForwardModel(ref: number | string): Promise<ForwardModel> {
   const [spectra, tables] = await Promise.all([
-    api.GET('/api/v1/models/{version}/spectra', { params: { path: { version } } }).then(unwrap),
+    api.GET('/api/v1/models/{ref}/spectra', { params: { path: { ref: String(ref) } } }).then(unwrap),
     api.GET('/api/v1/colorimetry').then(unwrap),
   ])
   return new ForwardModel(modelTables(spectra), tables)

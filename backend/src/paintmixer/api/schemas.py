@@ -21,6 +21,13 @@ class _Model(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+def _line_field() -> Any:
+    return Field(
+        None,
+        description="Model line (its id) to add the new version to; must exist. Default: 'default'",
+    )
+
+
 class _Out(BaseModel):
     """Responses: built from DB rows, extra attributes are ignored."""
 
@@ -360,6 +367,8 @@ class FitRequest(_Model):
     k_folds: int = Field(5, ge=2, le=20)
     activate: bool = True
     notes: str = ""
+    line: str | None = _line_field()
+    label: str = Field("", max_length=200)
 
 
 class FitRunRead(_Out):
@@ -401,7 +410,12 @@ ModelSource = Literal["calibration", "swatches"]
 
 
 class ModelSummary(_Out):
-    version: int
+    version: int = Field(description="Global version number, unique across all lines")
+    ref: str = Field(description="line@revision; usable wherever the API takes a model")
+    line: str = Field(description="Id of the model line this version belongs to")
+    line_name: str
+    revision: int = Field(description="Sequence number within the line")
+    label: str = Field(description="Editable display name of this version")
     active: bool
     source: ModelSource = Field(
         "calibration", description="calibration: fitted from measurements; swatches: uncalibrated"
@@ -421,6 +435,44 @@ class ModelSummary(_Out):
 class ModelDetail(ModelSummary):
     diagnostics: dict[str, Any]
     residuals: list[ResidualOut]
+
+
+class ModelPatch(_Model):
+    label: str | None = Field(None, max_length=200)
+    notes: str | None = None
+    line: str | None = Field(
+        None, description="Move to this line; the version gets that line's next revision"
+    )
+
+
+class ModelLineCreate(_Model):
+    name: str = Field(min_length=1, max_length=200)
+    slug: str | None = Field(
+        None, description="Id used in refs (a-z, 0-9, '-'); default: derived from the name"
+    )
+    description: str = ""
+
+
+class ModelLinePatch(_Model):
+    name: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = None
+
+
+class ModelLineSummary(_Out):
+    slug: str
+    name: str
+    description: str
+    created_at: datetime
+    n_versions: int
+    current_version: int | None = Field(
+        description="What the bare line id resolves to: newest calibrated revision, else newest"
+    )
+    current_ref: str | None
+    active_version: int | None = Field(description="The active model, if it is in this line")
+
+
+class ModelLineDetail(ModelLineSummary):
+    versions: list[ModelSummary] = Field(description="Newest revision first")
 
 
 class StrengthOut(_Out):
@@ -685,6 +737,8 @@ class SwatchModelRequest(_Model):
         0.3, gt=0, le=5, description="S relative to white for paints without a tint swatch"
     )
     notes: str = ""
+    line: str | None = _line_field()
+    label: str = Field("", max_length=200)
 
 
 class SwatchModelResult(_Out):

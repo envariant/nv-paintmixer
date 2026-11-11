@@ -9,8 +9,9 @@ database on startup) loads the synthetic sample data from ``sample_data/``:
 4. an uncalibrated swatch model of the same paints as a second, *inactive* version, so model
    versions (and their gamuts) can be compared.
 
-It never deletes anything: paints, colours and samples are upserted, and models are only created
-when the database has no model of that kind yet (``refit=True`` always adds new versions).
+Both models go in the model line ``cmykw-demo``. It never deletes anything: paints, colours and
+samples are upserted, and models are only created
+when that line has no model of that kind yet (``refit=True`` always adds new revisions).
 The data is synthetic (known K/S), not measurements of real products.
 """
 
@@ -30,6 +31,7 @@ from paintmixer.api.importers import (
     store_swatch_model,
     swatch_inputs,
 )
+from paintmixer.api.lines import create_line, find_line, model_ref
 from paintmixer.api.schemas import FitRequest
 from paintmixer.api.services import load_settings
 from paintmixer.calibration.swatch import model_from_swatches
@@ -39,6 +41,8 @@ from paintmixer.db.session import get_engine, migrate
 
 DEMO_PAINTS = STARTER_IDS  # white, black, cyan, magenta, yellow
 CALIBRATION_FILE = "calibration_starter5.csv"
+DEMO_LINE = "cmykw-demo"
+DEMO_LINE_NAME = "CMYKW demo (synthetic)"
 
 
 def default_sample_dir() -> Path:
@@ -57,7 +61,10 @@ class SeedReport:
     colours_updated: int = 0
     samples_stored: int = 0
     samples_replaced: int = 0
+    line: str = ""
     calibrated_version: int | None = None
+    calibrated_ref: str = ""
+    swatch_ref: str = ""
     swatch_version: int | None = None
     active_version: int | None = None
     skipped: list[str] = field(default_factory=list)
@@ -68,9 +75,10 @@ class SeedReport:
             f"paints: {', '.join(self.paints)} (loaded on channels 1-{len(self.paints)})",
             f"colour library: {self.colours_created} created, {self.colours_updated} updated",
             f"calibration samples: {self.samples_stored} stored ({self.samples_replaced} replaced)",
-            f"calibrated model: v{self.calibrated_version}"
+            f"model line: {self.line}",
+            f"calibrated model: v{self.calibrated_version} = {self.calibrated_ref}"
             + (" (active)" if self.active_version == self.calibrated_version else ""),
-            f"swatch model (uncalibrated, inactive): v{self.swatch_version}",
+            f"swatch model (uncalibrated): v{self.swatch_version} = {self.swatch_ref}",
         ]
         lines += [f"skipped: {s}" for s in self.skipped]
         lines += [f"error: {e}" for e in self.errors]
@@ -86,11 +94,11 @@ def database_is_empty(database_url: str) -> bool:
         )
 
 
-def _latest(s: Session, source: str) -> m.FittedModel | None:
+def _latest(s: Session, line: m.ModelLine, source: str) -> m.FittedModel | None:
     return s.exec(
         select(m.FittedModel)
-        .where(m.FittedModel.source == source)
-        .order_by(col(m.FittedModel.version).desc())
+        .where(m.FittedModel.line_id == line.id, m.FittedModel.source == source)
+        .order_by(col(m.FittedModel.revision).desc())
     ).first()
 
 
@@ -117,10 +125,20 @@ def seed_demo(
         if not up.report.ok:
             rep.errors.append("calibration file did not validate; samples not stored")
 
-        calibrated = _latest(s, "calibration")
+        line = find_line(s, DEMO_LINE) or create_line(
+            s, DEMO_LINE_NAME, DEMO_LINE, "Five-paint starter set on synthetic calibration data"
+        )
+        rep.line = line.slug
+        calibrated = _latest(s, line, "calibration")
         if calibrated is None or refit:
             run = create_fit_run(
-                s, FitRequest(activate=True, notes="demo: CMYKW starter set (synthetic)")
+                s,
+                FitRequest(
+                    activate=True,
+                    notes="demo: CMYKW starter set (synthetic)",
+                    line=DEMO_LINE,
+                    label="Calibrated from synthetic drawdowns",
+                ),
             )
             assert run.id is not None
             run_fit(database_url, run.id)  # inline: about a second
@@ -128,13 +146,14 @@ def seed_demo(
             finished = s.get(m.FitRun, run.id)
             if finished is None or finished.status != "succeeded":
                 raise RuntimeError(f"demo fit failed: {finished.error if finished else '?'}")
-            calibrated = _latest(s, "calibration")
+            calibrated = _latest(s, line, "calibration")
         else:
             rep.skipped.append(f"fit (calibrated model v{calibrated.version} already exists)")
         assert calibrated is not None
         rep.calibrated_version = calibrated.version
+        rep.calibrated_ref = model_ref(line.slug, calibrated.revision)
 
-        swatch = _latest(s, "swatches")
+        swatch = _latest(s, line, "swatches")
         if swatch is None or refit:
             settings = load_settings(s)
             sm = model_from_swatches(
@@ -143,11 +162,17 @@ def seed_demo(
                 k2=settings.saunderson_k2,
             )
             swatch = store_swatch_model(
-                s, sm, activate=False, notes="demo: CMYKW from swatch colours (uncalibrated)"
+                s,
+                sm,
+                activate=False,
+                notes="demo: CMYKW from swatch colours (uncalibrated)",
+                line=line,
+                label="From swatch colours",
             )
         else:
             rep.skipped.append(f"swatch model (v{swatch.version} already exists)")
         rep.swatch_version = swatch.version
+        rep.swatch_ref = model_ref(line.slug, swatch.revision)
         active = s.exec(select(m.FittedModel).where(col(m.FittedModel.active))).first()
         rep.active_version = active.version if active else None
     return rep

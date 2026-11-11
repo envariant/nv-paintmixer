@@ -14,6 +14,14 @@ from pydantic import ValidationError
 from sqlmodel import Session, col, delete, select
 
 from paintmixer.api.errors import ApiError, bad_request, conflict
+from paintmixer.api.lines import (
+    DEFAULT_LINE,
+    find_line,
+    line_for_new_model,
+    model_ref,
+    place_model,
+    set_active,
+)
 from paintmixer.api.schemas import (
     ColorImportResult,
     FitRequest,
@@ -227,7 +235,8 @@ def create_fit_run(session: Session, body: FitRequest) -> m.FitRun:
     """Record a queued fit; the caller runs :func:`run_fit` (background or inline)."""
     if session.exec(select(m.CalibrationSample)).first() is None:
         raise bad_request("no_samples", "upload calibration samples before fitting")
-    run = m.FitRun(options=body.model_dump())
+    line = line_for_new_model(session, body.line)
+    run = m.FitRun(options={**body.model_dump(), "line": line.slug})
     session.add(run)
     session.commit()
     session.refresh(run)
@@ -270,15 +279,12 @@ def run_fit(db_url: str, run_id: int) -> None:
         )
         d = fit_result_to_dict(result)
         with Session(engine) as s:
-            last = s.exec(select(m.FittedModel).order_by(col(m.FittedModel.version).desc())).first()
-            version = (last.version if last else 0) + 1
-            if req.activate:
-                for other in s.exec(select(m.FittedModel).where(col(m.FittedModel.active))).all():
-                    other.active = False
-                    s.add(other)
+            # the line was checked when the run was queued; recreate it if it was deleted since
+            line = find_line(s, req.line or DEFAULT_LINE) or line_for_new_model(s, None)
             fm = m.FittedModel(
-                version=version,
-                active=req.activate,
+                version=0,
+                line_id=0,
+                label=req.label,
                 paint_ids=d["paint_ids"],
                 K=d["K"],
                 S=d["S"],
@@ -295,16 +301,20 @@ def run_fit(db_url: str, run_id: int) -> None:
                 fit_run_id=run_id,
                 notes=req.notes,
             )
+            place_model(s, fm, line)
+            if req.activate:
+                set_active(s, fm)
             s.add(fm)
             s.commit()
             s.refresh(fm)
             model_id = fm.id
+            created = f"model v{fm.version} ({model_ref(line.slug, fm.revision)}) created"
         update(
             status="succeeded",
             progress=1.0,
             finished_at=utcnow(),
             model_id=model_id,
-            message=f"model v{version} created" + (" and activated" if req.activate else ""),
+            message=created + (" and activated" if req.activate else ""),
         )
     except FitError as e:
         update(status="failed", error=str(e), finished_at=utcnow(), message="fit failed")
@@ -351,17 +361,20 @@ def swatch_inputs(session: Session, paint_ids: list[str] | None) -> list[SwatchP
 
 
 def store_swatch_model(
-    session: Session, sm: SwatchModel, activate: bool, notes: str = ""
+    session: Session,
+    sm: SwatchModel,
+    activate: bool,
+    notes: str = "",
+    *,
+    line: m.ModelLine | None = None,
+    label: str = "",
 ) -> m.FittedModel:
-    """Store an uncalibrated swatch model as the next version (optionally activating it)."""
-    last = session.exec(select(m.FittedModel).order_by(col(m.FittedModel.version).desc())).first()
-    if activate:
-        for other in session.exec(select(m.FittedModel).where(col(m.FittedModel.active))).all():
-            other.active = False
-            session.add(other)
+    """Store an uncalibrated swatch model as the next version of ``line`` (default line if
+    omitted), optionally activating it."""
     fm = m.FittedModel(
-        version=(last.version if last else 0) + 1,
-        active=activate,
+        version=0,
+        line_id=0,
+        label=label,
         source="swatches",
         paint_ids=sm.paint_ids,
         K=np.round(sm.K, 7).tolist(),
@@ -388,6 +401,9 @@ def store_swatch_model(
         },
         notes=notes or "uncalibrated: built from swatch colours",
     )
+    place_model(session, fm, line or line_for_new_model(session, None))
+    if activate:
+        set_active(session, fm)
     session.add(fm)
     session.commit()
     session.refresh(fm)

@@ -92,10 +92,27 @@ class FitRun(SQLModel, table=True):
     finished_at: datetime | None = None
 
 
+class ModelLine(SQLModel, table=True):
+    """A named series of model versions, e.g. one paint set recalibrated over time."""
+
+    __tablename__ = "model_line"
+    id: int | None = Field(default=None, primary_key=True)
+    slug: str = Field(index=True, unique=True, max_length=64)  # used in model refs
+    name: str
+    description: str = ""
+    # highest revision ever issued in this line, so refs are never reused when versions move out
+    last_revision: int = 0
+    created_at: datetime = Field(default_factory=utcnow)
+
+
 class FittedModel(SQLModel, table=True):
     __tablename__ = "fitted_model"
+    __table_args__ = (UniqueConstraint("line_id", "revision", name="uq_fitted_model_line_rev"),)
     id: int | None = Field(default=None, primary_key=True)
-    version: int = Field(index=True, unique=True)
+    version: int = Field(index=True, unique=True)  # global, never reused
+    line_id: int = Field(foreign_key="model_line.id", index=True)
+    revision: int = 1  # sequence number within the line, never reused
+    label: str = ""  # free, editable display name of this version
     active: bool = Field(default=False, index=True)
     # "calibration" (fitted from measurements) or "swatches" (uncalibrated, from swatch colours)
     source: str = Field(default="calibration", sa_column_kwargs={"server_default": "calibration"})

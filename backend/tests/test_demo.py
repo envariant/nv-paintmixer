@@ -62,7 +62,7 @@ def test_seed_is_idempotent_and_refit_adds_versions(tmp_path: Path) -> None:
     assert len(again.skipped) == 2
     refit = seed_demo(url, refit=True)
     assert (refit.calibrated_version, refit.swatch_version, refit.active_version) == (3, 4, 3)
-    assert "calibrated model: v3 (active)" in refit.summary()
+    assert "calibrated model: v3 = cmykw-demo@3 (active)" in refit.summary()
 
 
 def test_seed_missing_sample_data(tmp_path: Path) -> None:
@@ -87,7 +87,8 @@ def test_cli_seed_demo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PAINTMIXER_DATABASE_URL", f"sqlite:///{tmp_path / 'cli.db'}")
     res = CliRunner().invoke(cli_app, ["seed-demo"])
     assert res.exit_code == 0, res.output
-    assert "calibrated model: v1 (active)" in res.output and "v2" in res.output
+    assert "calibrated model: v1 = cmykw-demo@1 (active)" in res.output
+    assert "v2 = cmykw-demo@2" in res.output
 
 
 # --- gamut of any model version -------------------------------------------------------------
@@ -135,6 +136,6 @@ def test_model_gamut_svg(demo_client: TestClient) -> None:
     panels = root.findall(f"{ns}svg")
     n_slices = len(demo_client.get(f"{API}/models/2/gamut").json()["slices"])
     assert len(panels) == n_slices and panels[0].get("data-L") is not None
-    assert "model v2 (swatches)" in (root.findtext(f"{ns}title") or "")
+    assert "(cmykw-demo@2, swatches)" in (root.findtext(f"{ns}title") or "")
     assert "scale ±60" in r.text
     assert demo_client.get(f"{API}/models/99/gamut.svg").status_code == 404
