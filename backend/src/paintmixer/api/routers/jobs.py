@@ -2,6 +2,8 @@
 
 Job status flow: ``draft`` -> ``dispensed`` -> ``measured`` -> (``correcting`` -> dispense ...)
 -> ``done`` (within tolerance) or ``needs_attention`` (iteration cap reached).
+``accept`` ends a job the person is happy with (``accepted``); ``cancel`` abandons it
+(``cancelled``) and records what was already poured.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from sqlmodel import Session, col, select
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, ApiError, bad_request, not_found
 from paintmixer.api.schemas import (
+    CancelRequest,
     CorrectRequest,
     DispenseRequest,
     JobCreate,
@@ -240,13 +243,18 @@ def correct(job_id: int, body: CorrectRequest, session: SessionDep) -> JobRead:
     target = np.array(j.target["lab"])
     meas = np.array(j.measured["lab"])
     de = float(delta_e_2000(meas, target))
+    tolerance = (
+        body.tolerance_de
+        if body.tolerance_de is not None
+        else load_settings(session).accept_tolerance_de
+    )
     iteration = int(j.recipe.get("iteration", 0))
     entry: dict[str, Any] = {
         "iteration": iteration,
         "measured_de": de,
         "measured_lab": meas.tolist(),
     }
-    if de <= body.tolerance_de:
+    if de <= tolerance:
         entry["result"] = "within tolerance"
         j.corrections = [*j.corrections, entry]
         j.status = "done"
@@ -288,4 +296,47 @@ def correct(job_id: int, body: CorrectRequest, session: SessionDep) -> JobRead:
     j.recipe = recipe
     j.corrections = [*j.corrections, entry]
     j.status = "correcting"
+    return _save(session, j)
+
+
+OPEN_STATES = ("draft", "dispensed", "measured", "correcting", "needs_attention")
+
+
+@router.post("/{job_id}/accept", response_model=JobRead)
+def accept(job_id: int, session: SessionDep) -> JobRead:
+    """Accept the mix as it is (after a measurement), whatever its dE."""
+    j = _get(session, job_id)
+    if j.status not in ("measured", "needs_attention", "done") or j.measured is None:
+        raise ApiError(409, "bad_state", f"accept after a measurement (status is {j.status!r})")
+    j.corrections = [
+        *j.corrections,
+        {
+            "iteration": j.recipe.get("iteration", 0),
+            "result": "accepted",
+            "measured_de": j.measured.get("de_to_target"),
+            "at": utcnow().isoformat(),
+        },
+    ]
+    j.status = "accepted"
+    return _save(session, j)
+
+
+@router.post("/{job_id}/cancel", response_model=JobRead)
+def cancel(job_id: int, body: CancelRequest, session: SessionDep) -> JobRead:
+    """Abandon a job. What is already in the cup stays there and is logged."""
+    j = _get(session, job_id)
+    if j.status not in OPEN_STATES:
+        raise ApiError(409, "bad_state", f"cannot cancel a job in status {j.status!r}")
+    poured = sum((j.dispensed or {}).get("cup_ml", {}).values())
+    j.corrections = [
+        *j.corrections,
+        {
+            "iteration": j.recipe.get("iteration", 0),
+            "result": "cancelled",
+            "poured_ml": poured,
+            "reason": body.reason,
+            "at": utcnow().isoformat(),
+        },
+    ]
+    j.status = "cancelled"
     return _save(session, j)

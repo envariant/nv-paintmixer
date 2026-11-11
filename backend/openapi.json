@@ -4007,6 +4007,163 @@
           }
         }
       }
+    },
+    "/api/v1/jobs/{job_id}/accept": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Accept",
+        "description": "Accept the mix as it is (after a measurement), whatever its dE.",
+        "operationId": "accept_api_v1_jobs__job_id__accept_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Cancel",
+        "description": "Abandon a job. What is already in the cup stays there and is logged.",
+        "operationId": "cancel_api_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/machine": {
+      "get": {
+        "tags": [
+          "machine"
+        ],
+        "summary": "Machine Status",
+        "operationId": "machine_status_api_v1_machine_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineStatus"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4720,6 +4877,19 @@
         ],
         "title": "Body_validate_api_v1_calibration_validate_post"
       },
+      "CancelRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Reason",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CancelRequest"
+      },
       "CandidateOut": {
         "properties": {
           "rank": {
@@ -5167,10 +5337,17 @@
             "default": 0.001
           },
           "tolerance_de": {
-            "type": "number",
-            "exclusiveMinimum": 0.0,
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Tolerance De",
-            "default": 0.5
+            "description": "Default: settings.accept_tolerance_de"
           },
           "max_iterations": {
             "type": "integer",
@@ -5802,6 +5979,86 @@
         ],
         "title": "IlluminantTables"
       },
+      "JobBrief": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "target_hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Hex"
+          },
+          "last_hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Hex",
+            "description": "Latest measured (or predicted) colour"
+          },
+          "last_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last De"
+          },
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
+          "batch_volume_ml": {
+            "type": "number",
+            "title": "Batch Volume Ml"
+          },
+          "poured_ml": {
+            "type": "number",
+            "title": "Poured Ml"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "target_hex",
+          "last_de",
+          "round",
+          "batch_volume_ml",
+          "poured_ml",
+          "updated_at"
+        ],
+        "title": "JobBrief"
+      },
       "JobCreate": {
         "properties": {
           "name": {
@@ -5990,6 +6247,66 @@
           "message"
         ],
         "title": "LowMassOut"
+      },
+      "MachineStatus": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "channels": {
+            "type": "integer",
+            "title": "Channels"
+          },
+          "channels_loaded": {
+            "type": "integer",
+            "title": "Channels Loaded"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "pouring",
+              "measuring",
+              "correcting",
+              "attention"
+            ],
+            "title": "State"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Pill text, e.g. 'Machine ready' or 'Correcting \u00b7 Plum Mist'"
+          },
+          "current_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/JobBrief"
+            },
+            "type": "array",
+            "title": "Recent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "channels",
+          "channels_loaded",
+          "state",
+          "label",
+          "current_job",
+          "recent"
+        ],
+        "title": "MachineStatus"
       },
       "MeasurementIn": {
         "properties": {

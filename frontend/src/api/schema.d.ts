@@ -874,6 +874,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept
+         * @description Accept the mix as it is (after a measurement), whatever its dE.
+         */
+        post: operations["accept_api_v1_jobs__job_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel
+         * @description Abandon a job. What is already in the cup stays there and is logged.
+         */
+        post: operations["cancel_api_v1_jobs__job_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/machine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Machine Status */
+        get: operations["machine_status_api_v1_machine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1143,6 +1200,14 @@ export interface components {
             /** File */
             file: string;
         };
+        /** CancelRequest */
+        CancelRequest: {
+            /**
+             * Reason
+             * @default
+             */
+            reason?: string;
+        };
         /** CandidateOut */
         CandidateOut: {
             /** Rank */
@@ -1286,9 +1351,9 @@ export interface components {
             damping?: number;
             /**
              * Tolerance De
-             * @default 0.5
+             * @description Default: settings.accept_tolerance_de
              */
-            tolerance_de?: number;
+            tolerance_de?: number | null;
             /**
              * Max Iterations
              * @default 5
@@ -1507,6 +1572,35 @@ export interface components {
             /** White */
             white: number[];
         };
+        /** JobBrief */
+        JobBrief: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Target Hex */
+            target_hex: string | null;
+            /**
+             * Last Hex
+             * @description Latest measured (or predicted) colour
+             */
+            last_hex?: string | null;
+            /** Last De */
+            last_de: number | null;
+            /** Round */
+            round: number;
+            /** Batch Volume Ml */
+            batch_volume_ml: number;
+            /** Poured Ml */
+            poured_ml: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** JobCreate */
         JobCreate: {
             /**
@@ -1593,6 +1687,28 @@ export interface components {
             suggest_dilution: boolean;
             /** Message */
             message: string;
+        };
+        /** MachineStatus */
+        MachineStatus: {
+            /** Name */
+            name: string;
+            /** Channels */
+            channels: number;
+            /** Channels Loaded */
+            channels_loaded: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ready" | "pouring" | "measuring" | "correcting" | "attention";
+            /**
+             * Label
+             * @description Pill text, e.g. 'Machine ready' or 'Correcting · Plum Mist'
+             */
+            label: string;
+            current_job: components["schemas"]["JobBrief"] | null;
+            /** Recent */
+            recent: components["schemas"]["JobBrief"][];
         };
         /**
          * MeasurementIn
@@ -5856,6 +5972,128 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accept_api_v1_jobs__job_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_api_v1_jobs__job_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    machine_status_api_v1_machine_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineStatus"];
                 };
             };
         };

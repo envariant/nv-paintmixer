@@ -831,8 +831,14 @@ class MeasurementIn(_Model):
 class CorrectRequest(_Model):
     mode: Literal["additions", "remix"] = "additions"
     damping: float = Field(1e-3, ge=0)
-    tolerance_de: float = Field(0.5, gt=0)
+    tolerance_de: float | None = Field(
+        None, gt=0, description="Default: settings.accept_tolerance_de"
+    )
     max_iterations: int = Field(5, ge=1, le=20)
+
+
+class CancelRequest(_Model):
+    reason: str = Field("", max_length=200)
 
 
 class JobRead(_Out):
@@ -924,3 +930,29 @@ class PaletteRead(_Out):
     color_ids: list[int]
     created_at: datetime
     updated_at: datetime
+
+
+# --- machine --------------------------------------------------------------------------------
+
+
+class JobBrief(_Out):
+    id: int
+    name: str
+    status: str
+    target_hex: str | None
+    last_hex: str | None = Field(None, description="Latest measured (or predicted) colour")
+    last_de: float | None
+    round: int
+    batch_volume_ml: float
+    poured_ml: float
+    updated_at: datetime
+
+
+class MachineStatus(_Out):
+    name: str
+    channels: int
+    channels_loaded: int
+    state: Literal["ready", "pouring", "measuring", "correcting", "attention"]
+    label: str = Field(description="Pill text, e.g. 'Machine ready' or 'Correcting · Plum Mist'")
+    current_job: JobBrief | None
+    recent: list[JobBrief]

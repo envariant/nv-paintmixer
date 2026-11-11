@@ -16,6 +16,7 @@ from paintmixer.api.routers import (
     illuminants,
     jobs,
     lines,
+    machine,
     mixing,
     models,
     paints,
@@ -82,6 +83,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lines,
         mixing,
         jobs,
+        machine,
     ):
         app.include_router(r.router, prefix=API_PREFIX)
     return app
