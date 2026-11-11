@@ -209,7 +209,11 @@ export interface paths {
         get: operations["get_color_api_v1_colors__color_id__get"];
         put?: never;
         post?: never;
-        /** Delete Color */
+        /**
+         * Delete Color
+         * @description Delete a colour and remove it from every palette. SQLite can give a later colour the
+         *     same id, so a stale id left in a palette would bring in an unrelated colour.
+         */
         delete: operations["delete_color_api_v1_colors__color_id__delete"];
         options?: never;
         head?: never;

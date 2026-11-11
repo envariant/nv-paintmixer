@@ -203,8 +203,10 @@ introduced it.
   new lot. Dispensing subtracts the volume actually delivered, never below 0. `model_lab` /
   `model_hex` are the active model's masstone under D65, gamut-mapped for display.
 - **Palettes** Ordered lists of colour-library ids: order is kept, repeats are dropped,
-  unknown ids are refused. A colour deleted from the library is filtered out when a palette is
-  read; its id stays stored.
+  unknown ids are refused. Deleting a colour removes its id from every palette in the same
+  transaction: SQLite can give a later colour the same id, so a stale id would bring an
+  unrelated colour into old palettes. Reads also filter out ids that are no longer in the
+  library.
 - **Machine status and job outcomes** The pill's state is derived from the newest open job:
   dispensed → measuring, measured → correcting, correcting → pouring, needs_attention →
   attention; no open job → ready. The machine name is fixed ("DSP-01 (simulated)") until a real

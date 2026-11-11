@@ -12,6 +12,7 @@ from paintmixer.api.schemas import ColorCreate, ColorImportResult, ColorRead, Co
 from paintmixer.api.services import color_from_input
 from paintmixer.colorsci.convert import lab_to_srgb
 from paintmixer.db import models as m
+from paintmixer.db.models import utcnow
 
 router = APIRouter(prefix="/colors", tags=["color library"], responses=ERROR_RESPONSES)
 
@@ -106,9 +107,16 @@ def update_color(color_id: int, body: ColorUpdate, session: SessionDep) -> Color
 
 @router.delete("/{color_id}", status_code=204)
 def delete_color(color_id: int, session: SessionDep) -> Response:
+    """Delete a colour and remove it from every palette. SQLite can give a later colour the
+    same id, so a stale id left in a palette would bring in an unrelated colour."""
     e = session.get(m.ColorLibraryEntry, color_id)
     if e is None:
         raise not_found("colour", color_id)
+    for pal in session.exec(select(m.Palette)).all():
+        if color_id in pal.color_ids:
+            pal.color_ids = [i for i in pal.color_ids if i != color_id]
+            pal.updated_at = utcnow()
+            session.add(pal)
     session.delete(e)
     session.commit()
     return Response(status_code=204)

@@ -1020,6 +1020,7 @@
           "color library"
         ],
         "summary": "Delete Color",
+        "description": "Delete a colour and remove it from every palette. SQLite can give a later colour the\nsame id, so a stale id left in a palette would bring in an unrelated colour.",
         "operationId": "delete_color_api_v1_colors__color_id__delete",
         "parameters": [
           {
