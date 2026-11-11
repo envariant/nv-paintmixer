@@ -135,4 +135,16 @@ Progress notes per milestone are appended below as work completes.
   `fitted_model.line_id/revision/label`, refs (`12`, `line`, `line@3`, `line@latest`) on every
   `/models/{ref}` endpoint, `/model-lines` CRUD, `PATCH /models/{ref}` (label, notes, move),
   `line`/`label` on fits and swatch models. The demo seeds into `cmykw-demo`.
+- **Frontend support, items 1–5** (backend plan for the new frontend, branch
+  `frontend-support`):
+  1. Illuminant catalogue (17 lights in D/A/F/LED/ID series), `GET /illuminants`,
+     `POST /appearance` (CAT02-adapted preview colours and dE2000 per light).
+  2. Settings `accept_tolerance_de`, `check_illuminants`, `machine_max_batch_ml`,
+     `low_level_warn_pct`; `batch_too_large` on solve and job create; metamerism under the
+     checked lights. Old settings with a larger batch raise the maximum on load.
+  3. Paint inventory (migration `0005`): batch code, body type, capacity, level, last refill;
+     `POST /paints/{id}/refill`; level decremented on dispense; model masstone on `PaintRead`.
+  4. Palettes (migration `0006`) and `/palettes` CRUD.
+  5. `GET /machine`, `POST /jobs/{id}/accept` and `/cancel`; correction tolerance defaults to
+     `accept_tolerance_de`.
 

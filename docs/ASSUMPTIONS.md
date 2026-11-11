@@ -183,4 +183,33 @@ introduced it.
   use and by the migration for existing models. Line ids are immutable (lower case, digits and
   `-`, starting with a letter, so they can't be mistaken for versions). `active` and
   `from-swatches` are reserved. Lines can be deleted only when empty; models are never deleted.
+- **Illuminant catalogue** 17 illuminants in five series (D, A, F, LED, ID), each with a
+  default member and a nominal CCT. Spectra come from `colour.SDS_ILLUMINANTS`; D93 is not
+  tabulated there, so it is synthesised from the CIE daylight model at 9300 K (rescaled to the
+  modern c2, like the tabulated D illuminants). Switching series keeps the member closest in
+  CCT. Previews under another light are chromatically adapted to D65 with CAT02, full
+  adaptation, before conversion to sRGB, so the display shows what the eye adapted to that
+  light would see. The UI shows those values and never shifts hues itself.
+- **Checked lights and machine maximum** `check_illuminants` defaults to A and F11, the lights
+  metamerism was reported under before, so solve results don't change. The design's default
+  (A, D50) is left for the Settings screen to set. `machine_max_batch_ml` is 250 ml; solve and
+  job creation refuse larger batches (`batch_too_large`). Settings saved before the maximum
+  existed may hold a larger batch: on load the maximum is raised to that batch instead of
+  refusing to load, and the next settings change saves it. `PATCH /settings` still refuses a
+  batch above the maximum.
+- **Paint inventory** The reservoir level is tracked only for paints that have one
+  (`level_ml` set, normally by a refill), so existing paints are unaffected. A refill fills to
+  `capacity_ml` unless a level is given, and stamps the time; a new `batch_code` there means a
+  new lot. Dispensing subtracts the volume actually delivered, never below 0. `model_lab` /
+  `model_hex` are the active model's masstone under D65, gamut-mapped for display.
+- **Palettes** Ordered lists of colour-library ids: order is kept, repeats are dropped,
+  unknown ids are refused. A colour deleted from the library is filtered out when a palette is
+  read; its id stays stored.
+- **Machine status and job outcomes** The pill's state is derived from the newest open job:
+  dispensed → measuring, measured → correcting, correcting → pouring, needs_attention →
+  attention; no open job → ready. The machine name is fixed ("DSP-01 (simulated)") until a real
+  dispenser adapter exists. Accept is allowed once a job has a measurement (measured,
+  needs_attention or done) and ends it as `accepted` whatever its dE. Cancel works from any open
+  state and logs the volume already poured. Correction without an explicit tolerance uses
+  `accept_tolerance_de` (default 1.0; it was a fixed 0.5).
 
