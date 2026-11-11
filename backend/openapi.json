@@ -638,6 +638,79 @@
         }
       }
     },
+    "/api/v1/paints/{paint_id}/refill": {
+      "post": {
+        "tags": [
+          "paints"
+        ],
+        "summary": "Refill Paint",
+        "description": "Mark a reservoir refilled (Models screen). Records the time, and a new batch if given.",
+        "operationId": "refill_paint_api_v1_paints__paint_id__refill_post",
+        "parameters": [
+          {
+            "name": "paint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Paint Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaintRefill"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaintRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/colors": {
       "get": {
         "tags": [
@@ -6639,6 +6712,33 @@
             "title": "Tint Fraction",
             "description": "Paint volume fraction in the tint swatch (default 0.1)"
           },
+          "batch_code": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Batch Code",
+            "description": "Manufacturer lot / batch",
+            "default": ""
+          },
+          "body_type": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Body Type",
+            "description": "e.g. 'Heavy body', 'Fluid'",
+            "default": ""
+          },
+          "capacity_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Ml",
+            "description": "Reservoir size on the dispenser"
+          },
           "id": {
             "type": "string",
             "maxLength": 64,
@@ -6823,6 +6923,33 @@
             "title": "Tint Fraction",
             "description": "Paint volume fraction in the tint swatch (default 0.1)"
           },
+          "batch_code": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Batch Code",
+            "description": "Manufacturer lot / batch",
+            "default": ""
+          },
+          "body_type": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Body Type",
+            "description": "e.g. 'Heavy body', 'Fluid'",
+            "default": ""
+          },
+          "capacity_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Ml",
+            "description": "Reservoir size on the dispenser"
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -6856,6 +6983,74 @@
             ],
             "title": "Tinting Peak Nm"
           },
+          "level_ml": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Ml"
+          },
+          "level_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Pct",
+            "description": "level_ml / capacity_ml x 100"
+          },
+          "low": {
+            "type": "boolean",
+            "title": "Low",
+            "description": "Below settings.low_level_warn_pct",
+            "default": false
+          },
+          "last_refill_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Refill At"
+          },
+          "model_lab": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Lab",
+            "description": "Masstone Lab (D65) predicted by the active model"
+          },
+          "model_hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Hex",
+            "description": "Masstone colour for swatches (D65)"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -6875,6 +7070,39 @@
           "updated_at"
         ],
         "title": "PaintRead"
+      },
+      "PaintRefill": {
+        "properties": {
+          "level_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Ml",
+            "description": "Level after refilling (default: the full capacity)"
+          },
+          "batch_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Code",
+            "description": "New lot, when the refill opens a new batch"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PaintRefill"
       },
       "PaintRole": {
         "type": "string",
@@ -7139,6 +7367,42 @@
               }
             ],
             "title": "Tint Fraction"
+          },
+          "batch_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Code"
+          },
+          "body_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Type"
+          },
+          "capacity_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Ml"
           }
         },
         "additionalProperties": false,

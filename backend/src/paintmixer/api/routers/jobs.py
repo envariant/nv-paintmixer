@@ -149,6 +149,11 @@ def dispense(job_id: int, body: DispenseRequest, session: SessionDep) -> JobRead
         cup = {p: 0.0 for p in cup}
     for r in results:
         cup[r.paint_id] += r.actual_ml
+        p = paints.get(r.paint_id)
+        if p is not None and p.level_ml is not None:  # track the reservoir
+            p.level_ml = max(0.0, p.level_ml - r.actual_ml)
+            p.updated_at = utcnow()
+            session.add(p)
     events = [*(j.dispensed or {}).get("events", [])]
     events.append(
         {

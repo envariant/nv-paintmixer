@@ -160,6 +160,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/paints/{paint_id}/refill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refill Paint
+         * @description Mark a reservoir refilled (Models screen). Records the time, and a new batch if given.
+         */
+        post: operations["refill_paint_api_v1_paints__paint_id__refill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/colors": {
         parameters: {
             query?: never;
@@ -1973,6 +1993,23 @@ export interface components {
              * @description Paint volume fraction in the tint swatch (default 0.1)
              */
             tint_fraction?: number | null;
+            /**
+             * Batch Code
+             * @description Manufacturer lot / batch
+             * @default
+             */
+            batch_code?: string;
+            /**
+             * Body Type
+             * @description e.g. 'Heavy body', 'Fluid'
+             * @default
+             */
+            body_type?: string;
+            /**
+             * Capacity Ml
+             * @description Reservoir size on the dispenser
+             */
+            capacity_ml?: number | null;
             /** Id */
             id: string;
         };
@@ -2060,6 +2097,23 @@ export interface components {
              * @description Paint volume fraction in the tint swatch (default 0.1)
              */
             tint_fraction?: number | null;
+            /**
+             * Batch Code
+             * @description Manufacturer lot / batch
+             * @default
+             */
+            batch_code?: string;
+            /**
+             * Body Type
+             * @description e.g. 'Heavy body', 'Fluid'
+             * @default
+             */
+            body_type?: string;
+            /**
+             * Capacity Ml
+             * @description Reservoir size on the dispenser
+             */
+            capacity_ml?: number | null;
             /** Id */
             id: string;
             /**
@@ -2075,6 +2129,31 @@ export interface components {
             tinting_strength?: number | null;
             /** Tinting Peak Nm */
             tinting_peak_nm?: number | null;
+            /** Level Ml */
+            level_ml?: number | null;
+            /**
+             * Level Pct
+             * @description level_ml / capacity_ml x 100
+             */
+            level_pct?: number | null;
+            /**
+             * Low
+             * @description Below settings.low_level_warn_pct
+             * @default false
+             */
+            low?: boolean;
+            /** Last Refill At */
+            last_refill_at?: string | null;
+            /**
+             * Model Lab
+             * @description Masstone Lab (D65) predicted by the active model
+             */
+            model_lab?: number[] | null;
+            /**
+             * Model Hex
+             * @description Masstone colour for swatches (D65)
+             */
+            model_hex?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -2085,6 +2164,19 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** PaintRefill */
+        PaintRefill: {
+            /**
+             * Level Ml
+             * @description Level after refilling (default: the full capacity)
+             */
+            level_ml?: number | null;
+            /**
+             * Batch Code
+             * @description New lot, when the refill opens a new batch
+             */
+            batch_code?: string | null;
         };
         /**
          * PaintRole
@@ -2142,6 +2234,12 @@ export interface components {
             tint_hex?: string | null;
             /** Tint Fraction */
             tint_fraction?: number | null;
+            /** Batch Code */
+            batch_code?: string | null;
+            /** Body Type */
+            body_type?: string | null;
+            /** Capacity Ml */
+            capacity_ml?: number | null;
         };
         /** PredictRequest */
         PredictRequest: {
@@ -3170,6 +3268,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaintImportResult"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    refill_paint_api_v1_paints__paint_id__refill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paint_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaintRefill"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaintRead"];
                 };
             };
             /** @description Not found */

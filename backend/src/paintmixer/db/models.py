@@ -32,6 +32,12 @@ class Paint(SQLModel, table=True):
     swatch_hex: str | None = None  # masstone (opaque chip)
     tint_hex: str | None = None  # reduction with white
     tint_fraction: float | None = None  # paint volume fraction in the tint swatch
+    # product + inventory (Models screen)
+    batch_code: str = ""  # manufacturer lot / batch on the current container
+    body_type: str = ""  # e.g. "Heavy body", "Fluid"
+    capacity_ml: float | None = None  # reservoir size on the dispenser
+    level_ml: float | None = None  # current level; decremented by dispensing
+    last_refill_at: datetime | None = None
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 

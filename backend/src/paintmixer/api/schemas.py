@@ -60,6 +60,9 @@ class PaintFields(_Model):
     tint_fraction: float | None = Field(
         None, gt=0, lt=1, description="Paint volume fraction in the tint swatch (default 0.1)"
     )
+    batch_code: str = Field("", max_length=64, description="Manufacturer lot / batch")
+    body_type: str = Field("", max_length=40, description="e.g. 'Heavy body', 'Fluid'")
+    capacity_ml: float | None = Field(None, gt=0, description="Reservoir size on the dispenser")
 
 
 class PaintCreate(PaintFields):
@@ -83,6 +86,18 @@ class PaintUpdate(_Model):
     swatch_hex: str | None = Field(None, pattern=HEX_PATTERN)
     tint_hex: str | None = Field(None, pattern=HEX_PATTERN)
     tint_fraction: float | None = Field(None, gt=0, lt=1)
+    batch_code: str | None = Field(None, max_length=64)
+    body_type: str | None = Field(None, max_length=40)
+    capacity_ml: float | None = Field(None, gt=0)
+
+
+class PaintRefill(_Model):
+    level_ml: float | None = Field(
+        None, ge=0, description="Level after refilling (default: the full capacity)"
+    )
+    batch_code: str | None = Field(
+        None, max_length=64, description="New lot, when the refill opens a new batch"
+    )
 
 
 class PaintRead(PaintFields):
@@ -96,6 +111,14 @@ class PaintRead(PaintFields):
         "(ISO 787-24 style; active model). None for white or uncalibrated paints.",
     )
     tinting_peak_nm: float | None = None
+    level_ml: float | None = None
+    level_pct: float | None = Field(None, description="level_ml / capacity_ml x 100")
+    low: bool = Field(False, description="Below settings.low_level_warn_pct")
+    last_refill_at: datetime | None = None
+    model_lab: list[float] | None = Field(
+        None, description="Masstone Lab (D65) predicted by the active model"
+    )
+    model_hex: str | None = Field(None, description="Masstone colour for swatches (D65)")
     created_at: datetime
     updated_at: datetime
 
