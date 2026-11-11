@@ -903,3 +903,24 @@ class AppearanceUnderOut(_Out):
 
 class AppearanceResponse(_Out):
     under: list[AppearanceUnderOut]
+
+
+# --- palettes -----------------------------------------------------------------------------
+
+
+class PaletteCreate(_Model):
+    name: str = Field(min_length=1, max_length=120)
+    color_ids: list[int] = Field(default_factory=list, max_length=500)
+
+
+class PaletteUpdate(_Model):
+    name: str | None = Field(None, min_length=1, max_length=120)
+    color_ids: list[int] | None = Field(None, max_length=500, description="Replaces the order")
+
+
+class PaletteRead(_Out):
+    id: int
+    name: str
+    color_ids: list[int]
+    created_at: datetime
+    updated_at: datetime

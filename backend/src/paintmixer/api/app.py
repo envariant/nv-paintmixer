@@ -19,6 +19,7 @@ from paintmixer.api.routers import (
     mixing,
     models,
     paints,
+    palettes,
     system,
     worksheet,
 )
@@ -74,6 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         illuminants,
         paints,
         colors,
+        palettes,
         worksheet,
         calibration,
         models,

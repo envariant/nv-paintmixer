@@ -84,6 +84,16 @@ class ColorLibraryEntry(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class Palette(SQLModel, table=True):
+    """A named, ordered set of colour-library entries (Library screen)."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(index=True)
+    color_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 class FitRun(SQLModel, table=True):
     __tablename__ = "fit_run"
     id: int | None = Field(default=None, primary_key=True)
