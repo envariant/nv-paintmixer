@@ -12,9 +12,9 @@ Pipeline (see PLAN.md):
 5. recipes are quantised to dispenser resolution and minimum dose and re-optimised;
 6. metamerism under the checked lights and dose sensitivity are reported; out-of-gamut targets
    return the nearest achievable colour with a warning;
-7. the returned candidates differ in kind: the closest, the fewest paints and the cheapest within
-   reach of the closest, and the best without black / white when the closest uses them, each
-   tagged with its role (:func:`select_candidates`), then the rest by objective.
+7. the returned candidates differ in kind: the closest, and the fewest paints and the cheapest
+   within reach of the closest, each tagged with its role (:func:`select_candidates`), then the
+   rest by objective.
 """
 
 from __future__ import annotations
@@ -238,7 +238,7 @@ def solve(
     pre.sort(key=lambda t: (t[0], tuple(t[1])))
     picked = list(pre[: max(opts.refine_top, opts.top_n)])
     keys = {tuple(int(i) for i in t[1]) for t in picked}
-    for t in _role_contenders(model, pre):  # so every role has a refined contender
+    for t in _best_per_size(pre):  # so "fewest paints" has a refined contender
         if tuple(int(i) for i in t[1]) not in keys:
             keys.add(tuple(int(i) for i in t[1]))
             picked.append(t)
@@ -311,13 +311,7 @@ def solve(
         )
     # re-rank after quantisation (stable on ties), then keep a varied top_n
     cands.sort(key=lambda x: (x.objective, x.paint_ids))
-    cands = select_candidates(
-        cands,
-        opts.top_n,
-        opts.accept_tolerance_de,
-        black={p.id for p in model.paints if p.role == PaintRole.BLACK},
-        white={p.id for p in model.paints if p.role == PaintRole.WHITE},
-    )
+    cands = select_candidates(cands, opts.top_n, opts.accept_tolerance_de)
     for i, cand in enumerate(cands):
         cand.rank = i + 1
     nearest = cands[0].de2000 if cands else float("inf")
@@ -345,26 +339,13 @@ def solve(
     )
 
 
-def _role_contenders(
-    model: PoolModel, pre: Sequence[tuple[float, Any, Any]]
-) -> list[tuple[float, Any, Any]]:
-    """From the screened subsets (objective order): the best of each size, the best without
-    black and the best without white."""
-    black = model.role_mask(PaintRole.BLACK)
-    white = model.role_mask(PaintRole.WHITE)
+def _best_per_size(pre: Sequence[tuple[float, Any, Any]]) -> list[tuple[float, Any, Any]]:
+    """The best screened subset (objective order) of each size."""
     out = []
     sizes: set[int] = set()
-    no_black = no_white = False
     for t in pre:
-        idx = t[1]
-        if len(idx) not in sizes:
-            sizes.add(len(idx))
-            out.append(t)
-        if not no_black and not black[idx].any():
-            no_black = True
-            out.append(t)
-        if not no_white and not white[idx].any():
-            no_white = True
+        if len(t[1]) not in sizes:
+            sizes.add(len(t[1]))
             out.append(t)
     return out
 
@@ -373,15 +354,12 @@ def select_candidates(
     cands: Sequence[Candidate],
     top_n: int,
     accept_tolerance_de: float,
-    black: set[str],
-    white: set[str],
 ) -> list[Candidate]:
     """Pick ``top_n`` candidates that differ in kind, tagging each with the roles it wins.
 
     ``cands`` is in objective order. Roles, in priority order: ``closest`` (lowest dE2000);
     ``fewest paints`` and ``cheapest`` (per ml), both among candidates within
-    max(1.5 x the closest dE2000, ``accept_tolerance_de``); ``no black`` / ``no white``, the
-    closest candidate without that paint, when the closest uses it. ``cheapest`` is skipped
+    max(1.5 x the closest dE2000, ``accept_tolerance_de``). ``cheapest`` is skipped
     when every candidate in reach costs the same (e.g. no paint costs set). One candidate can
     win several roles. Role winners come first, the rest is filled in objective order, and the
     result is returned in objective order.
@@ -399,11 +377,6 @@ def select_candidates(
     ]
     if len({round(c.cost_per_ml, 9) for c in near}) > 1:
         winners.append(("cheapest", min(near, key=lambda c: (c.cost_per_ml, c.de2000))))
-    for tag, ids in (("no black", black), ("no white", white)):
-        if ids.intersection(closest.paint_ids):
-            alt = [c for c in cands if not ids.intersection(c.paint_ids)]
-            if alt:
-                winners.append((tag, min(alt, key=lambda c: (c.de2000, c.objective))))
     chosen: list[int] = []  # id() of the picked candidates, in pick order
     for tag, c in winners:
         if id(c) in chosen or len(chosen) < top_n:

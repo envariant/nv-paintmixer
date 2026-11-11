@@ -618,7 +618,7 @@ class CandidateOut(_Out):
     warnings: list[str]
     tags: list[str] = Field(
         default_factory=list,
-        description="Roles this mix wins: closest, fewest paints, cheapest, no black, no white",
+        description="Roles this mix wins: closest, fewest paints, cheapest",
     )
     uncertainty_de: float | None = Field(
         None,

@@ -52,37 +52,31 @@ def test_select_candidates_roles_dedup_and_order() -> None:
     a = _cand(["w", "k", "c", "y"], de=0.2, cost=0.07, objective=1.0)  # closest
     b = _cand(["w", "k", "y"], de=0.25, cost=0.08, objective=1.1)  # fewest within the band
     d = _cand(["w", "k", "c", "m"], de=0.9, cost=0.05, objective=1.2)  # cheapest within band
-    e = _cand(["w", "c", "m", "y"], de=2.5, cost=0.07, objective=1.3)  # best without black
-    f = _cand(["k", "c", "y"], de=30.0, cost=0.09, objective=9.0)  # best without white
-    g = _cand(["w", "k", "m"], de=3.0, cost=0.06, objective=1.25)  # objective filler
-    pool = [a, b, d, g, e, f]  # objective order
-    out = select_candidates(pool, 5, 1.0, black={"k"}, white={"w"})
-    assert [c.tags for c in out] == [
-        ["closest"],
-        ["fewest paints"],
-        ["cheapest"],
-        ["no black"],
-        ["no white"],
-    ]
+    g = _cand(["w", "k", "m"], de=3.0, cost=0.04, objective=1.25)  # cheaper, but out of reach
+    e = _cand(["w", "c", "m", "y"], de=2.5, cost=0.07, objective=1.3)  # objective filler
+    pool = [a, b, d, g, e]  # objective order
+    out = select_candidates(pool, 3, 1.0)
+    assert [c.tags for c in out] == [["closest"], ["fewest paints"], ["cheapest"]]
+    out = select_candidates(pool, 5, 1.0)
+    assert [c.tags for c in out] == [["closest"], ["fewest paints"], ["cheapest"], [], []]
     assert [c.objective for c in out] == sorted(c.objective for c in out)  # objective order
-    # top_n truncates in role priority; the objective filler only enters with room to spare
-    out = select_candidates(pool, 2, 1.0, black={"k"}, white={"w"})
+    # top_n cuts in role priority, ahead of better-objective fillers
+    out = select_candidates([a, g, e, b, d], 2, 1.0)
     assert [c.tags for c in out] == [["closest"], ["fewest paints"]]
-    out = select_candidates(pool, 6, 1.0, black={"k"}, white={"w"})
-    assert g in out and g.tags == []
+    assert g not in out and d not in out and d.tags == []
 
 
 def test_select_candidates_one_mix_can_win_several_roles() -> None:
     a = _cand(["w", "c", "y"], de=0.2, cost=0.06, objective=1.0)  # closest, fewest, cheapest
     b = _cand(["w", "k", "c", "y"], de=0.3, cost=0.07, objective=1.1)
-    out = select_candidates([a, b], 3, 1.0, black={"k"}, white={"w"})
+    out = select_candidates([a, b], 3, 1.0)
     assert out[0].tags == ["closest", "fewest paints", "cheapest"] and out[1].tags == []
 
 
 def test_cheapest_is_skipped_when_costs_are_unknown() -> None:
     a = _cand(["w", "k", "c"], de=0.2, cost=0.0, objective=1.0)
     b = _cand(["w", "c", "y"], de=0.3, cost=0.0, objective=1.1)
-    tags = [t for c in select_candidates([a, b], 3, 1.0, set(), set()) for t in c.tags]
+    tags = [t for c in select_candidates([a, b], 3, 1.0) for t in c.tags]
     assert "cheapest" not in tags
 
 
@@ -167,7 +161,8 @@ def demo(tmp_path_factory: pytest.TempPathFactory) -> Iterator[TestClient]:
 
 
 def test_starter5_mid_chroma_target_gives_varied_tagged_mixes(demo: TestClient) -> None:
-    r = demo.post(f"{API}/solve", json={"target": {"lab": [60, -10, 15]}, "top_n": 3})
+    # plum, C* ~ 36: the closest mix uses four paints, a three-paint mix is in reach
+    r = demo.post(f"{API}/solve", json={"target": {"lab": [45, 30, -20]}, "top_n": 3})
     assert r.status_code == 200, r.text
     res = r.json()
     cands = res["candidates"]
@@ -177,6 +172,14 @@ def test_starter5_mid_chroma_target_gives_varied_tagged_mixes(demo: TestClient) 
     assert sum("closest" in c["tags"] for c in cands) == 1
     assert all(c["uncertainty_de"] is not None and c["uncertainty_de"] > 0 for c in cands)
     assert res["in_gamut"] is True and res["gamut_margin_de"] > 0
+
+
+def test_one_mix_can_win_every_role(demo: TestClient) -> None:
+    # sage: the closest mix is also the fewest-paint and cheapest one in reach
+    r = demo.post(f"{API}/solve", json={"target": {"lab": [60, -10, 15]}, "top_n": 3})
+    cands = r.json()["candidates"]
+    assert [c["tags"] for c in cands if c["tags"]] == [["closest", "fewest paints", "cheapest"]]
+    assert len(cands) == 3  # the rest is filled by objective
 
 
 def test_swatch_model_has_no_uncertainty(demo: TestClient) -> None:

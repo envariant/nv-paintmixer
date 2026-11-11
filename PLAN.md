@@ -147,8 +147,8 @@ Progress notes per milestone are appended below as work completes.
   4. Palettes (migration `0006`) and `/palettes` CRUD.
   5. `GET /machine`, `POST /jobs/{id}/accept` and `/cancel`; correction tolerance defaults to
      `accept_tolerance_de`.
-  6. Mix candidates that differ in kind: `CandidateOut.tags` (closest, fewest paints, cheapest,
-     no black, no white), `CandidateOut.uncertainty_de` (per-paint hold-out error, doubled
+  6. Mix candidates that differ in kind: `CandidateOut.tags` (closest, fewest paints, cheapest;
+     the plan's no black / no white roles dropped), `CandidateOut.uncertainty_de` (per-paint hold-out error, doubled
      for under-sampled paints, plus dosing), `SolveResponse.gamut_margin_de`;
      `calibration.accuracy` (per-paint coverage and residuals, shared with the fit's data
      warnings and with item 7).

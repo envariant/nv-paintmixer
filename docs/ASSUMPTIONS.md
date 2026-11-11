@@ -215,13 +215,15 @@ introduced it.
   state and logs the volume already poured. Correction without an explicit tolerance uses
   `accept_tolerance_de` (default 1.0; it was a fixed 0.5).
 - **Varied mix candidates (tags)** The solver refines, besides the best subsets by objective,
-  the best subset of each size and the best without black and without white, so every role has
-  a contender. It then quantises them all and picks by role, in priority order:
+  the best subset of each size, so `fewest paints` has a contender. It then quantises them all
+  and picks by role, in priority order:
   - `closest`: lowest dE2000;
   - `fewest paints` and `cheapest` (per ml): both among the candidates within
-    max(1.5 × the closest dE2000, `accept_tolerance_de`);
-  - `no black` / `no white`: the closest candidate without that paint, when the closest uses
-    it. As specified, this has no dE limit.
+    max(1.5 × the closest dE2000, `accept_tolerance_de`).
+
+  The plan's `no black` / `no white` roles were dropped: without a dE limit the closest mix
+  without white was nearly always 14–43 dE2000 off (e.g. pure yellow for a sage green), and it
+  took one of the screen's three slots.
 
   `cheapest` is skipped when every candidate in reach costs the same, e.g. no paint costs are
   set, so it can't land on an arbitrary mix. One mix can win several roles. Role winners come

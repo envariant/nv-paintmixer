@@ -1246,7 +1246,7 @@ export interface components {
             warnings: string[];
             /**
              * Tags
-             * @description Roles this mix wins: closest, fewest paints, cheapest, no black, no white
+             * @description Roles this mix wins: closest, fewest paints, cheapest
              */
             tags?: string[];
             /**
