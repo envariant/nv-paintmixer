@@ -54,6 +54,7 @@ class SolveOptions:
     min_fraction: float = 0.02
     include_white: bool | None = None  # None = allowed, True = required, False = excluded
     illuminant: Illuminant = Illuminant.D65
+    check_illuminants: tuple[Illuminant, ...] = (Illuminant.A, Illuminant.F11)
     batch_volume_ml: float = 100.0
     resolution_ml: float = 0.05
     weights: Weights = field(default_factory=Weights)
@@ -203,7 +204,15 @@ def solve(
         sc = screen(model, subsets, target_lab, opts.min_fraction, ref, ill=ill)
         n_eval = len(subsets)
 
-    obj = Objective(model, target_lab, ref, opts.weights, opts.min_fraction, ill)
+    obj = Objective(
+        model,
+        target_lab,
+        ref,
+        opts.weights,
+        opts.min_fraction,
+        ill,
+        check_illuminants=opts.check_illuminants,
+    )
     # rank screened subsets by the full objective at their Lab optimum
     pre = []
     sizes = (sc.idx >= 0).sum(axis=1)

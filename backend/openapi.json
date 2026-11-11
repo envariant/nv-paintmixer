@@ -3781,6 +3781,38 @@
             "exclusiveMinimum": 0.0,
             "title": "Selftest Cast Chroma",
             "default": 3.0
+          },
+          "accept_tolerance_de": {
+            "type": "number",
+            "maximum": 5.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Accept Tolerance De",
+            "description": "Jobs auto-accept when the measured dE2000 is below this",
+            "default": 1.0
+          },
+          "check_illuminants": {
+            "items": {
+              "$ref": "#/components/schemas/Illuminant"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Check Illuminants",
+            "description": "Metamerism is reported under these lights ('Also check under')"
+          },
+          "machine_max_batch_ml": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Machine Max Batch Ml",
+            "description": "Largest volume the cup holds",
+            "default": 250.0
+          },
+          "low_level_warn_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Low Level Warn Pct",
+            "description": "Warn below this level",
+            "default": 25.0
           }
         },
         "additionalProperties": false,
@@ -4066,6 +4098,59 @@
               }
             ],
             "title": "Selftest Cast Chroma"
+          },
+          "accept_tolerance_de": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 5.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accept Tolerance De"
+          },
+          "check_illuminants": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Illuminant"
+                },
+                "type": "array",
+                "maxItems": 6
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check Illuminants"
+          },
+          "machine_max_batch_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Max Batch Ml"
+          },
+          "low_level_warn_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Level Warn Pct"
           }
         },
         "additionalProperties": false,

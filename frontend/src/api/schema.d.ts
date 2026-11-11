@@ -933,6 +933,29 @@ export interface components {
              * @default 3
              */
             selftest_cast_chroma?: number;
+            /**
+             * Accept Tolerance De
+             * @description Jobs auto-accept when the measured dE2000 is below this
+             * @default 1
+             */
+            accept_tolerance_de?: number;
+            /**
+             * Check Illuminants
+             * @description Metamerism is reported under these lights ('Also check under')
+             */
+            check_illuminants?: components["schemas"]["Illuminant"][];
+            /**
+             * Machine Max Batch Ml
+             * @description Largest volume the cup holds
+             * @default 250
+             */
+            machine_max_batch_ml?: number;
+            /**
+             * Low Level Warn Pct
+             * @description Warn below this level
+             * @default 25
+             */
+            low_level_warn_pct?: number;
         };
         /** AppSettingsUpdate */
         AppSettingsUpdate: {
@@ -980,6 +1003,14 @@ export interface components {
             selftest_smoothness_rms?: number | null;
             /** Selftest Cast Chroma */
             selftest_cast_chroma?: number | null;
+            /** Accept Tolerance De */
+            accept_tolerance_de?: number | null;
+            /** Check Illuminants */
+            check_illuminants?: components["schemas"]["Illuminant"][] | null;
+            /** Machine Max Batch Ml */
+            machine_max_batch_ml?: number | null;
+            /** Low Level Warn Pct */
+            low_level_warn_pct?: number | null;
         };
         /** AppearanceOut */
         AppearanceOut: {

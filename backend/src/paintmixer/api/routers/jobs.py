@@ -67,6 +67,11 @@ def create_job(body: JobCreate, session: SessionDep) -> JobRead:
     c = np.array([body.components[p] for p in ids])
     c = c / c.sum()
     batch = body.batch_volume_ml or s.batch_volume_ml
+    if batch > s.machine_max_batch_ml:
+        raise bad_request(
+            "batch_too_large",
+            f"batch_volume_ml exceeds the machine maximum ({s.machine_max_batch_ml:g} ml)",
+        )
     res = s.dispenser_resolution_ml
     vols = np.maximum(np.round(c * batch / res) * res, res)
     idx = np.arange(len(ids))[None, :]

@@ -141,6 +141,17 @@ class AppSettings(_Model):
     selftest_max_band_jump: float = Field(0.05, gt=0)
     selftest_smoothness_rms: float = Field(0.01, gt=0)
     selftest_cast_chroma: float = Field(3.0, gt=0)
+    # Judging colour / machine (Settings screen)
+    accept_tolerance_de: float = Field(
+        1.0, gt=0, le=5, description="Jobs auto-accept when the measured dE2000 is below this"
+    )
+    check_illuminants: list[Illuminant] = Field(
+        default_factory=lambda: [Illuminant.A, Illuminant.F11],
+        max_length=6,
+        description="Metamerism is reported under these lights ('Also check under')",
+    )
+    machine_max_batch_ml: float = Field(250.0, gt=0, description="Largest volume the cup holds")
+    low_level_warn_pct: float = Field(25.0, ge=0, le=100, description="Warn below this level")
 
     @model_validator(mode="after")
     def _selftest_order(self) -> AppSettings:
@@ -148,6 +159,8 @@ class AppSettings(_Model):
             raise ValueError("selftest_warn_de must be <= selftest_fail_de")
         if self.selftest_white_min >= self.selftest_white_max:
             raise ValueError("selftest_white_min must be < selftest_white_max")
+        if self.batch_volume_ml > self.machine_max_batch_ml:
+            raise ValueError("batch_volume_ml must be <= machine_max_batch_ml")
         return self
 
 
@@ -175,6 +188,10 @@ class AppSettingsUpdate(_Model):
     selftest_max_band_jump: float | None = Field(None, gt=0)
     selftest_smoothness_rms: float | None = Field(None, gt=0)
     selftest_cast_chroma: float | None = Field(None, gt=0)
+    accept_tolerance_de: float | None = Field(None, gt=0, le=5)
+    check_illuminants: list[Illuminant] | None = Field(None, max_length=6)
+    machine_max_batch_ml: float | None = Field(None, gt=0)
+    low_level_warn_pct: float | None = Field(None, ge=0, le=100)
 
 
 # --- colour library -------------------------------------------------------------------------

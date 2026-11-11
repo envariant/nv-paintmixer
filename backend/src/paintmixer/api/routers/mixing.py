@@ -101,6 +101,7 @@ async def solve_recipe(body: SolveRequest, session: SessionDep, request: Request
         min_fraction=body.min_fraction if body.min_fraction is not None else s.min_fraction,
         include_white=body.include_white,
         illuminant=body.illuminant or s.illuminant,
+        check_illuminants=tuple(s.check_illuminants),
         batch_volume_ml=body.batch_volume_ml or s.batch_volume_ml,
         resolution_ml=body.resolution_ml or s.dispenser_resolution_ml,
         weights=Weights(de=w.de, n_paints=w.n_paints, cost=w.cost, metamerism=w.metamerism),
@@ -109,6 +110,11 @@ async def solve_recipe(body: SolveRequest, session: SessionDep, request: Request
         search=body.search,
         out_of_gamut_de=s.out_of_gamut_de,
     )
+    if opts.batch_volume_ml > s.machine_max_batch_ml:
+        raise bad_request(
+            "batch_too_large",
+            f"batch_volume_ml exceeds the machine maximum ({s.machine_max_batch_ml:g} ml)",
+        )
     if opts.max_paints * opts.min_fraction > 1:
         raise bad_request("bad_constraints", "max_paints x min_fraction must be <= 1")
     res = await run_compute(request.app, solve, model, target, opts, gamut_cache_key=fm.version)
