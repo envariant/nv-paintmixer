@@ -9,6 +9,7 @@ from sqlmodel import Session, col, select
 
 from paintmixer.api.errors import ApiError, bad_request, not_found
 from paintmixer.api.schemas import AppSettings, GamutResponse, GamutSliceOut, TargetIn
+from paintmixer.calibration.accuracy import PaintQuality, paint_quality
 from paintmixer.calibration.format import CalibrationSampleData, SampleType, Substrate
 from paintmixer.calibration.strength import PaintStrength, tinting_strengths
 from paintmixer.colorsci.convert import (
@@ -185,6 +186,33 @@ def gamut_response(model: PoolModel, fm: m.FittedModel, g: Gamut, max_paints: in
             for sl in g.slices
         ],
     )
+
+
+def model_paint_quality(session: Session, fm: m.FittedModel) -> dict[str, PaintQuality]:
+    """Per-paint coverage and residuals of a fitted model (residuals joined with the samples
+    they came from; samples deleted since the fit are skipped)."""
+    residuals = list(fm.diagnostics.get("residuals", []))
+    ids = [r["sample_id"] for r in residuals]
+    rows = session.exec(
+        select(m.CalibrationSample).where(col(m.CalibrationSample.id).in_(ids))
+    ).all()
+    samples = {r.id: sample_to_data(r) for r in rows}
+    roles = {p.id: PaintRole(p.role) for p in all_paints(session)}
+    whites = [p for p in fm.paint_ids if roles.get(p) == PaintRole.WHITE]
+    return paint_quality(residuals, samples, fm.paint_ids, roles, whites[0] if whites else None)
+
+
+def model_paint_errors(session: Session, fm: m.FittedModel) -> dict[str, float] | None:
+    """Per-paint calibration error (dE2000) for the solver's ``uncertainty_de``; None for
+    models without residuals (swatch models)."""
+    if fm.source != "calibration":
+        return None
+    errors = {
+        pid: e
+        for pid, q in model_paint_quality(session, fm).items()
+        if (e := q.error_de) is not None
+    }
+    return errors or None
 
 
 def model_strengths(session: Session, fm: m.FittedModel) -> dict[str, PaintStrength]:

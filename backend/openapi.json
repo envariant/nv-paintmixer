@@ -4963,6 +4963,26 @@
             },
             "type": "array",
             "title": "Warnings"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "description": "Roles this mix wins: closest, fewest paints, cheapest, no black, no white"
+          },
+          "uncertainty_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty De",
+            "description": "Expected spread of de2000 from calibration accuracy and dosing; null for uncalibrated (swatch) models"
           }
         },
         "type": "object",
@@ -8723,6 +8743,18 @@
           "nearest_de": {
             "type": "number",
             "title": "Nearest De"
+          },
+          "gamut_margin_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gamut Margin De",
+            "description": "dE2000 from the target to the reachable gamut's edge at its L*: positive inside, negative outside (negative exactly when in_gamut is false)"
           },
           "warnings": {
             "items": {

@@ -616,6 +616,15 @@ class CandidateOut(_Out):
     dose_sensitivity: float
     objective: float
     warnings: list[str]
+    tags: list[str] = Field(
+        default_factory=list,
+        description="Roles this mix wins: closest, fewest paints, cheapest, no black, no white",
+    )
+    uncertainty_de: float | None = Field(
+        None,
+        description="Expected spread of de2000 from calibration accuracy and dosing; "
+        "null for uncalibrated (swatch) models",
+    )
 
 
 class SolveResponse(_Out):
@@ -628,6 +637,11 @@ class SolveResponse(_Out):
     candidates: list[CandidateOut]
     in_gamut: bool | None
     nearest_de: float
+    gamut_margin_de: float | None = Field(
+        None,
+        description="dE2000 from the target to the reachable gamut's edge at its L*: positive "
+        "inside, negative outside (negative exactly when in_gamut is false)",
+    )
     warnings: list[str]
     search: str
     n_subsets: int

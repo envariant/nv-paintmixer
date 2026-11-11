@@ -10,12 +10,16 @@ Pipeline (see PLAN.md):
 4. the best subsets are refined with multi-start SLSQP on
    ``dE2000 + w_n*n + w_cost*cost + w_meta*metamerism + min-fraction penalty``;
 5. recipes are quantised to dispenser resolution and minimum dose and re-optimised;
-6. metamerism under A and F11 and dose sensitivity are reported; out-of-gamut targets return the
-   nearest achievable colour with a warning.
+6. metamerism under the checked lights and dose sensitivity are reported; out-of-gamut targets
+   return the nearest achievable colour with a warning;
+7. the returned candidates differ in kind: the closest, the fewest paints and the cheapest within
+   reach of the closest, and the best without black / white when the closest uses them, each
+   tagged with its role (:func:`select_candidates`), then the rest by objective.
 """
 
 from __future__ import annotations
 
+import math
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -23,6 +27,7 @@ from typing import Any
 
 import numpy as np
 
+from paintmixer.calibration.accuracy import mix_uncertainty
 from paintmixer.colorsci.convert import (
     lab_to_srgb,
     reflectance_to_lab,
@@ -65,6 +70,10 @@ class SolveOptions:
     gamut_check: bool = True
     out_of_gamut_de: float = 1.0
     n_jobs: int = 1
+    # "close enough" band for the role picks: dE2000 <= max(1.5 x closest, this)
+    accept_tolerance_de: float = 1.0
+    # per-paint calibration error (dE2000, see calibration.accuracy) -> Candidate.uncertainty_de
+    paint_error_de: dict[str, float] | None = None
 
 
 @dataclass
@@ -94,6 +103,8 @@ class Candidate:
     dose_sensitivity: float  # dE2000 per 1 % overdose of any one paint
     objective: float
     warnings: list[str]
+    tags: list[str] = field(default_factory=list)  # roles: closest, fewest paints, ...
+    uncertainty_de: float | None = None  # expected spread of the predicted dE2000
 
     def as_dict(self) -> dict[str, Any]:
         return self.__dict__.copy()
@@ -113,6 +124,7 @@ class SolveResult:
     search: str
     n_subsets: int
     duration_s: float
+    gamut_margin_de: float | None = None  # signed dE2000 to the gamut edge; < 0 iff out of gamut
 
 
 def pool_warnings(model: PoolModel) -> list[str]:
@@ -167,6 +179,7 @@ def solve(
         warnings.append("Target has no spectrum: matching under D65; illuminant setting ignored.")
 
     in_gamut: bool | None = None
+    g: Gamut | None = None
     if opts.gamut_check:
         g = gamut_for(model, opts.max_paints, gamut_cache_key)
         in_gamut = g.contains(target_lab)
@@ -223,8 +236,14 @@ def solve(
         vals = obj.terms(idx_k, c_k)["total"]
         pre += [(float(vals[j]), idx_k[j], c_k[j]) for j in range(rows.size)]
     pre.sort(key=lambda t: (t[0], tuple(t[1])))
+    picked = list(pre[: max(opts.refine_top, opts.top_n)])
+    keys = {tuple(int(i) for i in t[1]) for t in picked}
+    for t in _role_contenders(model, pre):  # so every role has a refined contender
+        if tuple(int(i) for i in t[1]) not in keys:
+            keys.add(tuple(int(i) for i in t[1]))
+            picked.append(t)
     refined = []
-    for _v, idx, c in pre[: max(opts.refine_top, opts.top_n)]:
+    for _v, idx, c in picked:
         c_best, v = refine_subset(obj, idx, c, rng)
         refined.append((v, idx, c_best))
     refined.sort(key=lambda t: (t[0], tuple(t[1])))
@@ -232,7 +251,9 @@ def solve(
     cands: list[Candidate] = []
     min_dose = np.array([p.min_dose_ml for p in model.paints])
     density = np.array([p.density_g_per_ml for p in model.paints])
-    for _v_cont, idx, c in refined[: opts.top_n]:
+    dose_error_pct = 100.0 * opts.resolution_ml / opts.batch_volume_ml
+    errors = opts.paint_error_de
+    for _v_cont, idx, c in refined:
         q = quantise(obj, idx, c, opts.batch_volume_ml, opts.resolution_ml, min_dose[idx])
         terms = obj.terms(idx[None, :], q.fractions[None, :])
         de_q = float(terms["de"][0])
@@ -262,10 +283,14 @@ def solve(
             cw.append(f"Dose-sensitive recipe: 1 % overdose of one paint moves it {sens:.1f} dE.")
         vols = q.volumes_ml
         cost_per_ml = float(np.dot(q.fractions, model.cost[idx]))
+        ids = [model.ids[i] for i in idx]
+        unc = None
+        if errors is not None and all(p in errors for p in ids):
+            unc = mix_uncertainty(q.fractions, [errors[p] for p in ids], sens, dose_error_pct)
         cands.append(
             Candidate(
                 rank=len(cands) + 1,
-                paint_ids=[model.ids[i] for i in idx],
+                paint_ids=ids,
                 fractions=[float(x) for x in c],
                 fractions_quantised=[float(x) for x in q.fractions],
                 volumes_ml=[float(x) for x in vols],
@@ -281,10 +306,18 @@ def solve(
                 dose_sensitivity=sens,
                 objective=float(q.value),
                 warnings=cw,
+                uncertainty_de=unc,
             )
         )
-    # re-rank after quantisation (stable on ties)
+    # re-rank after quantisation (stable on ties), then keep a varied top_n
     cands.sort(key=lambda x: (x.objective, x.paint_ids))
+    cands = select_candidates(
+        cands,
+        opts.top_n,
+        opts.accept_tolerance_de,
+        black={p.id for p in model.paints if p.role == PaintRole.BLACK},
+        white={p.id for p in model.paints if p.role == PaintRole.WHITE},
+    )
     for i, cand in enumerate(cands):
         cand.rank = i + 1
     nearest = cands[0].de2000 if cands else float("inf")
@@ -293,6 +326,7 @@ def solve(
             f"Out of gamut: nearest achievable colour is dE2000 {nearest:.2f} from the target."
         )
         in_gamut = False
+    margin = _gamut_margin(g, target_lab, in_gamut, nearest)
     t_srgb = lab_to_srgb(target_lab)
     return SolveResult(
         target_lab=[float(x) for x in target_lab],
@@ -307,7 +341,100 @@ def solve(
         search=mode,
         n_subsets=n_eval,
         duration_s=time.perf_counter() - t0,
+        gamut_margin_de=margin,
     )
+
+
+def _role_contenders(
+    model: PoolModel, pre: Sequence[tuple[float, Any, Any]]
+) -> list[tuple[float, Any, Any]]:
+    """From the screened subsets (objective order): the best of each size, the best without
+    black and the best without white."""
+    black = model.role_mask(PaintRole.BLACK)
+    white = model.role_mask(PaintRole.WHITE)
+    out = []
+    sizes: set[int] = set()
+    no_black = no_white = False
+    for t in pre:
+        idx = t[1]
+        if len(idx) not in sizes:
+            sizes.add(len(idx))
+            out.append(t)
+        if not no_black and not black[idx].any():
+            no_black = True
+            out.append(t)
+        if not no_white and not white[idx].any():
+            no_white = True
+            out.append(t)
+    return out
+
+
+def select_candidates(
+    cands: Sequence[Candidate],
+    top_n: int,
+    accept_tolerance_de: float,
+    black: set[str],
+    white: set[str],
+) -> list[Candidate]:
+    """Pick ``top_n`` candidates that differ in kind, tagging each with the roles it wins.
+
+    ``cands`` is in objective order. Roles, in priority order: ``closest`` (lowest dE2000);
+    ``fewest paints`` and ``cheapest`` (per ml), both among candidates within
+    max(1.5 x the closest dE2000, ``accept_tolerance_de``); ``no black`` / ``no white``, the
+    closest candidate without that paint, when the closest uses it. ``cheapest`` is skipped
+    when every candidate in reach costs the same (e.g. no paint costs set). One candidate can
+    win several roles. Role winners come first, the rest is filled in objective order, and the
+    result is returned in objective order.
+    """
+    for c in cands:
+        c.tags = []
+    if not cands:
+        return []
+    closest = min(cands, key=lambda c: (c.de2000, c.objective))
+    band = max(1.5 * closest.de2000, accept_tolerance_de)
+    near = [c for c in cands if c.de2000 <= band]
+    winners: list[tuple[str, Candidate]] = [
+        ("closest", closest),
+        ("fewest paints", min(near, key=lambda c: (len(c.paint_ids), c.de2000))),
+    ]
+    if len({round(c.cost_per_ml, 9) for c in near}) > 1:
+        winners.append(("cheapest", min(near, key=lambda c: (c.cost_per_ml, c.de2000))))
+    for tag, ids in (("no black", black), ("no white", white)):
+        if ids.intersection(closest.paint_ids):
+            alt = [c for c in cands if not ids.intersection(c.paint_ids)]
+            if alt:
+                winners.append((tag, min(alt, key=lambda c: (c.de2000, c.objective))))
+    chosen: list[int] = []  # id() of the picked candidates, in pick order
+    for tag, c in winners:
+        if id(c) in chosen or len(chosen) < top_n:
+            c.tags.append(tag)
+            if id(c) not in chosen:
+                chosen.append(id(c))
+    for c in cands:
+        if len(chosen) >= top_n:
+            break
+        if id(c) not in chosen:
+            chosen.append(id(c))
+    keep = set(chosen)
+    return [c for c in cands if id(c) in keep]
+
+
+def _gamut_margin(
+    g: Gamut | None, target_lab: FloatArray, in_gamut: bool | None, nearest: float
+) -> float | None:
+    """Signed distance to the gamut edge, made consistent with ``in_gamut``: the gamut is a
+    sampled estimate and the pre-check allows 2 dE2000 at the edge, while ``in_gamut`` also
+    turns False when the solver cannot get within ``out_of_gamut_de``. Inside but within the
+    pre-check's tolerance reads 0; reported out of gamut although the sampled edge encloses the
+    target reads minus the nearest achievable dE2000."""
+    if in_gamut is None:
+        return None
+    margin = g.margin_de(target_lab) if g is not None else None
+    if in_gamut:
+        return None if margin is None else max(margin, 0.0)
+    if margin is None or margin >= 0:
+        return -max(nearest, 0.01) if math.isfinite(nearest) else None
+    return margin
 
 
 def predict(model: PoolModel, paint_ids: Sequence[str], fractions: Sequence[float]) -> FloatArray:

@@ -1244,6 +1244,16 @@ export interface components {
             objective: number;
             /** Warnings */
             warnings: string[];
+            /**
+             * Tags
+             * @description Roles this mix wins: closest, fewest paints, cheapest, no black, no white
+             */
+            tags?: string[];
+            /**
+             * Uncertainty De
+             * @description Expected spread of de2000 from calibration accuracy and dosing; null for uncalibrated (swatch) models
+             */
+            uncertainty_de?: number | null;
         };
         /** ColorCreate */
         ColorCreate: {
@@ -2633,6 +2643,11 @@ export interface components {
             in_gamut: boolean | null;
             /** Nearest De */
             nearest_de: number;
+            /**
+             * Gamut Margin De
+             * @description dE2000 from the target to the reachable gamut's edge at its L*: positive inside, negative outside (negative exactly when in_gamut is false)
+             */
+            gamut_margin_de?: number | null;
             /** Warnings */
             warnings: string[];
             /** Search */

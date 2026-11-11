@@ -214,4 +214,34 @@ introduced it.
   needs_attention or done) and ends it as `accepted` whatever its dE. Cancel works from any open
   state and logs the volume already poured. Correction without an explicit tolerance uses
   `accept_tolerance_de` (default 1.0; it was a fixed 0.5).
+- **Varied mix candidates (tags)** The solver refines, besides the best subsets by objective,
+  the best subset of each size and the best without black and without white, so every role has
+  a contender. It then quantises them all and picks by role, in priority order:
+  - `closest`: lowest dE2000;
+  - `fewest paints` and `cheapest` (per ml): both among the candidates within
+    max(1.5 × the closest dE2000, `accept_tolerance_de`);
+  - `no black` / `no white`: the closest candidate without that paint, when the closest uses
+    it. As specified, this has no dE limit.
+
+  `cheapest` is skipped when every candidate in reach costs the same, e.g. no paint costs are
+  set, so it can't land on an arbitrary mix. One mix can win several roles. Role winners come
+  first (cut to `top_n` in priority order), the rest is filled by objective, and the list is
+  returned in objective order: `candidates[0]` is still the solver's best by objective. So
+  only *which* candidates come back changes, not how the first is chosen.
+- **Uncertainty** Each paint's error is the RMS dE2000 of the fit's hold-out samples
+  containing it (training residuals if it has no hold-out sample). It is doubled when the paint
+  is below the fit's sample requirement: a masstone, a tint with white (non-white paints) and
+  at least 3 mixture drawdowns, the same rule as the fit's data warnings. A mix's
+  `uncertainty_de` is the fraction-weighted RMS of its paints' errors, combined (root sum of
+  squares) with dosing: the recipe's dose sensitivity (dE per 1 % overdose) × one dispenser
+  step as a % of the batch. Hold-out dE includes measurement noise, so the figure is
+  conservative; on the synthetic starter set it is about ±1.1–1.9. Swatch models have no
+  residuals, so `uncertainty_de` is null.
+- **Gamut margin** `gamut_margin_de` is the dE2000 from the target to the sampled gamut
+  boundary at the target's L* (interpolated between slices; clamped to the gamut's L* range,
+  so a too-light or too-dark target counts its lightness gap). It is positive inside and
+  negative outside, and made consistent with `in_gamut`. The pre-check allows 2 dE2000 at the
+  edge, so a target inside by that tolerance reads 0. A target the sampled edge encloses but
+  the solver cannot reach within `out_of_gamut_de` reads minus the nearest achievable dE2000.
+  So `gamut_margin_de < 0` exactly when `in_gamut` is false. It is null when `in_gamut` is.
 

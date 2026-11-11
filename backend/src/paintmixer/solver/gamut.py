@@ -14,6 +14,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from paintmixer.colorsci.convert import lab_to_lch
+from paintmixer.colorsci.delta_e import delta_e_2000
 from paintmixer.colorsci.types import FloatArray
 from paintmixer.solver.model import PoolModel
 
@@ -58,6 +59,23 @@ class Gamut:
         j = int(np.searchsorted(Ls, L)) - 1
         t = (L - Ls[j]) / (Ls[j + 1] - Ls[j])
         return float((1 - t) * at(self.slices[j]) + t * at(self.slices[j + 1]))
+
+    def margin_de(self, lab: FloatArray, n_hue: int = 360) -> float:
+        """Signed dE2000 from ``lab`` to the gamut boundary at its lightness: positive inside,
+        negative outside. Outside the gamut's L* range, the nearest slice's boundary (at that
+        slice's L*) is used, so the lightness difference counts."""
+        lab = np.asarray(lab, dtype=np.float64)
+        L = float(np.clip(lab[0], self.L_min, self.L_max))
+        hues = np.arange(n_hue) * (360.0 / n_hue)
+        chroma = np.array([self.max_chroma(L, float(h)) for h in hues])
+        rad = np.radians(hues)
+        edge = np.stack([np.full(n_hue, L), chroma * np.cos(rad), chroma * np.sin(rad)], axis=1)
+        dist = float(np.min(delta_e_2000(edge, lab)))
+        lch = lab_to_lch(lab)
+        inside = self.L_min <= lab[0] <= self.L_max and lch[1] <= self.max_chroma(
+            float(lab[0]), float(lch[2])
+        )
+        return dist if inside else -dist
 
     def contains(self, lab: FloatArray, margin: float = 2.0) -> bool:
         lch = lab_to_lch(lab)

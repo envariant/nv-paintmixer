@@ -33,6 +33,7 @@ from paintmixer.api.services import (
     all_paints,
     gamut_response,
     load_settings,
+    model_paint_errors,
     pool_model,
     resolve_target,
 )
@@ -87,6 +88,8 @@ def candidate_out(
         dose_sensitivity=c.dose_sensitivity,
         objective=c.objective,
         warnings=c.warnings,
+        tags=c.tags,
+        uncertainty_de=None if c.uncertainty_de is None else round(c.uncertainty_de, 3),
     )
 
 
@@ -109,6 +112,8 @@ async def solve_recipe(body: SolveRequest, session: SessionDep, request: Request
         seed=body.seed if body.seed is not None else s.seed,
         search=body.search,
         out_of_gamut_de=s.out_of_gamut_de,
+        accept_tolerance_de=s.accept_tolerance_de,
+        paint_error_de=model_paint_errors(session, fm),
     )
     if opts.batch_volume_ml > s.machine_max_batch_ml:
         raise bad_request(
@@ -132,6 +137,7 @@ async def solve_recipe(body: SolveRequest, session: SessionDep, request: Request
         candidates=[candidate_out(c, names, cost, s.currency) for c in res.candidates],
         in_gamut=res.in_gamut,
         nearest_de=res.nearest_de,
+        gamut_margin_de=None if res.gamut_margin_de is None else round(res.gamut_margin_de, 3),
         warnings=res.warnings,
         search=res.search,
         n_subsets=res.n_subsets,
