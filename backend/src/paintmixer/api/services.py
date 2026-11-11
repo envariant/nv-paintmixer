@@ -38,7 +38,13 @@ def load_settings(session: Session) -> AppSettings:
     row = session.get(m.Setting, SETTINGS_KEY)
     if row is None or not isinstance(row.value, dict):
         return AppSettings()
-    return AppSettings.model_validate({**AppSettings().model_dump(), **row.value})
+    merged = {**AppSettings().model_dump(), **row.value}
+    # Settings saved before machine_max_batch_ml existed may hold a larger batch than the
+    # default maximum (250 ml). Raise the maximum to that batch rather than refuse to load;
+    # PATCH /settings still refuses a new batch above the maximum.
+    if merged["batch_volume_ml"] > merged["machine_max_batch_ml"]:
+        merged["machine_max_batch_ml"] = merged["batch_volume_ml"]
+    return AppSettings.model_validate(merged)
 
 
 def save_settings(session: Session, settings: AppSettings) -> AppSettings:
