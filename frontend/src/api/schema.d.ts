@@ -568,6 +568,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models/{ref}/paint-accuracy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Paint Accuracy
+         * @description How well the model predicts each of its paints: the residual of every fitted sample with
+         *     the paint, their median, a grade and a status (Models rack and paint card).
+         */
+        get: operations["paint_accuracy_api_v1_models__ref__paint_accuracy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/models/{ref}/spectra": {
         parameters: {
             query?: never;
@@ -1374,6 +1395,23 @@ export interface components {
              */
             max_iterations?: number;
         };
+        /** CoverageOut */
+        CoverageOut: {
+            /** Has Masstone */
+            has_masstone: boolean;
+            /**
+             * Has Tint
+             * @description null: not required (white, or no white in the set)
+             */
+            has_tint: boolean | null;
+            /** N Mixture Drawdowns */
+            n_mixture_drawdowns: number;
+            /**
+             * Ok
+             * @description Meets the fit's requirement (masstone, tint, >= 3 mixtures)
+             */
+            ok: boolean;
+        };
         /** DispenseRequest */
         DispenseRequest: {
             /**
@@ -2085,6 +2123,45 @@ export interface components {
             /** Cells */
             cells: components["schemas"]["MixCellOut"][];
         };
+        /** PaintAccuracyOut */
+        PaintAccuracyOut: {
+            /** Paint Id */
+            paint_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Samples
+             * @description Every fitted sample with this paint
+             */
+            samples: components["schemas"]["SampleErrorOut"][];
+            /** Median De */
+            median_de: number | null;
+            /**
+             * Grade
+             * @description From median_de: excellent < 0.4, good < 1, fair < 2, else poor
+             */
+            grade: ("excellent" | "good" | "fair" | "poor") | null;
+            /**
+             * Status
+             * @description Most pressing first: uncalibrated, stale (batch changed since the fit), needs_samples, review (a sample >= 2 dE2000), ok
+             * @enum {string}
+             */
+            status: "ok" | "review" | "needs_samples" | "stale" | "uncalibrated";
+            /**
+             * Calibrated At
+             * Format: date-time
+             * @description When the model was made
+             */
+            calibrated_at: string;
+            /**
+             * Batch At Fit
+             * @description null: not recorded (older models)
+             */
+            batch_at_fit: string | null;
+            /** Batch Now */
+            batch_now: string | null;
+            coverage: components["schemas"]["CoverageOut"] | null;
+        };
         /** PaintCreate */
         PaintCreate: {
             /** Name */
@@ -2546,6 +2623,17 @@ export interface components {
             outlier: boolean;
             /** Noise Floor De */
             noise_floor_de: number;
+        };
+        /** SampleErrorOut */
+        SampleErrorOut: {
+            /** Id */
+            id: string;
+            /** De2000 */
+            de2000: number;
+            /** Holdout */
+            holdout: boolean;
+            /** Outlier */
+            outlier: boolean;
         };
         /** SampleRead */
         SampleRead: {
@@ -4987,6 +5075,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelSummary"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    paint_accuracy_api_v1_models__ref__paint_accuracy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Model ref: global version (12), line id (current model), line@3 or line@latest */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaintAccuracyOut"][];
                 };
             };
             /** @description Not found */

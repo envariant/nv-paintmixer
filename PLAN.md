@@ -152,4 +152,8 @@ Progress notes per milestone are appended below as work completes.
      for under-sampled paints, plus dosing), `SolveResponse.gamut_margin_de`;
      `calibration.accuracy` (per-paint coverage and residuals, shared with the fit's data
      warnings and with item 7).
+  7. Per-paint calibration accuracy: `GET /models/{ref}/paint-accuracy` (samples, median,
+     grade, status ok / review / needs_samples / stale / uncalibrated, calibrated_at, batch at
+     fit and now, coverage); `fitted_model.paint_batches` recorded at fit time (migration
+     `0007`).
 

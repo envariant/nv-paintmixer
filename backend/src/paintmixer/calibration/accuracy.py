@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
@@ -79,6 +79,11 @@ class PaintQuality:
     samples: list[SampleError] = field(default_factory=list)
 
     @property
+    def median_de(self) -> float | None:
+        d = [s.de2000 for s in self.samples]
+        return float(np.median(d)) if d else None
+
+    @property
     def holdout_rms_de(self) -> float | None:
         h = [s.de2000 for s in self.samples if s.holdout]
         return float(np.sqrt(np.mean(np.square(h)))) if h else None
@@ -127,6 +132,34 @@ def paint_quality(
             if pid in per:
                 per[pid].append(err)
     return {pid: PaintQuality(pid, coverage[pid], per[pid]) for pid in paint_ids}
+
+
+Grade = Literal["excellent", "good", "fair", "poor"]
+Status = Literal["ok", "review", "needs_samples", "stale", "uncalibrated"]
+
+# median dE2000 below each bound earns the grade
+GRADE_BOUNDS: tuple[tuple[float, Grade], ...] = ((0.4, "excellent"), (1.0, "good"), (2.0, "fair"))
+REVIEW_DE = 2.0  # any sample at or above this asks for a review
+
+
+def grade(median_de: float) -> Grade:
+    return next((g for bound, g in GRADE_BOUNDS if median_de < bound), "poor")
+
+
+def paint_status(q: PaintQuality | None, batch_changed: bool) -> Status:
+    """One status per paint, the most pressing first: ``uncalibrated`` (no samples in the fit,
+    e.g. a swatch model), ``stale`` (its batch changed since the fit, so the model may no longer
+    describe it), ``needs_samples`` (below the fit's sample requirement), ``review`` (a sample at
+    or above :data:`REVIEW_DE`), else ``ok``."""
+    if q is None or not q.samples:
+        return "uncalibrated"
+    if batch_changed:
+        return "stale"
+    if not q.coverage.ok:
+        return "needs_samples"
+    if any(s.de2000 >= REVIEW_DE for s in q.samples):
+        return "review"
+    return "ok"
 
 
 def mix_uncertainty(

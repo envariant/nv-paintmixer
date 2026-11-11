@@ -515,6 +515,38 @@ class ModelLineDetail(ModelLineSummary):
     versions: list[ModelSummary] = Field(description="Newest revision first")
 
 
+class SampleErrorOut(_Out):
+    id: str
+    de2000: float
+    holdout: bool
+    outlier: bool
+
+
+class CoverageOut(_Out):
+    has_masstone: bool
+    has_tint: bool | None = Field(description="null: not required (white, or no white in the set)")
+    n_mixture_drawdowns: int
+    ok: bool = Field(description="Meets the fit's requirement (masstone, tint, >= 3 mixtures)")
+
+
+class PaintAccuracyOut(_Out):
+    paint_id: str
+    name: str
+    samples: list[SampleErrorOut] = Field(description="Every fitted sample with this paint")
+    median_de: float | None
+    grade: Literal["excellent", "good", "fair", "poor"] | None = Field(
+        description="From median_de: excellent < 0.4, good < 1, fair < 2, else poor"
+    )
+    status: Literal["ok", "review", "needs_samples", "stale", "uncalibrated"] = Field(
+        description="Most pressing first: uncalibrated, stale (batch changed since the fit), "
+        "needs_samples, review (a sample >= 2 dE2000), ok"
+    )
+    calibrated_at: datetime = Field(description="When the model was made")
+    batch_at_fit: str | None = Field(description="null: not recorded (older models)")
+    batch_now: str | None
+    coverage: CoverageOut | None
+
+
 class StrengthOut(_Out):
     reduction_fraction: float
     reduction_ks: float = Field(description="K/S of the reduction at its absorption peak")

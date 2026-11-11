@@ -2638,6 +2638,75 @@
         }
       }
     },
+    "/api/v1/models/{ref}/paint-accuracy": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Paint Accuracy",
+        "description": "How well the model predicts each of its paints: the residual of every fitted sample with\nthe paint, their median, a grade and a status (Models rack and paint card).",
+        "operationId": "paint_accuracy_api_v1_models__ref__paint_accuracy_get",
+        "parameters": [
+          {
+            "name": "ref",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Model ref: global version (12), line id (current model), line@3 or line@latest",
+              "title": "Ref"
+            },
+            "description": "Model ref: global version (12), line id (current model), line@3 or line@latest"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaintAccuracyOut"
+                  },
+                  "title": "Response Paint Accuracy Api V1 Models  Ref  Paint Accuracy Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/models/{ref}/spectra": {
       "get": {
         "tags": [
@@ -5382,6 +5451,43 @@
         "type": "object",
         "title": "CorrectRequest"
       },
+      "CoverageOut": {
+        "properties": {
+          "has_masstone": {
+            "type": "boolean",
+            "title": "Has Masstone"
+          },
+          "has_tint": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Tint",
+            "description": "null: not required (white, or no white in the set)"
+          },
+          "n_mixture_drawdowns": {
+            "type": "integer",
+            "title": "N Mixture Drawdowns"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "description": "Meets the fit's requirement (masstone, tint, >= 3 mixtures)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "has_masstone",
+          "has_tint",
+          "n_mixture_drawdowns",
+          "ok"
+        ],
+        "title": "CoverageOut"
+      },
       "DispenseRequest": {
         "properties": {
           "simulate": {
@@ -7213,6 +7319,120 @@
         ],
         "title": "MultimixResponse"
       },
+      "PaintAccuracyOut": {
+        "properties": {
+          "paint_id": {
+            "type": "string",
+            "title": "Paint Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "samples": {
+            "items": {
+              "$ref": "#/components/schemas/SampleErrorOut"
+            },
+            "type": "array",
+            "title": "Samples",
+            "description": "Every fitted sample with this paint"
+          },
+          "median_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median De"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "excellent",
+                  "good",
+                  "fair",
+                  "poor"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade",
+            "description": "From median_de: excellent < 0.4, good < 1, fair < 2, else poor"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "review",
+              "needs_samples",
+              "stale",
+              "uncalibrated"
+            ],
+            "title": "Status",
+            "description": "Most pressing first: uncalibrated, stale (batch changed since the fit), needs_samples, review (a sample >= 2 dE2000), ok"
+          },
+          "calibrated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Calibrated At",
+            "description": "When the model was made"
+          },
+          "batch_at_fit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch At Fit",
+            "description": "null: not recorded (older models)"
+          },
+          "batch_now": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Now"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoverageOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "paint_id",
+          "name",
+          "samples",
+          "median_de",
+          "grade",
+          "status",
+          "calibrated_at",
+          "batch_at_fit",
+          "batch_now",
+          "coverage"
+        ],
+        "title": "PaintAccuracyOut"
+      },
       "PaintCreate": {
         "properties": {
           "name": {
@@ -8394,6 +8614,34 @@
           "noise_floor_de"
         ],
         "title": "ResidualOut"
+      },
+      "SampleErrorOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "de2000": {
+            "type": "number",
+            "title": "De2000"
+          },
+          "holdout": {
+            "type": "boolean",
+            "title": "Holdout"
+          },
+          "outlier": {
+            "type": "boolean",
+            "title": "Outlier"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "de2000",
+          "holdout",
+          "outlier"
+        ],
+        "title": "SampleErrorOut"
       },
       "SampleRead": {
         "properties": {

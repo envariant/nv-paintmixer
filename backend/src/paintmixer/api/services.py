@@ -188,6 +188,11 @@ def gamut_response(model: PoolModel, fm: m.FittedModel, g: Gamut, max_paints: in
     )
 
 
+def current_batches(session: Session, paint_ids: list[str]) -> dict[str, str]:
+    """Each paint's batch code now (recorded on a model when it is made)."""
+    return {p.id: p.batch_code for p in all_paints(session) if p.id in paint_ids}
+
+
 def model_paint_quality(session: Session, fm: m.FittedModel) -> dict[str, PaintQuality]:
     """Per-paint coverage and residuals of a fitted model (residuals joined with the samples
     they came from; samples deleted since the fit are skipped)."""

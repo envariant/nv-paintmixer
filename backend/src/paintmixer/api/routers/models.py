@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import Annotated
 
 import numpy as np
@@ -22,12 +23,15 @@ from paintmixer.api.lines import (
     set_active,
 )
 from paintmixer.api.schemas import (
+    CoverageOut,
     GamutResponse,
     ModelDetail,
     ModelPatch,
     ModelSpectra,
     ModelSummary,
+    PaintAccuracyOut,
     PaintSpectra,
+    SampleErrorOut,
     StrengthOut,
     SwatchModelRequest,
     SwatchModelResult,
@@ -37,9 +41,11 @@ from paintmixer.api.services import (
     gamut_response,
     km_of,
     load_settings,
+    model_paint_quality,
     model_strengths,
     pool_model,
 )
+from paintmixer.calibration.accuracy import grade, paint_status
 from paintmixer.calibration.strength import PaintStrength, with_relative
 from paintmixer.calibration.swatch import SwatchError, model_from_swatches
 from paintmixer.colorsci.convert import reflectance_to_srgb, srgb_to_hex
@@ -190,6 +196,50 @@ def activate_model(ref: Annotated[str, _REF], session: SessionDep) -> ModelSumma
     session.commit()
     session.refresh(fm)
     return summary(session, fm)
+
+
+@router.get("/{ref}/paint-accuracy", response_model=list[PaintAccuracyOut])
+def paint_accuracy(ref: Annotated[str, _REF], session: SessionDep) -> list[PaintAccuracyOut]:
+    """How well the model predicts each of its paints: the residual of every fitted sample with
+    the paint, their median, a grade and a status (Models rack and paint card)."""
+    fm = resolve_model(session, ref)
+    quality = model_paint_quality(session, fm) if fm.source == "calibration" else {}
+    paints = {p.id: p for p in all_paints(session)}
+    batches = fm.paint_batches or {}
+    out = []
+    for pid in fm.paint_ids:
+        q = quality.get(pid)
+        p = paints.get(pid)
+        now = p.batch_code if p is not None else None
+        at_fit = batches.get(pid)
+        # a blank batch at fit time is unknown: recording one later is not a change of lot
+        changed = bool(at_fit) and now is not None and now != at_fit
+        med = q.median_de if q is not None else None
+        out.append(
+            PaintAccuracyOut(
+                paint_id=pid,
+                name=p.name if p is not None else pid,
+                samples=[
+                    SampleErrorOut(
+                        id=x.sample_id,
+                        de2000=round(x.de2000, 4),
+                        holdout=x.holdout,
+                        outlier=x.outlier,
+                    )
+                    for x in (q.samples if q is not None else [])
+                ],
+                median_de=None if med is None else round(med, 4),
+                grade=None if med is None else grade(med),
+                status=paint_status(q, changed),
+                calibrated_at=fm.created_at,
+                batch_at_fit=at_fit,
+                batch_now=now,
+                coverage=None
+                if q is None
+                else CoverageOut(**dataclasses.asdict(q.coverage), ok=q.coverage.ok),
+            )
+        )
+    return out
 
 
 @router.get("/{ref}/spectra", response_model=ModelSpectra)

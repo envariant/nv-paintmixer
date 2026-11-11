@@ -246,4 +246,21 @@ introduced it.
   edge, so a target inside by that tolerance reads 0. A target the sampled edge encloses but
   the solver cannot reach within `out_of_gamut_de` reads minus the nearest achievable dE2000.
   So `gamut_margin_de < 0` exactly when `in_gamut` is false. It is null when `in_gamut` is.
+- **Per-paint accuracy** `GET /models/{ref}/paint-accuracy` lists every paint of the model
+  with the residual of each fitted sample containing it (training and hold-out, as the strip
+  shows them). `median_de` is the median of those, and `grade` comes from it: excellent < 0.4,
+  good < 1, fair < 2, else poor. `status` gives the most pressing state first:
+  - `uncalibrated`: no samples in the fit, e.g. a swatch model;
+  - `stale`: the batch changed since the fit;
+  - `needs_samples`: below the fit's sample requirement, the same rule as the fit's data
+    warnings;
+  - `review`: any sample at or above 2 dE2000;
+  - `ok`.
+
+  Each model records every paint's `batch_code` when it is made (`paint_batches`, migration
+  `0007`). A blank batch at fit time counts as unknown, so recording a batch code for the
+  first time does not make the model stale. Models made before `0007` have nothing recorded,
+  so they are never stale. Mixtures contain several paints, so one bad mixture counts against
+  each of them: on the synthetic starter set every paint shows `review` (a few 3–4 dE2000
+  mixtures contain all five).
 

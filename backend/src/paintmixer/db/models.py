@@ -145,6 +145,8 @@ class FittedModel(SQLModel, table=True):
     diagnostics: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     holdout_report: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     n_samples: int = 0
+    # paint id -> batch_code when the model was made; a later change marks the paint "stale"
+    paint_batches: dict[str, str] = Field(default_factory=dict, sa_column=Column(JSON))
     fit_run_id: int | None = Field(default=None, foreign_key="fit_run.id")
     notes: str = ""
     created_at: datetime = Field(default_factory=utcnow)
