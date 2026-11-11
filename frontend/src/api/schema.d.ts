@@ -60,6 +60,49 @@ export interface paths {
         patch: operations["update_settings_api_v1_settings_patch"];
         trace?: never;
     };
+    "/api/v1/illuminants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Illuminants
+         * @description Series → members with nominal CCT. Switching series in the UI keeps the closest CCT.
+         */
+        get: operations["list_illuminants_api_v1_illuminants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appearance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Appearance
+         * @description Target and candidates as seen under each illuminant, adapted for display, with dE2000.
+         *
+         *     Cheap (no model needed): the client sends ``reference_spectrum`` and the candidates'
+         *     ``predicted_spectrum`` from ``POST /solve`` whenever the preview light changes.
+         */
+        post: operations["get_appearance_api_v1_appearance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/paints": {
         parameters: {
             query?: never;
@@ -938,6 +981,60 @@ export interface components {
             /** Selftest Cast Chroma */
             selftest_cast_chroma?: number | null;
         };
+        /** AppearanceOut */
+        AppearanceOut: {
+            /**
+             * Lab
+             * @description CIELAB under the illuminant (its own white)
+             */
+            lab: number[];
+            /**
+             * Display Lab
+             * @description Adapted to D65 for an sRGB display (CAT02)
+             */
+            display_lab: number[];
+            /** Hex */
+            hex: string;
+            /** Out Of Srgb Gamut */
+            out_of_srgb_gamut: boolean;
+        };
+        /**
+         * AppearanceRequest
+         * @description How the target and each candidate look under one or more illuminants.
+         */
+        AppearanceRequest: {
+            /**
+             * Reference
+             * @description Target reflectance (SolveResponse)
+             */
+            reference: number[];
+            /**
+             * Spectra
+             * @description Candidate reflectances (predicted_spectrum)
+             */
+            spectra: number[][];
+            /** Illuminants */
+            illuminants: components["schemas"]["Illuminant"][];
+        };
+        /** AppearanceResponse */
+        AppearanceResponse: {
+            /** Under */
+            under: components["schemas"]["AppearanceUnderOut"][];
+        };
+        /** AppearanceUnderOut */
+        AppearanceUnderOut: {
+            illuminant: components["schemas"]["Illuminant"];
+            /** Cct */
+            cct: number;
+            reference: components["schemas"]["AppearanceOut"];
+            /** Spectra */
+            spectra: components["schemas"]["AppearanceOut"][];
+            /**
+             * De2000
+             * @description Each spectrum vs the reference under this light
+             */
+            de2000: number[];
+        };
         /** Body_import_colors_api_v1_colors_import_post */
         Body_import_colors_api_v1_colors_import_post: {
             /** File */
@@ -1284,9 +1381,34 @@ export interface components {
         };
         /**
          * Illuminant
+         * @description CIE illuminants the backend can integrate under. The UI groups them into series
+         *     (:mod:`paintmixer.colorsci.illuminants`).
          * @enum {string}
          */
-        Illuminant: "D65" | "D50" | "A" | "F11";
+        Illuminant: "D50" | "D55" | "D65" | "D75" | "D93" | "A" | "F2" | "F7" | "F11" | "F12" | "LED-B1" | "LED-B2" | "LED-B3" | "LED-B4" | "LED-B5" | "ID50" | "ID65";
+        /** IlluminantMemberOut */
+        IlluminantMemberOut: {
+            code: components["schemas"]["Illuminant"];
+            /** Cct */
+            cct: number;
+        };
+        /** IlluminantSeriesOut */
+        IlluminantSeriesOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            default: components["schemas"]["Illuminant"];
+            /**
+             * Range
+             * @description e.g. '5003–9300 K'
+             */
+            range: string;
+            /** Members */
+            members: components["schemas"]["IlluminantMemberOut"][];
+        };
         /** IlluminantTables */
         IlluminantTables: {
             /**
@@ -2644,6 +2766,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_illuminants_api_v1_illuminants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IlluminantSeriesOut"][];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_appearance_api_v1_appearance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppearanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppearanceResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

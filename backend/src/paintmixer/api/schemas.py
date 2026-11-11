@@ -809,3 +809,57 @@ class JobRead(_Out):
     corrections: list[dict[str, Any]]
     created_at: datetime
     updated_at: datetime
+
+
+# --- illuminants + appearance ----------------------------------------------------------------
+
+
+class IlluminantMemberOut(_Out):
+    code: Illuminant
+    cct: int
+
+
+class IlluminantSeriesOut(_Out):
+    id: str
+    name: str
+    description: str
+    default: Illuminant
+    range: str = Field(description="e.g. '5003–9300 K'")
+    members: list[IlluminantMemberOut]
+
+
+class AppearanceRequest(_Model):
+    """How the target and each candidate look under one or more illuminants."""
+
+    reference: Spectrum = Field(
+        min_length=N_BANDS, max_length=N_BANDS, description="Target reflectance (SolveResponse)"
+    )
+    spectra: list[Spectrum] = Field(
+        min_length=1, max_length=20, description="Candidate reflectances (predicted_spectrum)"
+    )
+    illuminants: list[Illuminant] = Field(min_length=1, max_length=17)
+
+    @model_validator(mode="after")
+    def _bands(self) -> AppearanceRequest:
+        if any(len(s) != N_BANDS for s in self.spectra):
+            raise ValueError(f"every spectrum must have {N_BANDS} bands")
+        return self
+
+
+class AppearanceOut(_Out):
+    lab: list[float] = Field(description="CIELAB under the illuminant (its own white)")
+    display_lab: list[float] = Field(description="Adapted to D65 for an sRGB display (CAT02)")
+    hex: str
+    out_of_srgb_gamut: bool
+
+
+class AppearanceUnderOut(_Out):
+    illuminant: Illuminant
+    cct: int
+    reference: AppearanceOut
+    spectra: list[AppearanceOut]
+    de2000: list[float] = Field(description="Each spectrum vs the reference under this light")
+
+
+class AppearanceResponse(_Out):
+    under: list[AppearanceUnderOut]

@@ -109,6 +109,124 @@
         }
       }
     },
+    "/api/v1/illuminants": {
+      "get": {
+        "tags": [
+          "illuminants"
+        ],
+        "summary": "List Illuminants",
+        "description": "Series \u2192 members with nominal CCT. Switching series in the UI keeps the closest CCT.",
+        "operationId": "list_illuminants_api_v1_illuminants_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IlluminantSeriesOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Illuminants Api V1 Illuminants Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appearance": {
+      "post": {
+        "tags": [
+          "illuminants"
+        ],
+        "summary": "Get Appearance",
+        "description": "Target and candidates as seen under each illuminant, adapted for display, with dE2000.\n\nCheap (no model needed): the client sends ``reference_spectrum`` and the candidates'\n``predicted_spectrum`` from ``POST /solve`` whenever the preview light changes.",
+        "operationId": "get_appearance_api_v1_appearance_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppearanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppearanceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/paints": {
       "get": {
         "tags": [
@@ -3954,6 +4072,141 @@
         "type": "object",
         "title": "AppSettingsUpdate"
       },
+      "AppearanceOut": {
+        "properties": {
+          "lab": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Lab",
+            "description": "CIELAB under the illuminant (its own white)"
+          },
+          "display_lab": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Display Lab",
+            "description": "Adapted to D65 for an sRGB display (CAT02)"
+          },
+          "hex": {
+            "type": "string",
+            "title": "Hex"
+          },
+          "out_of_srgb_gamut": {
+            "type": "boolean",
+            "title": "Out Of Srgb Gamut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lab",
+          "display_lab",
+          "hex",
+          "out_of_srgb_gamut"
+        ],
+        "title": "AppearanceOut"
+      },
+      "AppearanceRequest": {
+        "properties": {
+          "reference": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 36,
+            "minItems": 36,
+            "title": "Reference",
+            "description": "Target reflectance (SolveResponse)"
+          },
+          "spectra": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Spectra",
+            "description": "Candidate reflectances (predicted_spectrum)"
+          },
+          "illuminants": {
+            "items": {
+              "$ref": "#/components/schemas/Illuminant"
+            },
+            "type": "array",
+            "maxItems": 17,
+            "minItems": 1,
+            "title": "Illuminants"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reference",
+          "spectra",
+          "illuminants"
+        ],
+        "title": "AppearanceRequest",
+        "description": "How the target and each candidate look under one or more illuminants."
+      },
+      "AppearanceResponse": {
+        "properties": {
+          "under": {
+            "items": {
+              "$ref": "#/components/schemas/AppearanceUnderOut"
+            },
+            "type": "array",
+            "title": "Under"
+          }
+        },
+        "type": "object",
+        "required": [
+          "under"
+        ],
+        "title": "AppearanceResponse"
+      },
+      "AppearanceUnderOut": {
+        "properties": {
+          "illuminant": {
+            "$ref": "#/components/schemas/Illuminant"
+          },
+          "cct": {
+            "type": "integer",
+            "title": "Cct"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/AppearanceOut"
+          },
+          "spectra": {
+            "items": {
+              "$ref": "#/components/schemas/AppearanceOut"
+            },
+            "type": "array",
+            "title": "Spectra"
+          },
+          "de2000": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "De2000",
+            "description": "Each spectrum vs the reference under this light"
+          }
+        },
+        "type": "object",
+        "required": [
+          "illuminant",
+          "cct",
+          "reference",
+          "spectra",
+          "de2000"
+        ],
+        "title": "AppearanceUnderOut"
+      },
       "Body_import_colors_api_v1_colors_import_post": {
         "properties": {
           "file": {
@@ -4985,12 +5238,84 @@
       "Illuminant": {
         "type": "string",
         "enum": [
-          "D65",
           "D50",
+          "D55",
+          "D65",
+          "D75",
+          "D93",
           "A",
-          "F11"
+          "F2",
+          "F7",
+          "F11",
+          "F12",
+          "LED-B1",
+          "LED-B2",
+          "LED-B3",
+          "LED-B4",
+          "LED-B5",
+          "ID50",
+          "ID65"
         ],
-        "title": "Illuminant"
+        "title": "Illuminant",
+        "description": "CIE illuminants the backend can integrate under. The UI groups them into series\n(:mod:`paintmixer.colorsci.illuminants`)."
+      },
+      "IlluminantMemberOut": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/Illuminant"
+          },
+          "cct": {
+            "type": "integer",
+            "title": "Cct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "cct"
+        ],
+        "title": "IlluminantMemberOut"
+      },
+      "IlluminantSeriesOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "default": {
+            "$ref": "#/components/schemas/Illuminant"
+          },
+          "range": {
+            "type": "string",
+            "title": "Range",
+            "description": "e.g. '5003\u20139300 K'"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/IlluminantMemberOut"
+            },
+            "type": "array",
+            "title": "Members"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "default",
+          "range",
+          "members"
+        ],
+        "title": "IlluminantSeriesOut"
       },
       "IlluminantTables": {
         "properties": {
