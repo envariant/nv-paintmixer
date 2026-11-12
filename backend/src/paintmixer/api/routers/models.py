@@ -225,6 +225,7 @@ def paint_accuracy(ref: Annotated[str, _REF], session: SessionDep) -> list[Paint
                         de2000=round(x.de2000, 4),
                         holdout=x.holdout,
                         outlier=x.outlier,
+                        major=x.major,
                     )
                     for x in (q.samples if q is not None else [])
                 ],

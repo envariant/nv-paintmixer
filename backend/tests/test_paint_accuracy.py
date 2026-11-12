@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
@@ -13,10 +14,14 @@ from paintmixer.calibration.accuracy import (
     PaintQuality,
     SampleError,
     grade,
+    is_major,
     paint_status,
 )
+from paintmixer.calibration.format import CalibrationSampleData, SampleType, Substrate
+from paintmixer.colorsci.spectral import N_BANDS
 from paintmixer.config import Settings
 from paintmixer.demo import seed_demo
+from paintmixer.domain import PaintRole
 
 API = "/api/v1"
 OK = PaintCoverage(has_masstone=True, has_tint=True, n_mixture_drawdowns=5)
@@ -49,6 +54,26 @@ def test_status_most_pressing_first() -> None:
     assert paint_status(_q(SHORT, 3.0), batch_changed=False) == "needs_samples"
     assert paint_status(_q(OK, 0.3, 2.0), batch_changed=False) == "review"
     assert paint_status(_q(OK, 0.3, 1.99), batch_changed=False) == "ok"
+    minor = PaintQuality(
+        "p",
+        OK,
+        [SampleError("S0", 0.3, False, False), SampleError("S1", 3.5, False, False, major=False)],
+    )
+    assert paint_status(minor, batch_changed=False) == "ok"  # a bad mix it is a small part of
+
+
+def test_major_samples() -> None:
+    roles = {"w": PaintRole.WHITE, "c": PaintRole.CHROMATIC, "y": PaintRole.CHROMATIC}
+
+    def s(t: SampleType, comps: dict[str, float]) -> CalibrationSampleData:
+        return CalibrationSampleData("S", t, Substrate.WHITE, comps, np.full(N_BANDS, 0.5))
+
+    assert is_major(s(SampleType.MASSTONE_OVER_WHITE, {"c": 1.0}), "c", roles)
+    tint = s(SampleType.TINT, {"c": 0.05, "w": 0.95})
+    assert is_major(tint, "c", roles) and not is_major(tint, "w", roles)
+    mix = s(SampleType.MIXTURE, {"c": 0.25, "y": 0.15, "w": 0.6})
+    assert is_major(mix, "c", roles) and is_major(mix, "w", roles)
+    assert not is_major(mix, "y", roles)
 
 
 @pytest.fixture
@@ -74,7 +99,12 @@ def test_every_model_paint_appears(demo: TestClient) -> None:
         assert p["calibrated_at"] == fm["created_at"]
         assert p["grade"] == grade(p["median_de"])
         assert p["status"] in ("ok", "review")
-        assert (p["status"] == "review") == any(s["de2000"] >= 2.0 for s in p["samples"])
+        assert (p["status"] == "review") == any(
+            s["de2000"] >= 2.0 and s["major"] for s in p["samples"]
+        )
+    # white is in the worst mixtures, but as a small part: they don't flag it
+    white = next(p for p in r if p["paint_id"] == "titanium-white")
+    assert white["status"] == "ok" and any(s["de2000"] >= 2.0 for s in white["samples"])
     assert demo.get(f"{API}/models/99/paint-accuracy").status_code == 404
 
 

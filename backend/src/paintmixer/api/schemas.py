@@ -520,6 +520,10 @@ class SampleErrorOut(_Out):
     de2000: float
     holdout: bool
     outlier: bool
+    major: bool = Field(
+        description="The paint is a big part of this sample (its masstone or tint, or >= 25 % "
+        "of a mixture); only these can set status 'review'"
+    )
 
 
 class CoverageOut(_Out):
@@ -539,7 +543,7 @@ class PaintAccuracyOut(_Out):
     )
     status: Literal["ok", "review", "needs_samples", "stale", "uncalibrated"] = Field(
         description="Most pressing first: uncalibrated, stale (batch changed since the fit), "
-        "needs_samples, review (a sample >= 2 dE2000), ok"
+        "needs_samples, review (a major sample >= 2 dE2000), ok"
     )
     calibrated_at: datetime = Field(description="When the model was made")
     batch_at_fit: str | None = Field(description="null: not recorded (older models)")

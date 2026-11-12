@@ -2143,7 +2143,7 @@ export interface components {
             grade: ("excellent" | "good" | "fair" | "poor") | null;
             /**
              * Status
-             * @description Most pressing first: uncalibrated, stale (batch changed since the fit), needs_samples, review (a sample >= 2 dE2000), ok
+             * @description Most pressing first: uncalibrated, stale (batch changed since the fit), needs_samples, review (a major sample >= 2 dE2000), ok
              * @enum {string}
              */
             status: "ok" | "review" | "needs_samples" | "stale" | "uncalibrated";
@@ -2634,6 +2634,11 @@ export interface components {
             holdout: boolean;
             /** Outlier */
             outlier: boolean;
+            /**
+             * Major
+             * @description The paint is a big part of this sample (its masstone or tint, or >= 25 % of a mixture); only these can set status 'review'
+             */
+            major: boolean;
         };
         /** SampleRead */
         SampleRead: {

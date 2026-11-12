@@ -70,6 +70,22 @@ class SampleError:
     de2000: float
     holdout: bool
     outlier: bool
+    major: bool = True  # the paint is a big part of this sample (see is_major); used for review
+
+
+MAJOR_FRACTION = 0.25
+
+
+def is_major(sample: CalibrationSampleData, pid: str, roles: Mapping[str, PaintRole]) -> bool:
+    """Whether ``pid`` is a big part of ``sample``, so the sample's error says something about
+    that paint: masstones of the paint, tints of the paint (not of the white it is let down
+    with), and mixtures where it is at least :data:`MAJOR_FRACTION` of the volume."""
+    if sample.type in _MASSTONES:
+        return True
+    if sample.type == SampleType.TINT:
+        return roles.get(pid) != PaintRole.WHITE
+    total = sum(sample.components.values())
+    return total > 0 and sample.components.get(pid, 0.0) / total >= MAJOR_FRACTION
 
 
 @dataclass(frozen=True)
@@ -125,12 +141,17 @@ def paint_quality(
         s = samples.get(r["sample_id"])
         if s is None:
             continue
-        err = SampleError(
-            r["sample_id"], float(r["de2000"]), bool(r["holdout"]), bool(r["outlier"])
-        )
         for pid in s.components:
             if pid in per:
-                per[pid].append(err)
+                per[pid].append(
+                    SampleError(
+                        r["sample_id"],
+                        float(r["de2000"]),
+                        bool(r["holdout"]),
+                        bool(r["outlier"]),
+                        is_major(s, pid, roles),
+                    )
+                )
     return {pid: PaintQuality(pid, coverage[pid], per[pid]) for pid in paint_ids}
 
 
@@ -149,15 +170,15 @@ def grade(median_de: float) -> Grade:
 def paint_status(q: PaintQuality | None, batch_changed: bool) -> Status:
     """One status per paint, the most pressing first: ``uncalibrated`` (no samples in the fit,
     e.g. a swatch model), ``stale`` (its batch changed since the fit, so the model may no longer
-    describe it), ``needs_samples`` (below the fit's sample requirement), ``review`` (a sample at
-    or above :data:`REVIEW_DE`), else ``ok``."""
+    describe it), ``needs_samples`` (below the fit's sample requirement), ``review`` (a sample
+    the paint is a big part of, at or above :data:`REVIEW_DE`), else ``ok``."""
     if q is None or not q.samples:
         return "uncalibrated"
     if batch_changed:
         return "stale"
     if not q.coverage.ok:
         return "needs_samples"
-    if any(s.de2000 >= REVIEW_DE for s in q.samples):
+    if any(s.de2000 >= REVIEW_DE and s.major for s in q.samples):
         return "review"
     return "ok"
 

@@ -254,13 +254,19 @@ introduced it.
   - `stale`: the batch changed since the fit;
   - `needs_samples`: below the fit's sample requirement, the same rule as the fit's data
     warnings;
-  - `review`: any sample at or above 2 dE2000;
+  - `review`: a sample the paint is a big part of, at or above 2 dE2000;
   - `ok`.
 
   Each model records every paint's `batch_code` when it is made (`paint_batches`, migration
   `0007`). A blank batch at fit time counts as unknown, so recording a batch code for the
   first time does not make the model stale. Models made before `0007` have nothing recorded,
-  so they are never stale. Mixtures contain several paints, so one bad mixture counts against
-  each of them: on the synthetic starter set every paint shows `review` (a few 3–4 dE2000
-  mixtures contain all five).
+  so they are never stale.
+
+  Mixtures contain several paints, so with the plan's rule (any sample ≥ 2 dE2000) one bad
+  mixture flagged every paint in it: on the synthetic starter set all five showed `review`,
+  white included. Only *major* samples can set `review` now: masstones of the paint, tints of
+  the paint (not of the white it is let down with), and mixtures where it is at least 25 % of
+  the volume. The strip still shows every sample, each flagged `major` or not. On the starter
+  set white is now `ok`, and the four chromatic paints stay `review`: each is a big part of at
+  least one 2–4 dE2000 mixture.
 

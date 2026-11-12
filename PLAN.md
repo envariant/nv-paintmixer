@@ -154,6 +154,6 @@ Progress notes per milestone are appended below as work completes.
      warnings and with item 7).
   7. Per-paint calibration accuracy: `GET /models/{ref}/paint-accuracy` (samples, median,
      grade, status ok / review / needs_samples / stale / uncalibrated, calibrated_at, batch at
-     fit and now, coverage); `fitted_model.paint_batches` recorded at fit time (migration
+     fit and now, coverage; only samples the paint is a big part of can set `review`); `fitted_model.paint_batches` recorded at fit time (migration
      `0007`).
 
