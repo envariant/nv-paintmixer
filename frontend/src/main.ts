@@ -10,5 +10,6 @@ import '@fontsource/jetbrains-mono/400.css'
 import '@fontsource/jetbrains-mono/500.css'
 import './style.css'
 import App from './App.vue'
+import { makeRouter } from './router'
 
-createApp(App).use(createPinia()).mount('#app')
+createApp(App).use(createPinia()).use(makeRouter()).mount('#app')

@@ -74,6 +74,23 @@ export function labToHex(lab: Lab): string {
   return '#' + labToSrgb(lab).rgb.map((c) => c.toString(16).padStart(2, '0')).join('').toUpperCase()
 }
 
+const decode = (v: number): number => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+const RGB_TO_XYZ = [
+  [0.4124564, 0.3575761, 0.1804375],
+  [0.2126729, 0.7151522, 0.072175],
+  [0.0193339, 0.119192, 0.9503041],
+]
+
+/** sRGB hex → Lab (D65), for colours the API sends only as hex (e.g. a job's last reading). */
+export function hexToLab(hex: string): Lab {
+  const h = hex.replace(/^#/, '')
+  const lin = [0, 2, 4].map((i) => decode(parseInt(h.slice(i, i + 2), 16) / 255))
+  const xyz = RGB_TO_XYZ.map((r) => 100 * (r[0]! * lin[0]! + r[1]! * lin[1]! + r[2]! * lin[2]!))
+  const f = (t: number) => (t > 216 / 24389 ? Math.cbrt(t) : ((24389 / 27) * t + 16) / 116)
+  const [fx, fy, fz] = xyz.map((v, i) => f(v / SRGB_WHITE[i]!)) as [number, number, number]
+  return { L: 116 * fy - 16, a: 500 * (fx - fy), b: 200 * (fy - fz) }
+}
+
 /* ───────────── ColourMeta caption ───────────── */
 
 /**

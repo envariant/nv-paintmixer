@@ -362,4 +362,12 @@ introduced it.
 - **Illuminant list** The illuminants store loads `GET /illuminants`. Until it loads, or if it
   fails, the store uses the built-in catalogue (`SERIES`), which the parity fixture keeps equal
   to the backend's.
+- **M6 app shell** The handoff's starter components are copied into `frontend/src/components`
+  with their imports pointed at `lib/colour` and `lib/icons`; `design/handoff/` stays the
+  untouched reference. The app is four routes (Mix, Library, Models, Settings) in a kiosk
+  layout: the top bar, then a screen that scrolls only inside. The handoff has no logo artwork,
+  so the logo is three overlapping C/M/Y circles until one is supplied. The machine pill polls
+  `GET /machine` every 2 s. Its popover shows the running job: step, progress, pour volume,
+  last dE, Cancel job with an inline confirm, and Go to job, which opens Mix with `?job=<id>`.
+  It also lists the recent jobs. Export log arrives with item 11 (`GET /jobs/export.csv`).
 

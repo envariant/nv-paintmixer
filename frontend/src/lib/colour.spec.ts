@@ -99,3 +99,12 @@ describe('input helpers', () => {
     expect(parseLab('120 0 0')).toBeNull()
   })
 })
+
+describe('hexToLab', () => {
+  it('inverts labToHex for in-gamut colours', async () => {
+    const { hexToLab } = await import('./colour')
+    for (const hex of ['#859072', '#7A5C80', '#000000', '#FFFFFF', '#135A4B']) {
+      expect(labToHex(hexToLab(hex))).toBe(hex.toUpperCase())
+    }
+  })
+})
