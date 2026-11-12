@@ -874,6 +874,7 @@ dependencies = [
     { name = "numpy" },
     { name = "pexpect" },
     { name = "pydantic" },
+    { name = "pyserial" },
     { name = "python-multipart" },
     { name = "scipy" },
     { name = "sqlmodel" },
@@ -891,6 +892,7 @@ dev = [
     { name = "ruff" },
     { name = "types-jsonschema" },
     { name = "types-pexpect" },
+    { name = "types-pyserial" },
 ]
 
 [package.metadata]
@@ -901,6 +903,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "pexpect", specifier = ">=4.9.0" },
     { name = "pydantic", specifier = ">=2" },
+    { name = "pyserial", specifier = ">=3.5" },
     { name = "python-multipart", specifier = ">=0.0.33" },
     { name = "scipy", specifier = ">=1.18.1" },
     { name = "sqlmodel", specifier = ">=0.0.48" },
@@ -918,6 +921,7 @@ dev = [
     { name = "ruff", specifier = ">=0.17.4" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
     { name = "types-pexpect", specifier = ">=4.9.0.20260518" },
+    { name = "types-pyserial", specifier = ">=3.5.0.20261104" },
 ]
 
 [[package]]
@@ -1090,6 +1094,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/49/2e/ced460408999b33da6b31b0021b0f37d329e202d4169aeb164493778f25b/pygments-2.21.0.tar.gz", hash = "sha256:610ca751c9bc2492b38eb9a38a7fbc93edbbb2d7182edaf34e66ae493dee5c8c", size = 5005329, upload-time = "2026-08-17T08:02:48.824Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl", hash = "sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9", size = 1250147, upload-time = "2026-08-17T08:02:44.912Z" },
+]
+
+[[package]]
+name = "pyserial"
+version = "3.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/7d/ae3f0a63f41e4d2f6cb66a5b57197850f919f59e558159a4dd3a818f5082/pyserial-3.5.tar.gz", hash = "sha256:3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb", size = 159125, upload-time = "2020-11-23T03:59:15.045Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/bc/587a445451b253b285629263eb51c2d8e9bcea4fc97826266d186f96f558/pyserial-3.5-py2.py3-none-any.whl", hash = "sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0", size = 90585, upload-time = "2020-11-23T03:59:13.41Z" },
 ]
 
 [[package]]
@@ -1559,6 +1572,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ee/84/c52c4841aeaf1d56551f14335ca99a40e7e04b4f8358b402115910828e8e/types_pexpect-4.9.0.20260518.tar.gz", hash = "sha256:38c373798209428dd90988b6fd4b8839c68c7e3ed79215f1ab11fa42d7ff9427", size = 13568, upload-time = "2026-05-18T06:03:35.378Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/01/11/17b1da645d5f2a12e4db83ae38dbb732fbac96fb3bd7416635c844f7d24e/types_pexpect-4.9.0.20260518-py3-none-any.whl", hash = "sha256:bf2422e825e4efe29cc4a1b7bdc3c375ae97d9c3046ce6b2018c100fb049c262", size = 17087, upload-time = "2026-05-18T06:03:34.14Z" },
+]
+
+[[package]]
+name = "types-pyserial"
+version = "3.5.0.20261104"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/12/a7f5c8e6529275da78de98283e407f4ad70612189c8b2c50076595824bde/types_pyserial-3.5.0.20261104.tar.gz", hash = "sha256:8276342a827facb25bd91976f2b2db576b74b3c32777464a5aa8ba6a7b91959f", size = 21336, upload-time = "2026-11-04T08:14:17.383Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/08/16c3bd0453593e058d5e2abedea51cd913db0d0ac9754476d26d58461a2a/types_pyserial-3.5.0.20261104-py3-none-any.whl", hash = "sha256:b31c0b53cd57784db8434fc623a019e4d69b8e88a87796f09fc885d59799b593", size = 25372, upload-time = "2026-11-04T08:14:16.167Z" },
 ]
 
 [[package]]

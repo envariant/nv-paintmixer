@@ -9,7 +9,7 @@ of the dispenser's links. The protocol is the same on every link; only the trans
 | USB serial | `serial`, `port[@baud]` (e.g. `/dev/ttyUSB0`, `COM3`) | default 115200 baud, 8N1 |
 | Bluetooth serial (SPP) | `serial`, the RFCOMM port (`/dev/rfcomm0`, `/dev/cu.DSP-01`, `COM5`) | same as USB once paired |
 
-Serial needs the `pyserial` package on the backend. The host side is
+Serial uses `pyserial`. The host side is
 `backend/src/paintmixer/hardware/protocol.py`; `hardware/firmware_sim.py` is a reference
 implementation of the device side, which the backend uses as its simulator.
 

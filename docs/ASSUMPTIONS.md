@@ -320,6 +320,7 @@ introduced it.
   transport (docs/dispenser_protocol.md): TCP for Wi-Fi, and serial for USB and Bluetooth SPP,
   which shows up as a serial port. Simulated runs use the same protocol code against an
   in-memory simulated firmware, so the simulator exercises the host code the hardware will
-  use. The TCP path is tested against the simulated firmware served on a local socket. Serial
-  needs `pyserial`, which is not installed yet.
+  use. Both real transports are tested against the simulated firmware: TCP on a local
+  socket, serial (`pyserial`) on a pseudo-terminal pair standing in for the USB or Bluetooth
+  link.
 

@@ -1,16 +1,15 @@
 """Transports for the dispenser line protocol: TCP (Wi-Fi) and serial (USB, Bluetooth SPP).
 
 Bluetooth serial (SPP) shows up as a serial port (``/dev/rfcommN``, ``/dev/cu.*`` or ``COMn``),
-so :class:`SerialTransport` covers both USB and Bluetooth. Serial needs the optional
-``pyserial`` package.
+so :class:`SerialTransport` (pyserial) covers both USB and Bluetooth.
 """
 
 from __future__ import annotations
 
-import importlib
 import socket
 import time
-from typing import Any
+
+import serial
 
 from paintmixer.hardware.dispenser import DispenserError
 from paintmixer.hardware.protocol import Transport
@@ -58,19 +57,16 @@ class SerialTransport:
 
     def __init__(self, port: str, baudrate: int = DEFAULT_BAUD):
         try:
-            serial: Any = importlib.import_module("serial")  # optional: pyserial
-        except ImportError as e:  # pragma: no cover - depends on the install
-            raise DispenserError("serial transport needs the 'pyserial' package") from e
-        try:
-            self._ser: Any = serial.Serial(port, baudrate=baudrate, timeout=0.1)
-        except Exception as e:  # pragma: no cover - needs a device
+            self._ser = serial.Serial(port, baudrate=baudrate, timeout=0.1)
+        except serial.SerialException as e:
             raise DispenserError(f"cannot open {port}: {e}") from e
         self._buf = b""
 
-    def write_line(self, line: str) -> None:  # pragma: no cover - needs a device
+    def write_line(self, line: str) -> None:
         self._ser.write(line.encode("ascii") + b"\n")
+        self._ser.flush()
 
-    def read_line(self, timeout: float) -> str | None:  # pragma: no cover - needs a device
+    def read_line(self, timeout: float) -> str | None:
         deadline = time.monotonic() + timeout
         while b"\n" not in self._buf:
             if time.monotonic() >= deadline:
@@ -79,7 +75,7 @@ class SerialTransport:
         line, self._buf = self._buf.split(b"\n", 1)
         return line.decode("ascii", errors="replace").rstrip("\r")
 
-    def close(self) -> None:  # pragma: no cover - needs a device
+    def close(self) -> None:
         self._ser.close()
 
 

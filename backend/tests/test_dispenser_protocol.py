@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import importlib.util
+import sys
 
 import pytest
 
@@ -10,7 +10,7 @@ from paintmixer.hardware.dispenser import DispenserError, SimulatedDispenser
 from paintmixer.hardware.firmware_sim import LoopbackTransport, SimulatedFirmware
 from paintmixer.hardware.protocol import ProtocolDispenser, ProtocolError
 from paintmixer.hardware.transports import TcpTransport, open_transport
-from tests.hardware_helpers import firmware_over_tcp
+from tests.hardware_helpers import firmware_over_pty, firmware_over_tcp
 
 
 def _disp(**fw: object) -> ProtocolDispenser:
@@ -105,7 +105,15 @@ def test_open_transport_checks_its_address() -> None:
         open_transport("carrier-pigeon", "x")
 
 
-@pytest.mark.skipif(importlib.util.find_spec("serial") is not None, reason="pyserial installed")
-def test_serial_needs_pyserial() -> None:
-    with pytest.raises(DispenserError, match="pyserial"):
-        open_transport("serial", "/dev/ttyUSB0")
+@pytest.mark.skipif(sys.platform == "win32", reason="needs a pseudo-terminal")
+def test_serial_transport_end_to_end() -> None:
+    """A pseudo-terminal pair stands in for the USB / Bluetooth serial link: the simulated
+    firmware answers on one end, SerialTransport talks on the other."""
+    fw = SimulatedFirmware(dispenser=SimulatedDispenser(rel_sigma=0, abs_sigma_ml=0))
+    with firmware_over_pty(fw) as port:
+        d = ProtocolDispenser(open_transport("serial", f"{port}@115200"))
+        assert d.info()["name"] == "DSP-01-sim"
+        assert d.dispense(2, 3.25) == pytest.approx(3.25)
+        d.close()
+    with pytest.raises(DispenserError, match="cannot open"):
+        open_transport("serial", "/dev/no-such-port")
