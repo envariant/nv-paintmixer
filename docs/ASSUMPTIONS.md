@@ -417,4 +417,17 @@ introduced it.
   - **Refill:** happens in the detail card. It asks for the reservoir size when the paint has
     none (the demo's paints don't); an empty level means full; a changed batch code records a
     new lot.
+- **M6 Settings** Four two-column sections: Judging colour (match in, accept tolerance, also
+  check under), Machine, Cost & display, and Advanced colour science (collapsed). The footer
+  shows the unsaved count, Discard and Save; Save sends only the changed fields
+  (`PATCH /settings`) and shows the API's validation message if it refuses.
+  - "Also check under" offers every illuminant as a chip, at most 6, the API's limit.
+  - Machine connection is Simulator / Wi-Fi (tcp) / USB or Bluetooth (serial), with the
+    address.
+  - The theme (System / Light / Dark) is a per-device choice: it is saved in local storage
+    and applied as `.theme-light` / `.theme-dark` on `<html>`, as `tokens.css` expects. It
+    still counts as an unsaved change until Save.
+  - Decimal values use a decimal field that commits on change and clamps to the API's limits,
+    because the starter `NumberField` rounds to whole numbers.
+  - The read-only observer and geometry block comes with item 11 (plan B6).
 

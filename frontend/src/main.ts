@@ -11,5 +11,8 @@ import '@fontsource/jetbrains-mono/500.css'
 import './style.css'
 import App from './App.vue'
 import { makeRouter } from './router'
+import { applyTheme, savedTheme } from './lib/theme'
+
+applyTheme(savedTheme())
 
 createApp(App).use(createPinia()).use(makeRouter()).mount('#app')
