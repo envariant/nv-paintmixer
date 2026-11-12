@@ -22,6 +22,7 @@ from paintmixer.colorsci.convert import (
     srgb_to_hex,
 )
 from paintmixer.colorsci.delta_e import delta_e_2000
+from paintmixer.colorsci.illuminants import SERIES as ILLUMINANT_SERIES
 from paintmixer.colorsci.km import KMModel
 from paintmixer.colorsci.spectral import WAVELENGTHS, Illuminant, weighting_matrix, white_point
 from paintmixer.solver.multimix import grid_parts, multimix, simplex_lattice
@@ -117,6 +118,17 @@ def build_fixture() -> dict[str, Any]:
         "gamut_map": [
             {"lab": _r(lab), "hex": srgb_to_hex(rgb), "out_of_gamut": bool(o)}
             for lab, rgb, o in zip(gamut_labs, gm.rgb, gm.out_of_gamut, strict=True)
+        ],
+        # GET /illuminants, which the frontend's built-in fallback (lib/colour.ts SERIES) mirrors
+        "illuminants": [
+            {
+                "id": sr.id,
+                "name": sr.name,
+                "description": sr.description,
+                "default": sr.default.value,
+                "members": [{"code": mm.code.value, "cct": mm.cct} for mm in sr.members],
+            }
+            for sr in ILLUMINANT_SERIES
         ],
         "ramp": {
             "paint_a": "phthalo-blue",

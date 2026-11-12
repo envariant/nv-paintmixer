@@ -170,4 +170,10 @@ Progress notes per milestone are appended below as work completes.
   - Live events: `GET /events` (server-sent events: job, machine, match, matches, model;
     resume with `Last-Event-ID`, `reset` when it cannot), `api.events` hub, machine status
     shared with `GET /machine` (`api.machine_state`). The frontend keeps polling for now.
+  10. Frontend integration: design handoff in `design/handoff/` (unchanged); `tokens.css` +
+      the handoff Tailwind theme via `@config`, colours also as v4 `@theme` (opacity
+      modifiers); `lib/colour.ts` merged with the handoff's helpers (backend-identical
+      Lab → hex, match tiers vs calibration grades); `lib/icons.ts`; illuminants store on
+      `GET /illuminants` with the built-in catalogue as fallback (parity fixture). Open: the
+      handoff says Lab D65/10°, the app uses 2° (spec).
 

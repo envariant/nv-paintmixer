@@ -14,11 +14,11 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-neutral-100 p-8 text-neutral-900">
-    <h1 class="text-2xl font-semibold">PaintMixer</h1>
-    <p class="mt-2 text-sm text-neutral-600">
-      Frontend scaffold. The UI is built in M6 from the Claude Design handoff bundle.
+  <main class="min-h-screen bg-page p-stage text-fg">
+    <h1 class="text-display font-semibold">PaintMixer</h1>
+    <p class="mt-2 text-ui text-fg-2">
+      Frontend scaffold, styled with the design handoff's tokens. The screens are built in M6.
     </p>
-    <p class="mt-4 text-sm" data-testid="health">{{ health }}</p>
+    <p class="mt-4 text-ui text-fg-3" data-testid="health">{{ health }}</p>
   </main>
 </template>

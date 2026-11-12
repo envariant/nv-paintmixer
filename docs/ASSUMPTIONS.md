@@ -337,4 +337,29 @@ introduced it.
   and keep-alive comments go out every 15 s. Events are in-process, so the server runs as a
   single worker, as the job runner already requires. A reverse proxy must not buffer the
   stream; the response sends `X-Accel-Buffering: no` for nginx.
+- **Design handoff integration** The bundle sits unchanged in `design/handoff/`. The app imports
+  `tokens.css` first, then Tailwind v4 loads the handoff's v3 `tailwind.config.js` with
+  `@config`, which brings radii, type sizes, heights, shadows, `darkMode` on `.theme-dark` and
+  the plugin for `.btn-*`, `.field` and `.seg`. The colours are defined again in a v4 `@theme`
+  block on the same `tokens.css` variables: v4 does not fill the v3 `<alpha-value>`
+  placeholder, so opacity modifiers (`bg-fg/25` in `ResidualStrip`) would otherwise render
+  opaque. Fonts (Inter, JetBrains Mono) are not bundled, so the system font is used until they
+  are added.
+- **Colour helpers merged** `lib/colour.ts` takes the handoff's helpers (match tiers, calibration
+  grades, `fmt`, `colourMeta`, the illuminant catalogue, `cctTint`, the impression line) with
+  one deliberate difference. `labToCss` / `labToHex` use the backend's conversion: sRGB with
+  CSS Color 4 gamut mapping, via `lib/km.ts`, instead of the handoff's per-channel clipping, so
+  a colour shows the same hex as in every API response. A test checks every swatch in the
+  parity fixture, gamut-mapped ones included. `clipped` means "outside sRGB, gamut-mapped".
+  - The handoff's text says Lab is D65/10°; the backend and this conversion use the CIE 1931
+    2° observer, as the original spec requires. This is still open (see PLAN.md).
+  - The old `deltaEBadge` is gone: its "Excellent match … Poor match" wording is what the design
+    reserves for calibration grades, and its thresholds matched neither scale. Matches use the
+    design's tiers (Indistinguishable / Barely visible / Visible difference / Mismatch at
+    1 / 2 / 5); calibration uses `calibrationGrade` (0.4 / 1 / 2, as the backend).
+  - `formatMoney` prints the design's `SGD 12.77`.
+  - `fmt` prints `0.0` rather than `−0.0` for values that round to zero.
+- **Illuminant list** The illuminants store loads `GET /illuminants`. Until it loads, or if it
+  fails, the store uses the built-in catalogue (`SERIES`), which the parity fixture keeps equal
+  to the backend's.
 
