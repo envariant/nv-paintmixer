@@ -131,6 +131,7 @@ def test_model_line_migration_assigns_default_line(tmp_path: Path) -> None:
         line = s.exec(select(m.ModelLine)).one()
         assert line.slug == "default" and line.last_revision == 2
         rows = s.exec(select(m.FittedModel).order_by(m.FittedModel.version)).all()  # type: ignore[arg-type]
+        assert all(r.paint_batches == {} for r in rows)  # 0007: nothing recorded for old models
         assert [(r.version, r.revision, r.line_id, r.label) for r in rows] == [
             (3, 1, line.id, ""),
             (5, 2, line.id, ""),

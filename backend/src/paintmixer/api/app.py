@@ -2,27 +2,36 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from paintmixer import __version__
+from paintmixer.api import events, matches
 from paintmixer.api.compute import make_executor
 from paintmixer.api.errors import install_error_handlers
 from paintmixer.api.routers import (
     calibration,
     colors,
+    illuminants,
     jobs,
     lines,
+    machine,
     mixing,
     models,
     paints,
+    palettes,
     system,
     worksheet,
 )
+from paintmixer.api.routers import (
+    events as events_router,
+)
+from paintmixer.api.runner import MachineRunner, recover_interrupted
 from paintmixer.config import Settings, get_settings
-from paintmixer.db.session import migrate
+from paintmixer.db.session import get_engine, migrate
 
 API_PREFIX = "/api/v1"
 
@@ -50,9 +59,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if database_is_empty(cfg.database_url):
                 seed_demo(cfg.database_url)
         app_.state.executor = make_executor(cfg.compute_workers)
+        recover_interrupted(cfg.database_url)  # jobs the machine held when the server stopped
+        app_.state.runner = MachineRunner(cfg.database_url)
+        app_.state.loop = asyncio.get_running_loop()  # for matches.request_refresh
+        app_.state.events.loop = app_.state.loop
+        events.register(get_engine(cfg.database_url), app_.state.events)
         try:
             yield
         finally:
+            await matches.stop(app_)
+            events.register(get_engine(cfg.database_url), None)
+            app_.state.events.loop = None
+            app_.state.runner.stop()
+            app_.state.loop = None
             if app_.state.executor is not None:
                 app_.state.executor.shutdown(wait=False, cancel_futures=True)
 
@@ -67,8 +86,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = cfg
     app.state.executor = None
+    app.state.loop = None
+    app.state.match_task = None
+    app.state.events = events.EventHub()
+    app.state.match_failed = set()  # api.matches: inputs whose solve failed
     install_error_handlers(app)
-    for r in (system, paints, colors, worksheet, calibration, models, lines, mixing, jobs):
+    for r in (
+        system,
+        illuminants,
+        paints,
+        colors,
+        palettes,
+        worksheet,
+        calibration,
+        models,
+        lines,
+        mixing,
+        jobs,
+        machine,
+        events_router,
+    ):
         app.include_router(r.router, prefix=API_PREFIX)
     return app
 

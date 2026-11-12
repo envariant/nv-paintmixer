@@ -60,6 +60,9 @@ class PaintFields(_Model):
     tint_fraction: float | None = Field(
         None, gt=0, lt=1, description="Paint volume fraction in the tint swatch (default 0.1)"
     )
+    batch_code: str = Field("", max_length=64, description="Manufacturer lot / batch")
+    body_type: str = Field("", max_length=40, description="e.g. 'Heavy body', 'Fluid'")
+    capacity_ml: float | None = Field(None, gt=0, description="Reservoir size on the dispenser")
 
 
 class PaintCreate(PaintFields):
@@ -83,6 +86,18 @@ class PaintUpdate(_Model):
     swatch_hex: str | None = Field(None, pattern=HEX_PATTERN)
     tint_hex: str | None = Field(None, pattern=HEX_PATTERN)
     tint_fraction: float | None = Field(None, gt=0, lt=1)
+    batch_code: str | None = Field(None, max_length=64)
+    body_type: str | None = Field(None, max_length=40)
+    capacity_ml: float | None = Field(None, gt=0)
+
+
+class PaintRefill(_Model):
+    level_ml: float | None = Field(
+        None, ge=0, description="Level after refilling (default: the full capacity)"
+    )
+    batch_code: str | None = Field(
+        None, max_length=64, description="New lot, when the refill opens a new batch"
+    )
 
 
 class PaintRead(PaintFields):
@@ -96,6 +111,14 @@ class PaintRead(PaintFields):
         "(ISO 787-24 style; active model). None for white or uncalibrated paints.",
     )
     tinting_peak_nm: float | None = None
+    level_ml: float | None = None
+    level_pct: float | None = Field(None, description="level_ml / capacity_ml x 100")
+    low: bool = Field(False, description="Below settings.low_level_warn_pct")
+    last_refill_at: datetime | None = None
+    model_lab: list[float] | None = Field(
+        None, description="Masstone Lab (D65) predicted by the active model"
+    )
+    model_hex: str | None = Field(None, description="Masstone colour for swatches (D65)")
     created_at: datetime
     updated_at: datetime
 
@@ -121,6 +144,14 @@ class AppSettings(_Model):
     dispenser_channels: int = Field(10, ge=1, le=64)
     batch_volume_ml: float = Field(100.0, gt=0)
     dispenser_resolution_ml: float = Field(0.05, gt=0)
+    dispenser_transport: Literal["none", "tcp", "serial"] = Field(
+        "none",
+        description="How to reach the dispenser: tcp (Wi-Fi) or serial (USB or Bluetooth SPP); "
+        "none = only the simulator",
+    )
+    dispenser_address: str = Field(
+        "", max_length=200, description="tcp: host[:port] (default port 3333); serial: port[@baud]"
+    )
     saunderson_k1: float = Field(0.0, ge=0, lt=1)
     saunderson_k2: float = Field(0.5, ge=0, lt=1)
     illuminant: Illuminant = Illuminant.D65
@@ -141,6 +172,17 @@ class AppSettings(_Model):
     selftest_max_band_jump: float = Field(0.05, gt=0)
     selftest_smoothness_rms: float = Field(0.01, gt=0)
     selftest_cast_chroma: float = Field(3.0, gt=0)
+    # Judging colour / machine (Settings screen)
+    accept_tolerance_de: float = Field(
+        1.0, gt=0, le=5, description="Jobs auto-accept when the measured dE2000 is below this"
+    )
+    check_illuminants: list[Illuminant] = Field(
+        default_factory=lambda: [Illuminant.A, Illuminant.F11],
+        max_length=6,
+        description="Metamerism is reported under these lights ('Also check under')",
+    )
+    machine_max_batch_ml: float = Field(250.0, gt=0, description="Largest volume the cup holds")
+    low_level_warn_pct: float = Field(25.0, ge=0, le=100, description="Warn below this level")
 
     @model_validator(mode="after")
     def _selftest_order(self) -> AppSettings:
@@ -148,6 +190,8 @@ class AppSettings(_Model):
             raise ValueError("selftest_warn_de must be <= selftest_fail_de")
         if self.selftest_white_min >= self.selftest_white_max:
             raise ValueError("selftest_white_min must be < selftest_white_max")
+        if self.batch_volume_ml > self.machine_max_batch_ml:
+            raise ValueError("batch_volume_ml must be <= machine_max_batch_ml")
         return self
 
 
@@ -156,6 +200,8 @@ class AppSettingsUpdate(_Model):
     dispenser_channels: int | None = Field(None, ge=1, le=64)
     batch_volume_ml: float | None = Field(None, gt=0)
     dispenser_resolution_ml: float | None = Field(None, gt=0)
+    dispenser_transport: Literal["none", "tcp", "serial"] | None = None
+    dispenser_address: str | None = Field(None, max_length=200)
     saunderson_k1: float | None = Field(None, ge=0, lt=1)
     saunderson_k2: float | None = Field(None, ge=0, lt=1)
     illuminant: Illuminant | None = None
@@ -175,6 +221,10 @@ class AppSettingsUpdate(_Model):
     selftest_max_band_jump: float | None = Field(None, gt=0)
     selftest_smoothness_rms: float | None = Field(None, gt=0)
     selftest_cast_chroma: float | None = Field(None, gt=0)
+    accept_tolerance_de: float | None = Field(None, gt=0, le=5)
+    check_illuminants: list[Illuminant] | None = Field(None, max_length=6)
+    machine_max_batch_ml: float | None = Field(None, gt=0)
+    low_level_warn_pct: float | None = Field(None, ge=0, le=100)
 
 
 # --- colour library -------------------------------------------------------------------------
@@ -211,6 +261,27 @@ class ColorUpdate(_Model):
     spectrum: Spectrum | None = Field(None, min_length=N_BANDS, max_length=N_BANDS)
 
 
+class MatchComponentOut(_Out):
+    paint_id: str
+    fraction: float
+
+
+class ColorMatchOut(_Out):
+    """The closest mix for a library colour under the active model (cached)."""
+
+    model_version: int
+    de: float = Field(description="dE2000 of the closest mix")
+    n_paints: int
+    cost_per_250ml: float
+    reach: Literal["within", "uncertain", "out"] = Field(
+        description="out: outside the gamut; uncertain: nearer the gamut's edge than the mix's "
+        "uncertainty; within: otherwise"
+    )
+    uncertainty_de: float | None
+    best_components: list[MatchComponentOut]
+    updated_at: datetime
+
+
 class ColorRead(_Out):
     id: int
     name: str
@@ -221,6 +292,11 @@ class ColorRead(_Out):
     spectrum: Spectrum | None
     in_srgb_gamut: bool
     notes: str
+    match: ColorMatchOut | None = Field(
+        None,
+        description="With ?with_match=true: the cached closest mix; null while it is computed "
+        "(or when there is no active model or loaded paint)",
+    )
 
 
 class ColorImportResult(_Out):
@@ -475,6 +551,42 @@ class ModelLineDetail(ModelLineSummary):
     versions: list[ModelSummary] = Field(description="Newest revision first")
 
 
+class SampleErrorOut(_Out):
+    id: str
+    de2000: float
+    holdout: bool
+    outlier: bool
+    major: bool = Field(
+        description="The paint is a big part of this sample (its masstone or tint, or >= 25 % "
+        "of a mixture); only these can set status 'review'"
+    )
+
+
+class CoverageOut(_Out):
+    has_masstone: bool
+    has_tint: bool | None = Field(description="null: not required (white, or no white in the set)")
+    n_mixture_drawdowns: int
+    ok: bool = Field(description="Meets the fit's requirement (masstone, tint, >= 3 mixtures)")
+
+
+class PaintAccuracyOut(_Out):
+    paint_id: str
+    name: str
+    samples: list[SampleErrorOut] = Field(description="Every fitted sample with this paint")
+    median_de: float | None
+    grade: Literal["excellent", "good", "fair", "poor"] | None = Field(
+        description="From median_de: excellent < 0.4, good < 1, fair < 2, else poor"
+    )
+    status: Literal["ok", "review", "needs_samples", "stale", "uncalibrated"] = Field(
+        description="Most pressing first: uncalibrated, stale (batch changed since the fit), "
+        "needs_samples, review (a major sample >= 2 dE2000), ok"
+    )
+    calibrated_at: datetime = Field(description="When the model was made")
+    batch_at_fit: str | None = Field(description="null: not recorded (older models)")
+    batch_now: str | None
+    coverage: CoverageOut | None
+
+
 class StrengthOut(_Out):
     reduction_fraction: float
     reduction_ks: float = Field(description="K/S of the reduction at its absorption peak")
@@ -576,6 +688,15 @@ class CandidateOut(_Out):
     dose_sensitivity: float
     objective: float
     warnings: list[str]
+    tags: list[str] = Field(
+        default_factory=list,
+        description="Roles this mix wins: closest, fewest paints, cheapest",
+    )
+    uncertainty_de: float | None = Field(
+        None,
+        description="Expected spread of de2000 from calibration accuracy and dosing; "
+        "null for uncalibrated (swatch) models",
+    )
 
 
 class SolveResponse(_Out):
@@ -588,6 +709,11 @@ class SolveResponse(_Out):
     candidates: list[CandidateOut]
     in_gamut: bool | None
     nearest_de: float
+    gamut_margin_de: float | None = Field(
+        None,
+        description="dE2000 from the target to the reachable gamut's edge at its L*: positive "
+        "inside, negative outside (negative exactly when in_gamut is false)",
+    )
     warnings: list[str]
     search: str
     n_subsets: int
@@ -764,10 +890,35 @@ class JobCreate(_Model):
 
 
 class DispenseRequest(_Model):
-    simulate: bool = Field(True, description="Only the simulated dispenser exists so far")
-    rel_sigma: float = Field(0.01, ge=0, le=0.5)
+    """Run the job on the machine in the background: pour, then (simulated) measure. Poll
+    ``GET /jobs/{id}`` or ``GET /machine`` for ``status``, ``step`` and ``progress``."""
+
+    simulate: bool = Field(
+        True,
+        description="true: the simulated dispenser and instrument; false: the dispenser in "
+        "settings (dispenser_transport), then wait for POST /measurement",
+    )
+    rel_sigma: float = Field(0.01, ge=0, le=0.5, description="Simulated dosing error")
     abs_sigma_ml: float = Field(0.01, ge=0)
     seed: int | None = None
+    measure: bool = Field(
+        True,
+        description="Simulated runs: measure the cup after pouring. false: stop at 'dispensed' "
+        "for a measurement entered with POST /measurement",
+    )
+    auto_correct_rounds: int = Field(
+        0,
+        ge=0,
+        le=10,
+        description="Correct and pour again by itself up to this many times while the "
+        "measurement is outside settings.accept_tolerance_de (0: stop for a decision)",
+    )
+    simulate_ml_per_s: float | None = Field(
+        None, gt=0, description="Simulated pump speed (default: instant)"
+    )
+    simulate_gain: float = Field(
+        1.0, gt=0, description="Simulated model/instrument bias of the measurement"
+    )
 
 
 class MeasurementIn(_Model):
@@ -791,8 +942,14 @@ class MeasurementIn(_Model):
 class CorrectRequest(_Model):
     mode: Literal["additions", "remix"] = "additions"
     damping: float = Field(1e-3, ge=0)
-    tolerance_de: float = Field(0.5, gt=0)
+    tolerance_de: float | None = Field(
+        None, gt=0, description="Default: settings.accept_tolerance_de"
+    )
     max_iterations: int = Field(5, ge=1, le=20)
+
+
+class CancelRequest(_Model):
+    reason: str = Field("", max_length=200)
 
 
 class JobRead(_Out):
@@ -806,6 +963,134 @@ class JobRead(_Out):
     model_version: int | None
     dispensed: dict[str, Any] | None
     measured: dict[str, Any] | None
-    corrections: list[dict[str, Any]]
+    corrections: list[dict[str, Any]] = Field(
+        description="Log: correction / accept / cancel entries (result), and one entry per "
+        "measured round (kind 'round': label, hex, de, added_ml, poured_ml)"
+    )
+    step: str = Field("", description="What is happening now (run screen)")
+    progress: float = Field(0.0, description="0-1 through the current round")
+    paused: bool = False
+    running: bool = Field(
+        False,
+        description="The machine holds the job (queued or running). Statuses such as "
+        "'correcting' also occur between automatic rounds, so wait for this to turn false",
+    )
     created_at: datetime
     updated_at: datetime
+
+
+# --- illuminants + appearance ----------------------------------------------------------------
+
+
+class IlluminantMemberOut(_Out):
+    code: Illuminant
+    cct: int
+
+
+class IlluminantSeriesOut(_Out):
+    id: str
+    name: str
+    description: str
+    default: Illuminant
+    range: str = Field(description="e.g. '5003–9300 K'")
+    members: list[IlluminantMemberOut]
+
+
+class AppearanceRequest(_Model):
+    """How the target and each candidate look under one or more illuminants."""
+
+    reference: Spectrum = Field(
+        min_length=N_BANDS, max_length=N_BANDS, description="Target reflectance (SolveResponse)"
+    )
+    spectra: list[Spectrum] = Field(
+        min_length=1, max_length=20, description="Candidate reflectances (predicted_spectrum)"
+    )
+    illuminants: list[Illuminant] = Field(min_length=1, max_length=17)
+
+    @model_validator(mode="after")
+    def _bands(self) -> AppearanceRequest:
+        if any(len(s) != N_BANDS for s in self.spectra):
+            raise ValueError(f"every spectrum must have {N_BANDS} bands")
+        return self
+
+
+class AppearanceOut(_Out):
+    lab: list[float] = Field(description="CIELAB under the illuminant (its own white)")
+    display_lab: list[float] = Field(description="Adapted to D65 for an sRGB display (CAT02)")
+    hex: str
+    out_of_srgb_gamut: bool
+
+
+class AppearanceUnderOut(_Out):
+    illuminant: Illuminant
+    cct: int
+    reference: AppearanceOut
+    spectra: list[AppearanceOut]
+    de2000: list[float] = Field(description="Each spectrum vs the reference under this light")
+
+
+class AppearanceResponse(_Out):
+    under: list[AppearanceUnderOut]
+
+
+# --- palettes -----------------------------------------------------------------------------
+
+
+class PaletteCreate(_Model):
+    name: str = Field(min_length=1, max_length=120)
+    color_ids: list[int] = Field(default_factory=list, max_length=500)
+
+
+class PaletteUpdate(_Model):
+    name: str | None = Field(None, min_length=1, max_length=120)
+    color_ids: list[int] | None = Field(None, max_length=500, description="Replaces the order")
+
+
+class PaletteSummary(_Out):
+    n: int = Field(description="Colours in the palette")
+    within: int
+    uncertain: int
+    out: int
+    pending: int = Field(
+        description="Colours whose match is still being computed (0 without an active model)"
+    )
+    worst_de: float | None = Field(description="Largest closest-mix dE2000 among those computed")
+
+
+class PaletteRead(_Out):
+    id: int
+    name: str
+    color_ids: list[int]
+    created_at: datetime
+    updated_at: datetime
+
+
+# --- machine --------------------------------------------------------------------------------
+
+
+class JobBrief(_Out):
+    id: int
+    name: str
+    status: str
+    target_hex: str | None
+    last_hex: str | None = Field(None, description="Latest measured (or predicted) colour")
+    last_de: float | None
+    round: int
+    batch_volume_ml: float
+    poured_ml: float
+    step: str = ""
+    progress: float = 0.0
+    paused: bool = False
+    running: bool = False
+    updated_at: datetime
+
+
+class MachineStatus(_Out):
+    name: str
+    transport: str = Field(description="none (simulator only), tcp or serial")
+    channels: int
+    channels_loaded: int
+    state: Literal["ready", "pouring", "measuring", "correcting", "attention"]
+    label: str = Field(description="Pill text, e.g. 'Machine ready' or 'Correcting · Plum Mist'")
+    current_job: JobBrief | None
+    recent: list[JobBrief]

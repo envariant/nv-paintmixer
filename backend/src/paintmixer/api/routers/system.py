@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from sqlmodel import col, select
 
 from paintmixer import __version__
+from paintmixer.api import matches
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import bad_request
 from paintmixer.api.schemas import AppSettings, AppSettingsUpdate, Colorimetry, Health
@@ -40,7 +41,7 @@ def get_settings(session: SessionDep) -> AppSettings:
     return load_settings(session)
 
 
-@router.patch("/settings", response_model=AppSettings)
+@router.patch("/settings", response_model=AppSettings, dependencies=matches.REFRESH_AFTER)
 def update_settings(body: AppSettingsUpdate, session: SessionDep) -> AppSettings:
     cur = load_settings(session).model_dump()
     cur.update(body.model_dump(exclude_unset=True, exclude_none=True))

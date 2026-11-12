@@ -60,6 +60,49 @@ export interface paths {
         patch: operations["update_settings_api_v1_settings_patch"];
         trace?: never;
     };
+    "/api/v1/illuminants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Illuminants
+         * @description Series → members with nominal CCT. Switching series in the UI keeps the closest CCT.
+         */
+        get: operations["list_illuminants_api_v1_illuminants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appearance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get Appearance
+         * @description Target and candidates as seen under each illuminant, adapted for display, with dE2000.
+         *
+         *     Cheap (no model needed): the client sends ``reference_spectrum`` and the candidates'
+         *     ``predicted_spectrum`` from ``POST /solve`` whenever the preview light changes.
+         */
+        post: operations["get_appearance_api_v1_appearance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/paints": {
         parameters: {
             query?: never;
@@ -117,6 +160,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/paints/{paint_id}/refill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refill Paint
+         * @description Mark a reservoir refilled (Models screen). Records the time, and a new batch if given.
+         */
+        post: operations["refill_paint_api_v1_paints__paint_id__refill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/colors": {
         parameters: {
             query?: never;
@@ -146,7 +209,11 @@ export interface paths {
         get: operations["get_color_api_v1_colors__color_id__get"];
         put?: never;
         post?: never;
-        /** Delete Color */
+        /**
+         * Delete Color
+         * @description Delete a colour and remove it from every palette. SQLite can give a later colour the
+         *     same id, so a stale id left in a palette would bring in an unrelated colour.
+         */
         delete: operations["delete_color_api_v1_colors__color_id__delete"];
         options?: never;
         head?: never;
@@ -169,6 +236,64 @@ export interface paths {
          *     ``L,a,b`` (D65) | ``r380..r730``. Existing (source, name) pairs are updated.
          */
         post: operations["import_colors_api_v1_colors_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/palettes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Palettes */
+        get: operations["list_palettes_api_v1_palettes_get"];
+        put?: never;
+        /** Create Palette */
+        post: operations["create_palette_api_v1_palettes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/palettes/{palette_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Palette */
+        get: operations["get_palette_api_v1_palettes__palette_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Palette */
+        delete: operations["delete_palette_api_v1_palettes__palette_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Palette */
+        patch: operations["update_palette_api_v1_palettes__palette_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/palettes/{palette_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Palette Summary
+         * @description Reach of the palette's colours under the active model (the Library's palette band),
+         *     from the cached library matches; ``pending`` counts those still being computed.
+         */
+        get: operations["palette_summary_api_v1_palettes__palette_id__summary_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -464,6 +589,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models/{ref}/paint-accuracy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Paint Accuracy
+         * @description How well the model predicts each of its paints: the residual of every fitted sample with
+         *     the paint, their median, a grade and a status (Models rack and paint card).
+         */
+        get: operations["paint_accuracy_api_v1_models__ref__paint_accuracy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/models/{ref}/spectra": {
         parameters: {
             query?: never;
@@ -725,9 +871,47 @@ export interface paths {
         put?: never;
         /**
          * Dispense
-         * @description Dispense the recipe (or pending correction additions) with the simulated dispenser.
+         * @description Run the job on the machine in the background (the recipe, or the pending correction
+         *     additions). Returns at once with status ``queued``; poll ``GET /jobs/{id}``.
          */
         post: operations["dispense_api_v1_jobs__job_id__dispense_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause
+         * @description Pause a queued or running job before its next channel.
+         */
+        post: operations["pause_api_v1_jobs__job_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume */
+        post: operations["resume_api_v1_jobs__job_id__resume_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -765,9 +949,105 @@ export interface paths {
         put?: never;
         /**
          * Correct
-         * @description One damped Gauss-Newton correction from the latest measurement.
+         * @description One damped Gauss-Newton correction from the latest measurement ("Correct again";
+         *     then ``dispense`` pours it).
          */
         post: operations["correct_api_v1_jobs__job_id__correct_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept
+         * @description Accept the mix as it is (after a measurement), whatever its dE.
+         */
+        post: operations["accept_api_v1_jobs__job_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel
+         * @description Abandon a job. A queued job is cancelled at once; a running one stops before its next
+         *     channel (poll for ``cancelled``). What is already in the cup stays there and is logged.
+         */
+        post: operations["cancel_api_v1_jobs__job_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/machine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Machine Status */
+        get: operations["machine_status_api_v1_machine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Event Stream
+         * @description Live events (``text/event-stream``), for an ``EventSource``. Polling
+         *     ``GET /jobs/{id}`` and ``GET /machine`` stays available and returns the same data.
+         *
+         *     Event types (``event:`` field; ``data:`` is JSON):
+         *
+         *     * ``job``: a job changed: a ``JobBrief`` (status, step, progress, paused, running, round, last
+         *       dE and colour);
+         *     * ``machine``: the machine status (as ``GET /machine``); also sent once on connect;
+         *     * ``match``: a library colour's cached match: ``{color_id, match}``;
+         *     * ``matches``: the library refresh: ``{state: refreshing | idle, pending}``;
+         *     * ``model``: ``{event: created | activated, model}``;
+         *     * ``hello``: first, on connect: ``{boot, last_event_id, types}``;
+         *     * ``reset``: the stream cannot say what was missed (resumed from an unknown or expired id, or the
+         *       client fell too far behind): refetch the state you show, then keep listening.
+         *
+         *     Every event except ``hello``, ``reset`` and the connect snapshot has an ``id``; the browser
+         *     sends the last one back as ``Last-Event-ID`` when it reconnects, and missed events are
+         *     replayed. Comments (``: keepalive``) are sent every 15 s.
+         */
+        get: operations["event_stream_api_v1_events_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -800,6 +1080,19 @@ export interface components {
              * @default 0.05
              */
             dispenser_resolution_ml?: number;
+            /**
+             * Dispenser Transport
+             * @description How to reach the dispenser: tcp (Wi-Fi) or serial (USB or Bluetooth SPP); none = only the simulator
+             * @default none
+             * @enum {string}
+             */
+            dispenser_transport?: "none" | "tcp" | "serial";
+            /**
+             * Dispenser Address
+             * @description tcp: host[:port] (default port 3333); serial: port[@baud]
+             * @default
+             */
+            dispenser_address?: string;
             /**
              * Saunderson K1
              * @default 0
@@ -890,6 +1183,29 @@ export interface components {
              * @default 3
              */
             selftest_cast_chroma?: number;
+            /**
+             * Accept Tolerance De
+             * @description Jobs auto-accept when the measured dE2000 is below this
+             * @default 1
+             */
+            accept_tolerance_de?: number;
+            /**
+             * Check Illuminants
+             * @description Metamerism is reported under these lights ('Also check under')
+             */
+            check_illuminants?: components["schemas"]["Illuminant"][];
+            /**
+             * Machine Max Batch Ml
+             * @description Largest volume the cup holds
+             * @default 250
+             */
+            machine_max_batch_ml?: number;
+            /**
+             * Low Level Warn Pct
+             * @description Warn below this level
+             * @default 25
+             */
+            low_level_warn_pct?: number;
         };
         /** AppSettingsUpdate */
         AppSettingsUpdate: {
@@ -901,6 +1217,10 @@ export interface components {
             batch_volume_ml?: number | null;
             /** Dispenser Resolution Ml */
             dispenser_resolution_ml?: number | null;
+            /** Dispenser Transport */
+            dispenser_transport?: ("none" | "tcp" | "serial") | null;
+            /** Dispenser Address */
+            dispenser_address?: string | null;
             /** Saunderson K1 */
             saunderson_k1?: number | null;
             /** Saunderson K2 */
@@ -937,6 +1257,68 @@ export interface components {
             selftest_smoothness_rms?: number | null;
             /** Selftest Cast Chroma */
             selftest_cast_chroma?: number | null;
+            /** Accept Tolerance De */
+            accept_tolerance_de?: number | null;
+            /** Check Illuminants */
+            check_illuminants?: components["schemas"]["Illuminant"][] | null;
+            /** Machine Max Batch Ml */
+            machine_max_batch_ml?: number | null;
+            /** Low Level Warn Pct */
+            low_level_warn_pct?: number | null;
+        };
+        /** AppearanceOut */
+        AppearanceOut: {
+            /**
+             * Lab
+             * @description CIELAB under the illuminant (its own white)
+             */
+            lab: number[];
+            /**
+             * Display Lab
+             * @description Adapted to D65 for an sRGB display (CAT02)
+             */
+            display_lab: number[];
+            /** Hex */
+            hex: string;
+            /** Out Of Srgb Gamut */
+            out_of_srgb_gamut: boolean;
+        };
+        /**
+         * AppearanceRequest
+         * @description How the target and each candidate look under one or more illuminants.
+         */
+        AppearanceRequest: {
+            /**
+             * Reference
+             * @description Target reflectance (SolveResponse)
+             */
+            reference: number[];
+            /**
+             * Spectra
+             * @description Candidate reflectances (predicted_spectrum)
+             */
+            spectra: number[][];
+            /** Illuminants */
+            illuminants: components["schemas"]["Illuminant"][];
+        };
+        /** AppearanceResponse */
+        AppearanceResponse: {
+            /** Under */
+            under: components["schemas"]["AppearanceUnderOut"][];
+        };
+        /** AppearanceUnderOut */
+        AppearanceUnderOut: {
+            illuminant: components["schemas"]["Illuminant"];
+            /** Cct */
+            cct: number;
+            reference: components["schemas"]["AppearanceOut"];
+            /** Spectra */
+            spectra: components["schemas"]["AppearanceOut"][];
+            /**
+             * De2000
+             * @description Each spectrum vs the reference under this light
+             */
+            de2000: number[];
         };
         /** Body_import_colors_api_v1_colors_import_post */
         Body_import_colors_api_v1_colors_import_post: {
@@ -957,6 +1339,14 @@ export interface components {
         Body_validate_api_v1_calibration_validate_post: {
             /** File */
             file: string;
+        };
+        /** CancelRequest */
+        CancelRequest: {
+            /**
+             * Reason
+             * @default
+             */
+            reason?: string;
         };
         /** CandidateOut */
         CandidateOut: {
@@ -990,6 +1380,16 @@ export interface components {
             objective: number;
             /** Warnings */
             warnings: string[];
+            /**
+             * Tags
+             * @description Roles this mix wins: closest, fewest paints, cheapest
+             */
+            tags?: string[];
+            /**
+             * Uncertainty De
+             * @description Expected spread of de2000 from calibration accuracy and dosing; null for uncalibrated (swatch) models
+             */
+            uncertainty_de?: number | null;
         };
         /** ColorCreate */
         ColorCreate: {
@@ -1023,6 +1423,38 @@ export interface components {
             /** Errors */
             errors: string[];
         };
+        /**
+         * ColorMatchOut
+         * @description The closest mix for a library colour under the active model (cached).
+         */
+        ColorMatchOut: {
+            /** Model Version */
+            model_version: number;
+            /**
+             * De
+             * @description dE2000 of the closest mix
+             */
+            de: number;
+            /** N Paints */
+            n_paints: number;
+            /** Cost Per 250Ml */
+            cost_per_250ml: number;
+            /**
+             * Reach
+             * @description out: outside the gamut; uncertain: nearer the gamut's edge than the mix's uncertainty; within: otherwise
+             * @enum {string}
+             */
+            reach: "within" | "uncertain" | "out";
+            /** Uncertainty De */
+            uncertainty_de: number | null;
+            /** Best Components */
+            best_components: components["schemas"]["MatchComponentOut"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** ColorRead */
         ColorRead: {
             /** Id */
@@ -1043,6 +1475,8 @@ export interface components {
             in_srgb_gamut: boolean;
             /** Notes */
             notes: string;
+            /** @description With ?with_match=true: the cached closest mix; null while it is computed (or when there is no active model or loaded paint) */
+            match?: components["schemas"]["ColorMatchOut"] | null;
         };
         /** ColorUpdate */
         ColorUpdate: {
@@ -1101,25 +1535,47 @@ export interface components {
             damping?: number;
             /**
              * Tolerance De
-             * @default 0.5
+             * @description Default: settings.accept_tolerance_de
              */
-            tolerance_de?: number;
+            tolerance_de?: number | null;
             /**
              * Max Iterations
              * @default 5
              */
             max_iterations?: number;
         };
-        /** DispenseRequest */
+        /** CoverageOut */
+        CoverageOut: {
+            /** Has Masstone */
+            has_masstone: boolean;
+            /**
+             * Has Tint
+             * @description null: not required (white, or no white in the set)
+             */
+            has_tint: boolean | null;
+            /** N Mixture Drawdowns */
+            n_mixture_drawdowns: number;
+            /**
+             * Ok
+             * @description Meets the fit's requirement (masstone, tint, >= 3 mixtures)
+             */
+            ok: boolean;
+        };
+        /**
+         * DispenseRequest
+         * @description Run the job on the machine in the background: pour, then (simulated) measure. Poll
+         *     ``GET /jobs/{id}`` or ``GET /machine`` for ``status``, ``step`` and ``progress``.
+         */
         DispenseRequest: {
             /**
              * Simulate
-             * @description Only the simulated dispenser exists so far
+             * @description true: the simulated dispenser and instrument; false: the dispenser in settings (dispenser_transport), then wait for POST /measurement
              * @default true
              */
             simulate?: boolean;
             /**
              * Rel Sigma
+             * @description Simulated dosing error
              * @default 0.01
              */
             rel_sigma?: number;
@@ -1130,6 +1586,29 @@ export interface components {
             abs_sigma_ml?: number;
             /** Seed */
             seed?: number | null;
+            /**
+             * Measure
+             * @description Simulated runs: measure the cup after pouring. false: stop at 'dispensed' for a measurement entered with POST /measurement
+             * @default true
+             */
+            measure?: boolean;
+            /**
+             * Auto Correct Rounds
+             * @description Correct and pour again by itself up to this many times while the measurement is outside settings.accept_tolerance_de (0: stop for a decision)
+             * @default 0
+             */
+            auto_correct_rounds?: number;
+            /**
+             * Simulate Ml Per S
+             * @description Simulated pump speed (default: instant)
+             */
+            simulate_ml_per_s?: number | null;
+            /**
+             * Simulate Gain
+             * @description Simulated model/instrument bias of the measurement
+             * @default 1
+             */
+            simulate_gain?: number;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -1284,9 +1763,34 @@ export interface components {
         };
         /**
          * Illuminant
+         * @description CIE illuminants the backend can integrate under. The UI groups them into series
+         *     (:mod:`paintmixer.colorsci.illuminants`).
          * @enum {string}
          */
-        Illuminant: "D65" | "D50" | "A" | "F11";
+        Illuminant: "D50" | "D55" | "D65" | "D75" | "D93" | "A" | "F2" | "F7" | "F11" | "F12" | "LED-B1" | "LED-B2" | "LED-B3" | "LED-B4" | "LED-B5" | "ID50" | "ID65";
+        /** IlluminantMemberOut */
+        IlluminantMemberOut: {
+            code: components["schemas"]["Illuminant"];
+            /** Cct */
+            cct: number;
+        };
+        /** IlluminantSeriesOut */
+        IlluminantSeriesOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            default: components["schemas"]["Illuminant"];
+            /**
+             * Range
+             * @description e.g. '5003–9300 K'
+             */
+            range: string;
+            /** Members */
+            members: components["schemas"]["IlluminantMemberOut"][];
+        };
         /** IlluminantTables */
         IlluminantTables: {
             /**
@@ -1296,6 +1800,55 @@ export interface components {
             weights: number[][];
             /** White */
             white: number[];
+        };
+        /** JobBrief */
+        JobBrief: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /** Target Hex */
+            target_hex: string | null;
+            /**
+             * Last Hex
+             * @description Latest measured (or predicted) colour
+             */
+            last_hex?: string | null;
+            /** Last De */
+            last_de: number | null;
+            /** Round */
+            round: number;
+            /** Batch Volume Ml */
+            batch_volume_ml: number;
+            /** Poured Ml */
+            poured_ml: number;
+            /**
+             * Step
+             * @default
+             */
+            step?: string;
+            /**
+             * Progress
+             * @default 0
+             */
+            progress?: number;
+            /**
+             * Paused
+             * @default false
+             */
+            paused?: boolean;
+            /**
+             * Running
+             * @default false
+             */
+            running?: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** JobCreate */
         JobCreate: {
@@ -1354,10 +1907,36 @@ export interface components {
             measured: {
                 [key: string]: unknown;
             } | null;
-            /** Corrections */
+            /**
+             * Corrections
+             * @description Log: correction / accept / cancel entries (result), and one entry per measured round (kind 'round': label, hex, de, added_ml, poured_ml)
+             */
             corrections: {
                 [key: string]: unknown;
             }[];
+            /**
+             * Step
+             * @description What is happening now (run screen)
+             * @default
+             */
+            step?: string;
+            /**
+             * Progress
+             * @description 0-1 through the current round
+             * @default 0
+             */
+            progress?: number;
+            /**
+             * Paused
+             * @default false
+             */
+            paused?: boolean;
+            /**
+             * Running
+             * @description The machine holds the job (queued or running). Statuses such as 'correcting' also occur between automatic rounds, so wait for this to turn false
+             * @default false
+             */
+            running?: boolean;
             /**
              * Created At
              * Format: date-time
@@ -1383,6 +1962,40 @@ export interface components {
             suggest_dilution: boolean;
             /** Message */
             message: string;
+        };
+        /** MachineStatus */
+        MachineStatus: {
+            /** Name */
+            name: string;
+            /**
+             * Transport
+             * @description none (simulator only), tcp or serial
+             */
+            transport: string;
+            /** Channels */
+            channels: number;
+            /** Channels Loaded */
+            channels_loaded: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ready" | "pouring" | "measuring" | "correcting" | "attention";
+            /**
+             * Label
+             * @description Pill text, e.g. 'Machine ready' or 'Correcting · Plum Mist'
+             */
+            label: string;
+            current_job: components["schemas"]["JobBrief"] | null;
+            /** Recent */
+            recent: components["schemas"]["JobBrief"][];
+        };
+        /** MatchComponentOut */
+        MatchComponentOut: {
+            /** Paint Id */
+            paint_id: string;
+            /** Fraction */
+            fraction: number;
         };
         /**
          * MeasurementIn
@@ -1745,6 +2358,45 @@ export interface components {
             /** Cells */
             cells: components["schemas"]["MixCellOut"][];
         };
+        /** PaintAccuracyOut */
+        PaintAccuracyOut: {
+            /** Paint Id */
+            paint_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Samples
+             * @description Every fitted sample with this paint
+             */
+            samples: components["schemas"]["SampleErrorOut"][];
+            /** Median De */
+            median_de: number | null;
+            /**
+             * Grade
+             * @description From median_de: excellent < 0.4, good < 1, fair < 2, else poor
+             */
+            grade: ("excellent" | "good" | "fair" | "poor") | null;
+            /**
+             * Status
+             * @description Most pressing first: uncalibrated, stale (batch changed since the fit), needs_samples, review (a major sample >= 2 dE2000), ok
+             * @enum {string}
+             */
+            status: "ok" | "review" | "needs_samples" | "stale" | "uncalibrated";
+            /**
+             * Calibrated At
+             * Format: date-time
+             * @description When the model was made
+             */
+            calibrated_at: string;
+            /**
+             * Batch At Fit
+             * @description null: not recorded (older models)
+             */
+            batch_at_fit: string | null;
+            /** Batch Now */
+            batch_now: string | null;
+            coverage: components["schemas"]["CoverageOut"] | null;
+        };
         /** PaintCreate */
         PaintCreate: {
             /** Name */
@@ -1820,6 +2472,23 @@ export interface components {
              * @description Paint volume fraction in the tint swatch (default 0.1)
              */
             tint_fraction?: number | null;
+            /**
+             * Batch Code
+             * @description Manufacturer lot / batch
+             * @default
+             */
+            batch_code?: string;
+            /**
+             * Body Type
+             * @description e.g. 'Heavy body', 'Fluid'
+             * @default
+             */
+            body_type?: string;
+            /**
+             * Capacity Ml
+             * @description Reservoir size on the dispenser
+             */
+            capacity_ml?: number | null;
             /** Id */
             id: string;
         };
@@ -1907,6 +2576,23 @@ export interface components {
              * @description Paint volume fraction in the tint swatch (default 0.1)
              */
             tint_fraction?: number | null;
+            /**
+             * Batch Code
+             * @description Manufacturer lot / batch
+             * @default
+             */
+            batch_code?: string;
+            /**
+             * Body Type
+             * @description e.g. 'Heavy body', 'Fluid'
+             * @default
+             */
+            body_type?: string;
+            /**
+             * Capacity Ml
+             * @description Reservoir size on the dispenser
+             */
+            capacity_ml?: number | null;
             /** Id */
             id: string;
             /**
@@ -1922,6 +2608,31 @@ export interface components {
             tinting_strength?: number | null;
             /** Tinting Peak Nm */
             tinting_peak_nm?: number | null;
+            /** Level Ml */
+            level_ml?: number | null;
+            /**
+             * Level Pct
+             * @description level_ml / capacity_ml x 100
+             */
+            level_pct?: number | null;
+            /**
+             * Low
+             * @description Below settings.low_level_warn_pct
+             * @default false
+             */
+            low?: boolean;
+            /** Last Refill At */
+            last_refill_at?: string | null;
+            /**
+             * Model Lab
+             * @description Masstone Lab (D65) predicted by the active model
+             */
+            model_lab?: number[] | null;
+            /**
+             * Model Hex
+             * @description Masstone colour for swatches (D65)
+             */
+            model_hex?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -1932,6 +2643,19 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** PaintRefill */
+        PaintRefill: {
+            /**
+             * Level Ml
+             * @description Level after refilling (default: the full capacity)
+             */
+            level_ml?: number | null;
+            /**
+             * Batch Code
+             * @description New lot, when the refill opens a new batch
+             */
+            batch_code?: string | null;
         };
         /**
          * PaintRole
@@ -1989,6 +2713,72 @@ export interface components {
             tint_hex?: string | null;
             /** Tint Fraction */
             tint_fraction?: number | null;
+            /** Batch Code */
+            batch_code?: string | null;
+            /** Body Type */
+            body_type?: string | null;
+            /** Capacity Ml */
+            capacity_ml?: number | null;
+        };
+        /** PaletteCreate */
+        PaletteCreate: {
+            /** Name */
+            name: string;
+            /** Color Ids */
+            color_ids?: number[];
+        };
+        /** PaletteRead */
+        PaletteRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Color Ids */
+            color_ids: number[];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** PaletteSummary */
+        PaletteSummary: {
+            /**
+             * N
+             * @description Colours in the palette
+             */
+            n: number;
+            /** Within */
+            within: number;
+            /** Uncertain */
+            uncertain: number;
+            /** Out */
+            out: number;
+            /**
+             * Pending
+             * @description Colours whose match is still being computed (0 without an active model)
+             */
+            pending: number;
+            /**
+             * Worst De
+             * @description Largest closest-mix dE2000 among those computed
+             */
+            worst_de: number | null;
+        };
+        /** PaletteUpdate */
+        PaletteUpdate: {
+            /** Name */
+            name?: string | null;
+            /**
+             * Color Ids
+             * @description Replaces the order
+             */
+            color_ids?: number[] | null;
         };
         /** PredictRequest */
         PredictRequest: {
@@ -2093,6 +2883,22 @@ export interface components {
             /** Noise Floor De */
             noise_floor_de: number;
         };
+        /** SampleErrorOut */
+        SampleErrorOut: {
+            /** Id */
+            id: string;
+            /** De2000 */
+            de2000: number;
+            /** Holdout */
+            holdout: boolean;
+            /** Outlier */
+            outlier: boolean;
+            /**
+             * Major
+             * @description The paint is a big part of this sample (its masstone or tint, or >= 25 % of a mixture); only these can set status 'review'
+             */
+            major: boolean;
+        };
         /** SampleRead */
         SampleRead: {
             /** Id */
@@ -2189,6 +2995,11 @@ export interface components {
             in_gamut: boolean | null;
             /** Nearest De */
             nearest_de: number;
+            /**
+             * Gamut Margin De
+             * @description dE2000 from the target to the reachable gamut's edge at its L*: positive inside, negative outside (negative exactly when in_gamut is false)
+             */
+            gamut_margin_de?: number | null;
             /** Warnings */
             warnings: string[];
             /** Search */
@@ -2648,6 +3459,104 @@ export interface operations {
             };
         };
     };
+    list_illuminants_api_v1_illuminants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IlluminantSeriesOut"][];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_appearance_api_v1_appearance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AppearanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppearanceResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_paints_api_v1_paints_get: {
         parameters: {
             query?: {
@@ -2950,6 +3859,59 @@ export interface operations {
             };
         };
     };
+    refill_paint_api_v1_paints__paint_id__refill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paint_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaintRefill"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaintRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_colors_api_v1_colors_get: {
         parameters: {
             query?: {
@@ -2958,6 +3920,8 @@ export interface operations {
                 source?: string | null;
                 limit?: number;
                 offset?: number;
+                /** @description Add each colour's cached closest mix (null while it is computed) */
+                with_match?: boolean;
             };
             header?: never;
             path?: never;
@@ -3226,6 +4190,302 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ColorImportResult"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_palettes_api_v1_palettes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaletteRead"][];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_palette_api_v1_palettes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaletteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaletteRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_palette_api_v1_palettes__palette_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                palette_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaletteRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_palette_api_v1_palettes__palette_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                palette_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_palette_api_v1_palettes__palette_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                palette_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaletteUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaletteRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    palette_summary_api_v1_palettes__palette_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                palette_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaletteSummary"];
                 };
             };
             /** @description Not found */
@@ -4161,6 +5421,56 @@ export interface operations {
             };
         };
     };
+    paint_accuracy_api_v1_models__ref__paint_accuracy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Model ref: global version (12), line id (current model), line@3 or line@latest */
+                ref: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaintAccuracyOut"][];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     model_spectra_api_v1_models__ref__spectra_get: {
         parameters: {
             query?: {
@@ -4995,6 +6305,104 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pause_api_v1_jobs__job_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resume_api_v1_jobs__job_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5107,6 +6515,186 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accept_api_v1_jobs__job_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_api_v1_jobs__job_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    machine_status_api_v1_machine_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MachineStatus"];
+                };
+            };
+        };
+    };
+    event_stream_api_v1_events_get: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated event types; default: all */
+                types?: string | null;
+                /** @description Only job events of this job */
+                job_id?: number | null;
+                /** @description Close after this many events */
+                limit?: number | null;
+                /** @description Resume after this event (the Last-Event-ID header takes precedence) */
+                last_event_id?: string | null;
+            };
+            header?: {
+                "Last-Event-ID"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Event stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
                 };
             };
             /** @description Not found */

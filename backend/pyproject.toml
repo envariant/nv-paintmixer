@@ -13,6 +13,7 @@ dependencies = [
     "numpy>=2.5.4",
     "pexpect>=4.9.0",
     "pydantic>=2",
+    "pyserial>=3.5",
     "python-multipart>=0.0.33",
     "scipy>=1.18.1",
     "sqlmodel>=0.0.48",
@@ -34,6 +35,7 @@ dev = [
     "ruff>=0.17.4",
     "types-jsonschema>=4.26.0.20261006",
     "types-pexpect>=4.9.0.20260518",
+    "types-pyserial>=3.5.0.20261104",
 ]
 
 [project.scripts]

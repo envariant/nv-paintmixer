@@ -35,6 +35,7 @@ from paintmixer.api.services import (
     all_paints,
     clean_floats,
     color_from_input,
+    current_batches,
     data_to_sample,
     load_settings,
     paint_infos,
@@ -302,12 +303,14 @@ def run_fit(db_url: str, run_id: int) -> None:
                 notes=req.notes,
             )
             place_model(s, fm, line)
+            fm.paint_batches = current_batches(s, fm.paint_ids)
             if req.activate:
                 set_active(s, fm)
             s.add(fm)
             s.commit()
             s.refresh(fm)
             model_id = fm.id
+            _announce(s, fm)
             created = f"model v{fm.version} ({model_ref(line.slug, fm.revision)}) created"
         update(
             status="succeeded",
@@ -402,9 +405,17 @@ def store_swatch_model(
         notes=notes or "uncalibrated: built from swatch colours",
     )
     place_model(session, fm, line or line_for_new_model(session, None))
+    fm.paint_batches = current_batches(session, fm.paint_ids)
     if activate:
         set_active(session, fm)
     session.add(fm)
     session.commit()
     session.refresh(fm)
+    _announce(session, fm)
     return fm
+
+
+def _announce(session: Session, fm: m.FittedModel) -> None:
+    from paintmixer.api.routers.models import announce_model  # the router imports this module
+
+    announce_model(session, fm, "created")

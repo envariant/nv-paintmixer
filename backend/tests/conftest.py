@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -8,6 +9,10 @@ from fastapi.testclient import TestClient
 
 from paintmixer.domain import PaintInfo
 from tests.helpers import load_paints_csv
+
+# Background library-match refreshes (api.matches) stay off unless a test turns them on, so
+# activating a model in a test does not start solving the colour library behind its back.
+os.environ.setdefault("PAINTMIXER_MATCH_CACHE_AUTO", "0")
 
 
 @pytest.fixture

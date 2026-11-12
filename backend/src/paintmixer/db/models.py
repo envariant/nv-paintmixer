@@ -32,6 +32,12 @@ class Paint(SQLModel, table=True):
     swatch_hex: str | None = None  # masstone (opaque chip)
     tint_hex: str | None = None  # reduction with white
     tint_fraction: float | None = None  # paint volume fraction in the tint swatch
+    # product + inventory (Models screen)
+    batch_code: str = ""  # manufacturer lot / batch on the current container
+    body_type: str = ""  # e.g. "Heavy body", "Fluid"
+    capacity_ml: float | None = None  # reservoir size on the dispenser
+    level_ml: float | None = None  # current level; decremented by dispensing
+    last_refill_at: datetime | None = None
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 
@@ -76,6 +82,33 @@ class ColorLibraryEntry(SQLModel, table=True):
     spectrum: list[float] | None = Field(default=None, sa_column=Column(JSON))
     notes: str = ""
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class ColorMatch(SQLModel, table=True):
+    """Cached best match of a library colour under the active model (Library tiles)."""
+
+    __tablename__ = "color_match"
+    color_id: int = Field(primary_key=True)  # one row per colour: the latest computation
+    model_version: int
+    settings_hash: str = Field(max_length=64)  # solver options + loaded paint pool
+    color_hash: str = Field(max_length=64)  # the colour's Lab / spectrum when computed
+    de: float  # dE2000 of the closest mix
+    n_paints: int
+    cost_per_250ml: float
+    reach: str  # within | uncertain | out
+    uncertainty_de: float | None = None
+    best_components: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class Palette(SQLModel, table=True):
+    """A named, ordered set of colour-library entries (Library screen)."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(index=True)
+    color_ids: list[int] = Field(default_factory=list, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 class FitRun(SQLModel, table=True):
@@ -129,6 +162,8 @@ class FittedModel(SQLModel, table=True):
     diagnostics: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     holdout_report: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     n_samples: int = 0
+    # paint id -> batch_code when the model was made; a later change marks the paint "stale"
+    paint_batches: dict[str, str] = Field(default_factory=dict, sa_column=Column(JSON))
     fit_run_id: int | None = Field(default=None, foreign_key="fit_run.id")
     notes: str = ""
     created_at: datetime = Field(default_factory=utcnow)
@@ -147,6 +182,11 @@ class Job(SQLModel, table=True):
     dispensed: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     measured: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     corrections: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    # live state while the machine runs it (api.runner)
+    step: str = ""  # what is happening now, e.g. "Pouring Phthalo Blue · 2 of 4"
+    progress: float = 0.0  # 0-1 through the current round
+    paused: bool = False
+    running: bool = False  # the machine holds the job (queued or running)
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 

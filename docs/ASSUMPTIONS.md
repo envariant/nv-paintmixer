@@ -183,4 +183,158 @@ introduced it.
   use and by the migration for existing models. Line ids are immutable (lower case, digits and
   `-`, starting with a letter, so they can't be mistaken for versions). `active` and
   `from-swatches` are reserved. Lines can be deleted only when empty; models are never deleted.
+- **Illuminant catalogue** 17 illuminants in five series (D, A, F, LED, ID), each with a
+  default member and a nominal CCT. Spectra come from `colour.SDS_ILLUMINANTS`; D93 is not
+  tabulated there, so it is synthesised from the CIE daylight model at 9300 K (rescaled to the
+  modern c2, like the tabulated D illuminants). Switching series keeps the member closest in
+  CCT. Previews under another light are chromatically adapted to D65 with CAT02, full
+  adaptation, before conversion to sRGB, so the display shows what the eye adapted to that
+  light would see. The UI shows those values and never shifts hues itself.
+- **Checked lights and machine maximum** `check_illuminants` defaults to A and F11, the lights
+  metamerism was reported under before, so solve results don't change. The design's default
+  (A, D50) is left for the Settings screen to set. `machine_max_batch_ml` is 250 ml; solve and
+  job creation refuse larger batches (`batch_too_large`). Settings saved before the maximum
+  existed may hold a larger batch: on load the maximum is raised to that batch instead of
+  refusing to load, and the next settings change saves it. `PATCH /settings` still refuses a
+  batch above the maximum.
+- **Paint inventory** The reservoir level is tracked only for paints that have one
+  (`level_ml` set, normally by a refill), so existing paints are unaffected. A refill fills to
+  `capacity_ml` unless a level is given, and stamps the time; a new `batch_code` there means a
+  new lot. Dispensing subtracts the volume actually delivered, never below 0. `model_lab` /
+  `model_hex` are the active model's masstone under D65, gamut-mapped for display.
+- **Palettes** Ordered lists of colour-library ids: order is kept, repeats are dropped,
+  unknown ids are refused. Deleting a colour removes its id from every palette in the same
+  transaction: SQLite can give a later colour the same id, so a stale id would bring an
+  unrelated colour into old palettes. Reads also filter out ids that are no longer in the
+  library.
+- **Machine status and job outcomes** The pill's state is derived from the newest open job:
+  dispensed → measuring, measured → correcting, correcting → pouring, needs_attention →
+  attention; no open job → ready. The machine name is fixed ("DSP-01 (simulated)") until a real
+  dispenser adapter exists. Accept is allowed once a job has a measurement (measured,
+  needs_attention or done) and ends it as `accepted` whatever its dE. Cancel works from any open
+  state and logs the volume already poured. Correction without an explicit tolerance uses
+  `accept_tolerance_de` (default 1.0; it was a fixed 0.5).
+- **Varied mix candidates (tags)** The solver refines, besides the best subsets by objective,
+  the best subset of each size, so `fewest paints` has a contender. It then quantises them all
+  and picks by role, in priority order:
+  - `closest`: lowest dE2000;
+  - `fewest paints` and `cheapest` (per ml): both among the candidates within
+    max(1.5 × the closest dE2000, `accept_tolerance_de`).
+
+  The plan's `no black` / `no white` roles were dropped: without a dE limit the closest mix
+  without white was nearly always 14–43 dE2000 off (e.g. pure yellow for a sage green), and it
+  took one of the screen's three slots.
+
+  `cheapest` is skipped when every candidate in reach costs the same, e.g. no paint costs are
+  set, so it can't land on an arbitrary mix. One mix can win several roles. Role winners come
+  first (cut to `top_n` in priority order), the rest is filled by objective, and the list is
+  returned in objective order: `candidates[0]` is still the solver's best by objective. So
+  only *which* candidates come back changes, not how the first is chosen.
+- **Uncertainty** Each paint's error is the RMS dE2000 of the fit's hold-out samples
+  containing it (training residuals if it has no hold-out sample). It is doubled when the paint
+  is below the fit's sample requirement: a masstone, a tint with white (non-white paints) and
+  at least 3 mixture drawdowns, the same rule as the fit's data warnings. A mix's
+  `uncertainty_de` is the fraction-weighted RMS of its paints' errors, combined (root sum of
+  squares) with dosing: the recipe's dose sensitivity (dE per 1 % overdose) × one dispenser
+  step as a % of the batch. Hold-out dE includes measurement noise, so the figure is
+  conservative; on the synthetic starter set it is about ±1.1–1.9. Swatch models have no
+  residuals, so `uncertainty_de` is null.
+- **Gamut margin** `gamut_margin_de` is the dE2000 from the target to the sampled gamut
+  boundary at the target's L* (interpolated between slices; clamped to the gamut's L* range,
+  so a too-light or too-dark target counts its lightness gap). It is positive inside and
+  negative outside, and made consistent with `in_gamut`. The pre-check allows 2 dE2000 at the
+  edge, so a target inside by that tolerance reads 0. A target the sampled edge encloses but
+  the solver cannot reach within `out_of_gamut_de` reads minus the nearest achievable dE2000.
+  So `gamut_margin_de < 0` exactly when `in_gamut` is false. It is null when `in_gamut` is.
+- **Per-paint accuracy** `GET /models/{ref}/paint-accuracy` lists every paint of the model
+  with the residual of each fitted sample containing it (training and hold-out, as the strip
+  shows them). `median_de` is the median of those, and `grade` comes from it: excellent < 0.4,
+  good < 1, fair < 2, else poor. `status` gives the most pressing state first:
+  - `uncalibrated`: no samples in the fit, e.g. a swatch model;
+  - `stale`: the batch changed since the fit;
+  - `needs_samples`: below the fit's sample requirement, the same rule as the fit's data
+    warnings;
+  - `review`: a sample the paint is a big part of, at or above 2 dE2000;
+  - `ok`.
+
+  Each model records every paint's `batch_code` when it is made (`paint_batches`, migration
+  `0007`). A blank batch at fit time counts as unknown, so recording a batch code for the
+  first time does not make the model stale. Models made before `0007` have nothing recorded,
+  so they are never stale.
+
+  Mixtures contain several paints, so with the plan's rule (any sample ≥ 2 dE2000) one bad
+  mixture flagged every paint in it: on the synthetic starter set all five showed `review`,
+  white included. Only *major* samples can set `review` now: masstones of the paint, tints of
+  the paint (not of the white it is let down with), and mixtures where it is at least 25 % of
+  the volume. The strip still shows every sample, each flagged `major` or not. On the starter
+  set white is now `ok`, and the four chromatic paints stay `review`: each is a big part of at
+  least one 2–4 dE2000 mixture.
+- **Library match cache** `color_match` (migration `0008`) holds one row per library colour:
+  the closest mix the solver finds with the current settings (as `POST /solve` with no
+  overrides, the default pool of loaded paints). A row is used only while three things match:
+  - the active model version;
+  - a settings hash, covering the solver options and the loaded paint pool: ids, roles, costs,
+    minimum doses and densities, since loading a paint or changing a cost changes the answer;
+  - a hash of the colour's Lab and spectrum.
+
+  So any change to a colour, the settings, the pool or the model makes the row stale with no
+  hook needed, and renaming a colour keeps its match.
+
+  The refresh is one background task per app. It solves stale colours through the compute
+  pool, as many at a time as there are workers, and plans again until nothing is stale. It
+  starts:
+  - after a model is activated (directly, or by a fit or swatch model that activates);
+  - after settings, colours or paints change;
+  - whenever `GET /colors?with_match=true` or `GET /palettes/{id}/summary` finds a stale or
+    missing row.
+
+  `PAINTMIXER_MATCH_CACHE_AUTO=0` keeps only the last trigger; the test suite uses it so
+  activating a model in a test doesn't start solving the library. A colour whose solve fails
+  is not retried until its inputs change.
+
+  `reach`: `out` when the colour is out of gamut; `uncertain` when it is inside but nearer the
+  gamut's edge than the closest mix's uncertainty (the accept tolerance without one);
+  `within` otherwise. Without an active model or loaded paint nothing is computed, `match`
+  stays null and a palette summary reports nothing pending. On the demo all 20 colours are
+  summarised about 9 s after activation with 2 worker processes (14 s in the thread pool).
+- **Running jobs on the machine** `POST /jobs/{id}/dispense` queues the job and returns at
+  once (202). One background thread runs jobs one at a time, since a dispenser pours one cup at a
+  time. A round is:
+  1. pour, channel by channel;
+  2. simulated runs measure the cup with the simulated instrument. Runs on the real dispenser
+     stop at `dispensed`, because there is no inline instrument yet; the measurement is entered
+     with `POST /measurement`;
+  3. a measurement within `accept_tolerance_de` ends the job `done`. Otherwise the runner
+     corrects and pours again while `auto_correct_rounds` last (default 0), then waits in
+     `measured` for Accept or Correct again (`POST /correct`, then dispense). After 5
+     corrections the job `needs_attention`.
+
+  Pause and cancel act between channels, so the firmware never gets a request mid-pour. A
+  cancel keeps what was poured, in the cup and in the log. `running` on the job is true while
+  the machine holds it. Statuses such as `correcting` also occur between automatic rounds, so
+  clients wait for `running` to turn false. Jobs the machine held when the server stopped are
+  marked `needs_attention` on the next start. Each measurement adds a round entry to
+  `corrections`: label (`First pour`, `Fix 1`, ...), hex, dE, `added_ml`, `poured_ml`. Events
+  are polled (`GET /jobs/{id}`, `GET /machine`); there is no SSE stream.
+- **Dispenser protocol** The backend speaks one line protocol to the dispenser over any
+  transport (docs/dispenser_protocol.md): TCP for Wi-Fi, and serial for USB and Bluetooth SPP,
+  which shows up as a serial port. Simulated runs use the same protocol code against an
+  in-memory simulated firmware, so the simulator exercises the host code the hardware will
+  use. Both real transports are tested against the simulated firmware: TCP on a local
+  socket, serial (`pyserial`) on a pseudo-terminal pair standing in for the USB or Bluetooth
+  link.
+- **Live events (SSE)** `GET /events` streams `job`, `machine`, `match`, `matches` and `model`
+  events as server-sent events. It carries the same data as polling `GET /jobs/{id}` and
+  `GET /machine`, which stay the frontend's mechanism for now. Every job save publishes the
+  job's brief and the machine status, so the runner and the endpoints need no separate event
+  code. Publishers find the app's hub through the database engine, which also works from the
+  runner's thread. A fit in a worker process is announced by the parent when it finishes.
+
+  Event ids are `<boot>:<n>`, and the last 1000 events are kept. A reconnecting
+  `EventSource` sends `Last-Event-ID` and gets the missed events. If they are gone or the id
+  is from an earlier server run, it gets `reset` and should refetch. A client more than 1000
+  events behind is also reset. A connect without resume starts with a `machine` snapshot,
+  and keep-alive comments go out every 15 s. Events are in-process, so the server runs as a
+  single worker, as the job runner already requires. A reverse proxy must not buffer the
+  stream; the response sends `X-Accel-Buffering: no` for nginx.
 

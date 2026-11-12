@@ -38,9 +38,13 @@ class Objective:
     weights: Weights
     min_fraction: float
     illuminant: Illuminant = Illuminant.D65
+    # metamerism is reported (and lightly penalised) under these, plus D65 when solving under
+    # another light; settings.check_illuminants
+    check_illuminants: tuple[Illuminant, ...] = META_ILLUMINANTS
 
     def __post_init__(self) -> None:
-        self.meta_illuminants = tuple(i for i in REPORT_ILLUMINANTS if i != self.illuminant)
+        report = dict.fromkeys((Illuminant.D65, *self.check_illuminants))
+        self.meta_illuminants = tuple(i for i in report if i != self.illuminant)
         self._ref_lab = {
             ill: xyz_to_lab(self.reference_spectrum @ self.model.W(ill).T, white_point(ill))
             for ill in self.meta_illuminants

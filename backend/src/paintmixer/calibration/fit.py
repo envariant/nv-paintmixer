@@ -34,6 +34,7 @@ import numpy as np
 from scipy.optimize import least_squares, nnls
 from scipy.sparse import lil_matrix
 
+from paintmixer.calibration.accuracy import MIN_MIXTURE_DRAWDOWNS, paint_coverage
 from paintmixer.calibration.format import CalibrationSampleData, SampleType, Substrate
 from paintmixer.colorsci.convert import reflectance_to_lab
 from paintmixer.colorsci.delta_e import delta_e_2000
@@ -349,24 +350,16 @@ def _data_warnings(
 ) -> list[str]:
     out = []
     mixtures = [s for s in samples if s.type == SampleType.MIXTURE and not s.holdout]
-    for pid in paint_ids:
-        has_mt = any(
-            s.type in (SampleType.MASSTONE_OVER_WHITE, SampleType.MASSTONE_OVER_BLACK)
-            and list(s.components) == [pid]
-            for s in samples
-        )
-        if not has_mt:
+    for pid, cov in paint_coverage(samples, paint_ids, roles, white).items():
+        if not cov.has_masstone:
             out.append(f"{pid}: no masstone measured.")
-        if roles.get(pid) != PaintRole.WHITE and white is not None:
-            has_tint = any(
-                s.type == SampleType.TINT and pid in s.components and white in s.components
-                for s in samples
+        if cov.has_tint is False:
+            out.append(f"{pid}: no tint with white measured; its scattering is uncertain.")
+        if cov.n_mixture_drawdowns < MIN_MIXTURE_DRAWDOWNS:
+            out.append(
+                f"{pid}: only {cov.n_mixture_drawdowns} mixture drawdown(s) in the fit "
+                f"(recommend >= {MIN_MIXTURE_DRAWDOWNS})."
             )
-            if not has_tint:
-                out.append(f"{pid}: no tint with white measured; its scattering is uncertain.")
-        n_mix = len({s.drawdown_id for s in mixtures if pid in s.components})
-        if n_mix < 3:
-            out.append(f"{pid}: only {n_mix} mixture drawdown(s) in the fit (recommend >= 3).")
     n_drawdowns = len({s.drawdown_id for s in mixtures})
     if n_drawdowns < 2 * len(paint_ids):
         out.append(

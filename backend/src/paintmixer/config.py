@@ -25,6 +25,13 @@ class Settings:
             os.environ.get("PAINTMIXER_SEED_DEMO", "").lower() in ("1", "true", "yes")
         )
     )
+    # Recompute library match summaries in the background when a model is activated or solver
+    # inputs change (api.matches). Off: they are only computed when asked for.
+    match_cache_auto: bool = field(
+        default_factory=lambda: (
+            os.environ.get("PAINTMIXER_MATCH_CACHE_AUTO", "1").lower() not in ("0", "false", "no")
+        )
+    )
     # Worker processes for solve/gamut/fit. 0 = run in the FastAPI thread pool instead.
     compute_workers: int = field(
         default_factory=lambda: int(os.environ.get("PAINTMIXER_COMPUTE_WORKERS", "2"))

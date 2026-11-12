@@ -135,4 +135,39 @@ Progress notes per milestone are appended below as work completes.
   `fitted_model.line_id/revision/label`, refs (`12`, `line`, `line@3`, `line@latest`) on every
   `/models/{ref}` endpoint, `/model-lines` CRUD, `PATCH /models/{ref}` (label, notes, move),
   `line`/`label` on fits and swatch models. The demo seeds into `cmykw-demo`.
+- **Frontend support, items 1–5** (backend plan for the new frontend, branch
+  `frontend-support`):
+  1. Illuminant catalogue (17 lights in D/A/F/LED/ID series), `GET /illuminants`,
+     `POST /appearance` (CAT02-adapted preview colours and dE2000 per light).
+  2. Settings `accept_tolerance_de`, `check_illuminants`, `machine_max_batch_ml`,
+     `low_level_warn_pct`; `batch_too_large` on solve and job create; metamerism under the
+     checked lights. Old settings with a larger batch raise the maximum on load.
+  3. Paint inventory (migration `0005`): batch code, body type, capacity, level, last refill;
+     `POST /paints/{id}/refill`; level decremented on dispense; model masstone on `PaintRead`.
+  4. Palettes (migration `0006`) and `/palettes` CRUD.
+  5. `GET /machine`, `POST /jobs/{id}/accept` and `/cancel`; correction tolerance defaults to
+     `accept_tolerance_de`.
+  6. Mix candidates that differ in kind: `CandidateOut.tags` (closest, fewest paints, cheapest;
+     the plan's no black / no white roles dropped), `CandidateOut.uncertainty_de` (per-paint hold-out error, doubled
+     for under-sampled paints, plus dosing), `SolveResponse.gamut_margin_de`;
+     `calibration.accuracy` (per-paint coverage and residuals, shared with the fit's data
+     warnings and with item 7).
+  7. Per-paint calibration accuracy: `GET /models/{ref}/paint-accuracy` (samples, median,
+     grade, status ok / review / needs_samples / stale / uncalibrated, calibrated_at, batch at
+     fit and now, coverage; only samples the paint is a big part of can set `review`); `fitted_model.paint_batches` recorded at fit time (migration
+     `0007`).
+  8. Library match cache: `color_match` (migration `0008`), background refresh
+     (`api.matches`), `GET /colors?with_match=true` (`match` per colour),
+     `GET /palettes/{id}/summary` (within / uncertain / out / pending / worst dE);
+     `PAINTMIXER_MATCH_CACHE_AUTO`. `/solve` and the cache share `default_solve_options`.
+  9. Jobs run on the machine in the background (`api.runner`): queued → pouring → measuring
+     → done / measured / correcting (auto rounds) → needs_attention; `step`, `progress`,
+     `paused`, `running` on jobs (migration `0009`); `POST /jobs/{id}/pause` and `/resume`;
+     cancel between channels; round entries in `corrections`. Dispenser line protocol
+     (`hardware.protocol`, docs/dispenser_protocol.md) over TCP / serial (USB, Bluetooth) or
+     the simulated firmware (`hardware.firmware_sim`); settings `dispenser_transport` /
+     `dispenser_address`.
+  - Live events: `GET /events` (server-sent events: job, machine, match, matches, model;
+    resume with `Last-Event-ID`, `reset` when it cannot), `api.events` hub, machine status
+    shared with `GET /machine` (`api.machine_state`). The frontend keeps polling for now.
 

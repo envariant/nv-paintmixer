@@ -29,18 +29,61 @@ OBSERVER = "CIE 1931 2 Degree Standard Observer"
 
 
 class Illuminant(StrEnum):
-    D65 = "D65"
+    """CIE illuminants the backend can integrate under. The UI groups them into series
+    (:mod:`paintmixer.colorsci.illuminants`)."""
+
     D50 = "D50"
+    D55 = "D55"
+    D65 = "D65"
+    D75 = "D75"
+    D93 = "D93"
     A = "A"
+    F2 = "F2"
+    F7 = "F7"
     F11 = "F11"
+    F12 = "F12"
+    LED_B1 = "LED-B1"
+    LED_B2 = "LED-B2"
+    LED_B3 = "LED-B3"
+    LED_B4 = "LED-B4"
+    LED_B5 = "LED-B5"
+    ID50 = "ID50"
+    ID65 = "ID65"
 
 
+# names in ``colour.SDS_ILLUMINANTS``; D93 is synthesised from the CIE daylight model
 _COLOUR_ILLUMINANT_NAMES = {
-    Illuminant.D65: "D65",
     Illuminant.D50: "D50",
+    Illuminant.D55: "D55",
+    Illuminant.D65: "D65",
+    Illuminant.D75: "D75",
     Illuminant.A: "A",
+    Illuminant.F2: "FL2",
+    Illuminant.F7: "FL7",
     Illuminant.F11: "FL11",
+    Illuminant.F12: "FL12",
+    Illuminant.LED_B1: "LED-B1",
+    Illuminant.LED_B2: "LED-B2",
+    Illuminant.LED_B3: "LED-B3",
+    Illuminant.LED_B4: "LED-B4",
+    Illuminant.LED_B5: "LED-B5",
+    Illuminant.ID50: "ID50",
+    Illuminant.ID65: "ID65",
 }
+# nominal CCT (K) of the synthesised daylight illuminants; 1.4388/1.4380 rescales to the
+# modern c2, as for D50/D55/D65/D75 in the CIE tables
+_SYNTH_DAYLIGHT_K = {Illuminant.D93: 9300.0}
+
+
+def _illuminant_sd(illuminant: Illuminant) -> object:
+    import colour
+
+    if illuminant in _SYNTH_DAYLIGHT_K:
+        from colour.temperature import CCT_to_xy_CIE_D
+
+        xy = CCT_to_xy_CIE_D(_SYNTH_DAYLIGHT_K[illuminant] * 1.4388 / 1.4380)
+        return colour.sd_CIE_illuminant_D_series(xy)
+    return colour.SDS_ILLUMINANTS[_COLOUR_ILLUMINANT_NAMES[illuminant]].copy()
 
 
 def resample(
@@ -80,7 +123,7 @@ def _weights(illuminant: Illuminant) -> FloatArray:
 
         full = colour.SpectralShape(360, 830, 1)
         cmfs = colour.MSDS_CMFS[OBSERVER].copy().align(full)
-        sd = colour.SDS_ILLUMINANTS[_COLOUR_ILLUMINANT_NAMES[illuminant]].copy().align(full)
+        sd = _illuminant_sd(illuminant).align(full)  # type: ignore[attr-defined]
         w = colour.colorimetry.tristimulus_weighting_factors_ASTME2022(
             cmfs, sd, colour.SpectralShape(380, 730, 10)
         )

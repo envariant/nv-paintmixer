@@ -109,6 +109,124 @@
         }
       }
     },
+    "/api/v1/illuminants": {
+      "get": {
+        "tags": [
+          "illuminants"
+        ],
+        "summary": "List Illuminants",
+        "description": "Series \u2192 members with nominal CCT. Switching series in the UI keeps the closest CCT.",
+        "operationId": "list_illuminants_api_v1_illuminants_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IlluminantSeriesOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Illuminants Api V1 Illuminants Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appearance": {
+      "post": {
+        "tags": [
+          "illuminants"
+        ],
+        "summary": "Get Appearance",
+        "description": "Target and candidates as seen under each illuminant, adapted for display, with dE2000.\n\nCheap (no model needed): the client sends ``reference_spectrum`` and the candidates'\n``predicted_spectrum`` from ``POST /solve`` whenever the preview light changes.",
+        "operationId": "get_appearance_api_v1_appearance_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppearanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppearanceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/paints": {
       "get": {
         "tags": [
@@ -520,6 +638,79 @@
         }
       }
     },
+    "/api/v1/paints/{paint_id}/refill": {
+      "post": {
+        "tags": [
+          "paints"
+        ],
+        "summary": "Refill Paint",
+        "description": "Mark a reservoir refilled (Models screen). Records the time, and a new batch if given.",
+        "operationId": "refill_paint_api_v1_paints__paint_id__refill_post",
+        "parameters": [
+          {
+            "name": "paint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Paint Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaintRefill"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaintRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/colors": {
       "get": {
         "tags": [
@@ -584,6 +775,18 @@
               "default": 0,
               "title": "Offset"
             }
+          },
+          {
+            "name": "with_match",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Add each colour's cached closest mix (null while it is computed)",
+              "default": false,
+              "title": "With Match"
+            },
+            "description": "Add each colour's cached closest mix (null while it is computed)"
           }
         ],
         "responses": {
@@ -829,6 +1032,7 @@
           "color library"
         ],
         "summary": "Delete Color",
+        "description": "Delete a colour and remove it from every palette. SQLite can give a later colour the\nsame id, so a stale id left in a palette would bring in an unrelated colour.",
         "operationId": "delete_color_api_v1_colors__color_id__delete",
         "parameters": [
           {
@@ -923,6 +1127,368 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ColorImportResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/palettes": {
+      "get": {
+        "tags": [
+          "palettes"
+        ],
+        "summary": "List Palettes",
+        "operationId": "list_palettes_api_v1_palettes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PaletteRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Palettes Api V1 Palettes Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "palettes"
+        ],
+        "summary": "Create Palette",
+        "operationId": "create_palette_api_v1_palettes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaletteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaletteRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/palettes/{palette_id}": {
+      "get": {
+        "tags": [
+          "palettes"
+        ],
+        "summary": "Get Palette",
+        "operationId": "get_palette_api_v1_palettes__palette_id__get",
+        "parameters": [
+          {
+            "name": "palette_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Palette Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaletteRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "palettes"
+        ],
+        "summary": "Update Palette",
+        "operationId": "update_palette_api_v1_palettes__palette_id__patch",
+        "parameters": [
+          {
+            "name": "palette_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Palette Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaletteUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaletteRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "palettes"
+        ],
+        "summary": "Delete Palette",
+        "operationId": "delete_palette_api_v1_palettes__palette_id__delete",
+        "parameters": [
+          {
+            "name": "palette_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Palette Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/palettes/{palette_id}/summary": {
+      "get": {
+        "tags": [
+          "palettes"
+        ],
+        "summary": "Palette Summary",
+        "description": "Reach of the palette's colours under the active model (the Library's palette band),\nfrom the cached library matches; ``pending`` counts those still being computed.",
+        "operationId": "palette_summary_api_v1_palettes__palette_id__summary_get",
+        "parameters": [
+          {
+            "name": "palette_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Palette Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaletteSummary"
                 }
               }
             }
@@ -2147,6 +2713,75 @@
         }
       }
     },
+    "/api/v1/models/{ref}/paint-accuracy": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "Paint Accuracy",
+        "description": "How well the model predicts each of its paints: the residual of every fitted sample with\nthe paint, their median, a grade and a status (Models rack and paint card).",
+        "operationId": "paint_accuracy_api_v1_models__ref__paint_accuracy_get",
+        "parameters": [
+          {
+            "name": "ref",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Model ref: global version (12), line id (current model), line@3 or line@latest",
+              "title": "Ref"
+            },
+            "description": "Model ref: global version (12), line id (current model), line@3 or line@latest"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaintAccuracyOut"
+                  },
+                  "title": "Response Paint Accuracy Api V1 Models  Ref  Paint Accuracy Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/models/{ref}/spectra": {
       "get": {
         "tags": [
@@ -3305,7 +3940,7 @@
           "jobs"
         ],
         "summary": "Dispense",
-        "description": "Dispense the recipe (or pending correction additions) with the simulated dispenser.",
+        "description": "Run the job on the machine in the background (the recipe, or the pending correction\nadditions). Returns at once with status ``queued``; poll ``GET /jobs/{id}``.",
         "operationId": "dispense_api_v1_jobs__job_id__dispense_post",
         "parameters": [
           {
@@ -3328,6 +3963,131 @@
             }
           }
         },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}/pause": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Pause",
+        "description": "Pause a queued or running job before its next channel.",
+        "operationId": "pause_api_v1_jobs__job_id__pause_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}/resume": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Resume",
+        "operationId": "resume_api_v1_jobs__job_id__resume_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3451,7 +4211,7 @@
           "jobs"
         ],
         "summary": "Correct",
-        "description": "One damped Gauss-Newton correction from the latest measurement.",
+        "description": "One damped Gauss-Newton correction from the latest measurement (\"Correct again\";\nthen ``dispense`` pours it).",
         "operationId": "correct_api_v1_jobs__job_id__correct_post",
         "parameters": [
           {
@@ -3517,6 +4277,302 @@
           }
         }
       }
+    },
+    "/api/v1/jobs/{job_id}/accept": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Accept",
+        "description": "Accept the mix as it is (after a measurement), whatever its dE.",
+        "operationId": "accept_api_v1_jobs__job_id__accept_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Cancel",
+        "description": "Abandon a job. A queued job is cancelled at once; a running one stops before its next\nchannel (poll for ``cancelled``). What is already in the cup stays there and is logged.",
+        "operationId": "cancel_api_v1_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/machine": {
+      "get": {
+        "tags": [
+          "machine"
+        ],
+        "summary": "Machine Status",
+        "operationId": "machine_status_api_v1_machine_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events": {
+      "get": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Event Stream",
+        "description": "Live events (``text/event-stream``), for an ``EventSource``. Polling\n``GET /jobs/{id}`` and ``GET /machine`` stays available and returns the same data.\n\nEvent types (``event:`` field; ``data:`` is JSON):\n\n* ``job``: a job changed: a ``JobBrief`` (status, step, progress, paused, running, round, last\n  dE and colour);\n* ``machine``: the machine status (as ``GET /machine``); also sent once on connect;\n* ``match``: a library colour's cached match: ``{color_id, match}``;\n* ``matches``: the library refresh: ``{state: refreshing | idle, pending}``;\n* ``model``: ``{event: created | activated, model}``;\n* ``hello``: first, on connect: ``{boot, last_event_id, types}``;\n* ``reset``: the stream cannot say what was missed (resumed from an unknown or expired id, or the\n  client fell too far behind): refetch the state you show, then keep listening.\n\nEvery event except ``hello``, ``reset`` and the connect snapshot has an ``id``; the browser\nsends the last one back as ``Last-Event-ID`` when it reconnects, and missed events are\nreplayed. Comments (``: keepalive``) are sent every 15 s.",
+        "operationId": "event_stream_api_v1_events_get",
+        "parameters": [
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated event types; default: all",
+              "title": "Types"
+            },
+            "description": "Comma-separated event types; default: all"
+          },
+          {
+            "name": "job_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only job events of this job",
+              "title": "Job Id"
+            },
+            "description": "Only job events of this job"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Close after this many events",
+              "title": "Limit"
+            },
+            "description": "Close after this many events"
+          },
+          {
+            "name": "last_event_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Resume after this event (the Last-Event-ID header takes precedence)",
+              "title": "Last Event Id"
+            },
+            "description": "Resume after this event (the Last-Event-ID header takes precedence)"
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event stream",
+            "content": {
+              "text/event-stream": {}
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3546,6 +4602,24 @@
             "exclusiveMinimum": 0.0,
             "title": "Dispenser Resolution Ml",
             "default": 0.05
+          },
+          "dispenser_transport": {
+            "type": "string",
+            "enum": [
+              "none",
+              "tcp",
+              "serial"
+            ],
+            "title": "Dispenser Transport",
+            "description": "How to reach the dispenser: tcp (Wi-Fi) or serial (USB or Bluetooth SPP); none = only the simulator",
+            "default": "none"
+          },
+          "dispenser_address": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Dispenser Address",
+            "description": "tcp: host[:port] (default port 3333); serial: port[@baud]",
+            "default": ""
           },
           "saunderson_k1": {
             "type": "number",
@@ -3663,6 +4737,38 @@
             "exclusiveMinimum": 0.0,
             "title": "Selftest Cast Chroma",
             "default": 3.0
+          },
+          "accept_tolerance_de": {
+            "type": "number",
+            "maximum": 5.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Accept Tolerance De",
+            "description": "Jobs auto-accept when the measured dE2000 is below this",
+            "default": 1.0
+          },
+          "check_illuminants": {
+            "items": {
+              "$ref": "#/components/schemas/Illuminant"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Check Illuminants",
+            "description": "Metamerism is reported under these lights ('Also check under')"
+          },
+          "machine_max_batch_ml": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Machine Max Batch Ml",
+            "description": "Largest volume the cup holds",
+            "default": 250.0
+          },
+          "low_level_warn_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Low Level Warn Pct",
+            "description": "Warn below this level",
+            "default": 25.0
           }
         },
         "additionalProperties": false,
@@ -3718,6 +4824,34 @@
               }
             ],
             "title": "Dispenser Resolution Ml"
+          },
+          "dispenser_transport": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "tcp",
+                  "serial"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispenser Transport"
+          },
+          "dispenser_address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispenser Address"
           },
           "saunderson_k1": {
             "anyOf": [
@@ -3948,11 +5082,199 @@
               }
             ],
             "title": "Selftest Cast Chroma"
+          },
+          "accept_tolerance_de": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 5.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accept Tolerance De"
+          },
+          "check_illuminants": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Illuminant"
+                },
+                "type": "array",
+                "maxItems": 6
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check Illuminants"
+          },
+          "machine_max_batch_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Machine Max Batch Ml"
+          },
+          "low_level_warn_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Level Warn Pct"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "AppSettingsUpdate"
+      },
+      "AppearanceOut": {
+        "properties": {
+          "lab": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Lab",
+            "description": "CIELAB under the illuminant (its own white)"
+          },
+          "display_lab": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Display Lab",
+            "description": "Adapted to D65 for an sRGB display (CAT02)"
+          },
+          "hex": {
+            "type": "string",
+            "title": "Hex"
+          },
+          "out_of_srgb_gamut": {
+            "type": "boolean",
+            "title": "Out Of Srgb Gamut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lab",
+          "display_lab",
+          "hex",
+          "out_of_srgb_gamut"
+        ],
+        "title": "AppearanceOut"
+      },
+      "AppearanceRequest": {
+        "properties": {
+          "reference": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 36,
+            "minItems": 36,
+            "title": "Reference",
+            "description": "Target reflectance (SolveResponse)"
+          },
+          "spectra": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Spectra",
+            "description": "Candidate reflectances (predicted_spectrum)"
+          },
+          "illuminants": {
+            "items": {
+              "$ref": "#/components/schemas/Illuminant"
+            },
+            "type": "array",
+            "maxItems": 17,
+            "minItems": 1,
+            "title": "Illuminants"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reference",
+          "spectra",
+          "illuminants"
+        ],
+        "title": "AppearanceRequest",
+        "description": "How the target and each candidate look under one or more illuminants."
+      },
+      "AppearanceResponse": {
+        "properties": {
+          "under": {
+            "items": {
+              "$ref": "#/components/schemas/AppearanceUnderOut"
+            },
+            "type": "array",
+            "title": "Under"
+          }
+        },
+        "type": "object",
+        "required": [
+          "under"
+        ],
+        "title": "AppearanceResponse"
+      },
+      "AppearanceUnderOut": {
+        "properties": {
+          "illuminant": {
+            "$ref": "#/components/schemas/Illuminant"
+          },
+          "cct": {
+            "type": "integer",
+            "title": "Cct"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/AppearanceOut"
+          },
+          "spectra": {
+            "items": {
+              "$ref": "#/components/schemas/AppearanceOut"
+            },
+            "type": "array",
+            "title": "Spectra"
+          },
+          "de2000": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "De2000",
+            "description": "Each spectrum vs the reference under this light"
+          }
+        },
+        "type": "object",
+        "required": [
+          "illuminant",
+          "cct",
+          "reference",
+          "spectra",
+          "de2000"
+        ],
+        "title": "AppearanceUnderOut"
       },
       "Body_import_colors_api_v1_colors_import_post": {
         "properties": {
@@ -4009,6 +5331,19 @@
           "file"
         ],
         "title": "Body_validate_api_v1_calibration_validate_post"
+      },
+      "CancelRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Reason",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CancelRequest"
       },
       "CandidateOut": {
         "properties": {
@@ -4082,6 +5417,26 @@
             },
             "type": "array",
             "title": "Warnings"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "description": "Roles this mix wins: closest, fewest paints, cheapest"
+          },
+          "uncertainty_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty De",
+            "description": "Expected spread of de2000 from calibration accuracy and dosing; null for uncalibrated (swatch) models"
           }
         },
         "type": "object",
@@ -4214,6 +5569,73 @@
         ],
         "title": "ColorImportResult"
       },
+      "ColorMatchOut": {
+        "properties": {
+          "model_version": {
+            "type": "integer",
+            "title": "Model Version"
+          },
+          "de": {
+            "type": "number",
+            "title": "De",
+            "description": "dE2000 of the closest mix"
+          },
+          "n_paints": {
+            "type": "integer",
+            "title": "N Paints"
+          },
+          "cost_per_250ml": {
+            "type": "number",
+            "title": "Cost Per 250Ml"
+          },
+          "reach": {
+            "type": "string",
+            "enum": [
+              "within",
+              "uncertain",
+              "out"
+            ],
+            "title": "Reach",
+            "description": "out: outside the gamut; uncertain: nearer the gamut's edge than the mix's uncertainty; within: otherwise"
+          },
+          "uncertainty_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty De"
+          },
+          "best_components": {
+            "items": {
+              "$ref": "#/components/schemas/MatchComponentOut"
+            },
+            "type": "array",
+            "title": "Best Components"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_version",
+          "de",
+          "n_paints",
+          "cost_per_250ml",
+          "reach",
+          "uncertainty_de",
+          "best_components",
+          "updated_at"
+        ],
+        "title": "ColorMatchOut",
+        "description": "The closest mix for a library colour under the active model (cached)."
+      },
       "ColorRead": {
         "properties": {
           "id": {
@@ -4267,6 +5689,17 @@
           "notes": {
             "type": "string",
             "title": "Notes"
+          },
+          "match": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ColorMatchOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With ?with_match=true: the cached closest mix; null while it is computed (or when there is no active model or loaded paint)"
           }
         },
         "type": "object",
@@ -4457,10 +5890,17 @@
             "default": 0.001
           },
           "tolerance_de": {
-            "type": "number",
-            "exclusiveMinimum": 0.0,
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Tolerance De",
-            "default": 0.5
+            "description": "Default: settings.accept_tolerance_de"
           },
           "max_iterations": {
             "type": "integer",
@@ -4474,12 +5914,49 @@
         "type": "object",
         "title": "CorrectRequest"
       },
+      "CoverageOut": {
+        "properties": {
+          "has_masstone": {
+            "type": "boolean",
+            "title": "Has Masstone"
+          },
+          "has_tint": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Tint",
+            "description": "null: not required (white, or no white in the set)"
+          },
+          "n_mixture_drawdowns": {
+            "type": "integer",
+            "title": "N Mixture Drawdowns"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "description": "Meets the fit's requirement (masstone, tint, >= 3 mixtures)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "has_masstone",
+          "has_tint",
+          "n_mixture_drawdowns",
+          "ok"
+        ],
+        "title": "CoverageOut"
+      },
       "DispenseRequest": {
         "properties": {
           "simulate": {
             "type": "boolean",
             "title": "Simulate",
-            "description": "Only the simulated dispenser exists so far",
+            "description": "true: the simulated dispenser and instrument; false: the dispenser in settings (dispenser_transport), then wait for POST /measurement",
             "default": true
           },
           "rel_sigma": {
@@ -4487,6 +5964,7 @@
             "maximum": 0.5,
             "minimum": 0.0,
             "title": "Rel Sigma",
+            "description": "Simulated dosing error",
             "default": 0.01
           },
           "abs_sigma_ml": {
@@ -4505,11 +5983,46 @@
               }
             ],
             "title": "Seed"
+          },
+          "measure": {
+            "type": "boolean",
+            "title": "Measure",
+            "description": "Simulated runs: measure the cup after pouring. false: stop at 'dispensed' for a measurement entered with POST /measurement",
+            "default": true
+          },
+          "auto_correct_rounds": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Auto Correct Rounds",
+            "description": "Correct and pour again by itself up to this many times while the measurement is outside settings.accept_tolerance_de (0: stop for a decision)",
+            "default": 0
+          },
+          "simulate_ml_per_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simulate Ml Per S",
+            "description": "Simulated pump speed (default: instant)"
+          },
+          "simulate_gain": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Simulate Gain",
+            "description": "Simulated model/instrument bias of the measurement",
+            "default": 1.0
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "title": "DispenseRequest"
+        "title": "DispenseRequest",
+        "description": "Run the job on the machine in the background: pour, then (simulated) measure. Poll\n``GET /jobs/{id}`` or ``GET /machine`` for ``status``, ``step`` and ``progress``."
       },
       "ErrorBody": {
         "properties": {
@@ -4985,12 +6498,84 @@
       "Illuminant": {
         "type": "string",
         "enum": [
-          "D65",
           "D50",
+          "D55",
+          "D65",
+          "D75",
+          "D93",
           "A",
-          "F11"
+          "F2",
+          "F7",
+          "F11",
+          "F12",
+          "LED-B1",
+          "LED-B2",
+          "LED-B3",
+          "LED-B4",
+          "LED-B5",
+          "ID50",
+          "ID65"
         ],
-        "title": "Illuminant"
+        "title": "Illuminant",
+        "description": "CIE illuminants the backend can integrate under. The UI groups them into series\n(:mod:`paintmixer.colorsci.illuminants`)."
+      },
+      "IlluminantMemberOut": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/Illuminant"
+          },
+          "cct": {
+            "type": "integer",
+            "title": "Cct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "cct"
+        ],
+        "title": "IlluminantMemberOut"
+      },
+      "IlluminantSeriesOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "default": {
+            "$ref": "#/components/schemas/Illuminant"
+          },
+          "range": {
+            "type": "string",
+            "title": "Range",
+            "description": "e.g. '5003\u20139300 K'"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/IlluminantMemberOut"
+            },
+            "type": "array",
+            "title": "Members"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "default",
+          "range",
+          "members"
+        ],
+        "title": "IlluminantSeriesOut"
       },
       "IlluminantTables": {
         "properties": {
@@ -5019,6 +6604,106 @@
           "white"
         ],
         "title": "IlluminantTables"
+      },
+      "JobBrief": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "target_hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Hex"
+          },
+          "last_hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Hex",
+            "description": "Latest measured (or predicted) colour"
+          },
+          "last_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last De"
+          },
+          "round": {
+            "type": "integer",
+            "title": "Round"
+          },
+          "batch_volume_ml": {
+            "type": "number",
+            "title": "Batch Volume Ml"
+          },
+          "poured_ml": {
+            "type": "number",
+            "title": "Poured Ml"
+          },
+          "step": {
+            "type": "string",
+            "title": "Step",
+            "default": ""
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress",
+            "default": 0.0
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "default": false
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running",
+            "default": false
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "target_hex",
+          "last_de",
+          "round",
+          "batch_volume_ml",
+          "poured_ml",
+          "updated_at"
+        ],
+        "title": "JobBrief"
       },
       "JobCreate": {
         "properties": {
@@ -5140,7 +6825,31 @@
               "type": "object"
             },
             "type": "array",
-            "title": "Corrections"
+            "title": "Corrections",
+            "description": "Log: correction / accept / cancel entries (result), and one entry per measured round (kind 'round': label, hex, de, added_ml, poured_ml)"
+          },
+          "step": {
+            "type": "string",
+            "title": "Step",
+            "description": "What is happening now (run screen)",
+            "default": ""
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress",
+            "description": "0-1 through the current round",
+            "default": 0.0
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "default": false
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running",
+            "description": "The machine holds the job (queued or running). Statuses such as 'correcting' also occur between automatic rounds, so wait for this to turn false",
+            "default": false
           },
           "created_at": {
             "type": "string",
@@ -5208,6 +6917,90 @@
           "message"
         ],
         "title": "LowMassOut"
+      },
+      "MachineStatus": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "transport": {
+            "type": "string",
+            "title": "Transport",
+            "description": "none (simulator only), tcp or serial"
+          },
+          "channels": {
+            "type": "integer",
+            "title": "Channels"
+          },
+          "channels_loaded": {
+            "type": "integer",
+            "title": "Channels Loaded"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "pouring",
+              "measuring",
+              "correcting",
+              "attention"
+            ],
+            "title": "State"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Pill text, e.g. 'Machine ready' or 'Correcting \u00b7 Plum Mist'"
+          },
+          "current_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/JobBrief"
+            },
+            "type": "array",
+            "title": "Recent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "transport",
+          "channels",
+          "channels_loaded",
+          "state",
+          "label",
+          "current_job",
+          "recent"
+        ],
+        "title": "MachineStatus"
+      },
+      "MatchComponentOut": {
+        "properties": {
+          "paint_id": {
+            "type": "string",
+            "title": "Paint Id"
+          },
+          "fraction": {
+            "type": "number",
+            "title": "Fraction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paint_id",
+          "fraction"
+        ],
+        "title": "MatchComponentOut"
       },
       "MeasurementIn": {
         "properties": {
@@ -6093,6 +7886,120 @@
         ],
         "title": "MultimixResponse"
       },
+      "PaintAccuracyOut": {
+        "properties": {
+          "paint_id": {
+            "type": "string",
+            "title": "Paint Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "samples": {
+            "items": {
+              "$ref": "#/components/schemas/SampleErrorOut"
+            },
+            "type": "array",
+            "title": "Samples",
+            "description": "Every fitted sample with this paint"
+          },
+          "median_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median De"
+          },
+          "grade": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "excellent",
+                  "good",
+                  "fair",
+                  "poor"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade",
+            "description": "From median_de: excellent < 0.4, good < 1, fair < 2, else poor"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "review",
+              "needs_samples",
+              "stale",
+              "uncalibrated"
+            ],
+            "title": "Status",
+            "description": "Most pressing first: uncalibrated, stale (batch changed since the fit), needs_samples, review (a major sample >= 2 dE2000), ok"
+          },
+          "calibrated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Calibrated At",
+            "description": "When the model was made"
+          },
+          "batch_at_fit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch At Fit",
+            "description": "null: not recorded (older models)"
+          },
+          "batch_now": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Now"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CoverageOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "paint_id",
+          "name",
+          "samples",
+          "median_de",
+          "grade",
+          "status",
+          "calibrated_at",
+          "batch_at_fit",
+          "batch_now",
+          "coverage"
+        ],
+        "title": "PaintAccuracyOut"
+      },
       "PaintCreate": {
         "properties": {
           "name": {
@@ -6228,6 +8135,33 @@
             ],
             "title": "Tint Fraction",
             "description": "Paint volume fraction in the tint swatch (default 0.1)"
+          },
+          "batch_code": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Batch Code",
+            "description": "Manufacturer lot / batch",
+            "default": ""
+          },
+          "body_type": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Body Type",
+            "description": "e.g. 'Heavy body', 'Fluid'",
+            "default": ""
+          },
+          "capacity_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Ml",
+            "description": "Reservoir size on the dispenser"
           },
           "id": {
             "type": "string",
@@ -6413,6 +8347,33 @@
             "title": "Tint Fraction",
             "description": "Paint volume fraction in the tint swatch (default 0.1)"
           },
+          "batch_code": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Batch Code",
+            "description": "Manufacturer lot / batch",
+            "default": ""
+          },
+          "body_type": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Body Type",
+            "description": "e.g. 'Heavy body', 'Fluid'",
+            "default": ""
+          },
+          "capacity_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Ml",
+            "description": "Reservoir size on the dispenser"
+          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -6446,6 +8407,74 @@
             ],
             "title": "Tinting Peak Nm"
           },
+          "level_ml": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Ml"
+          },
+          "level_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Pct",
+            "description": "level_ml / capacity_ml x 100"
+          },
+          "low": {
+            "type": "boolean",
+            "title": "Low",
+            "description": "Below settings.low_level_warn_pct",
+            "default": false
+          },
+          "last_refill_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Refill At"
+          },
+          "model_lab": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Lab",
+            "description": "Masstone Lab (D65) predicted by the active model"
+          },
+          "model_hex": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Hex",
+            "description": "Masstone colour for swatches (D65)"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -6465,6 +8494,39 @@
           "updated_at"
         ],
         "title": "PaintRead"
+      },
+      "PaintRefill": {
+        "properties": {
+          "level_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Ml",
+            "description": "Level after refilling (default: the full capacity)"
+          },
+          "batch_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Code",
+            "description": "New lot, when the refill opens a new batch"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PaintRefill"
       },
       "PaintRole": {
         "type": "string",
@@ -6729,11 +8791,193 @@
               }
             ],
             "title": "Tint Fraction"
+          },
+          "batch_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Code"
+          },
+          "body_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Type"
+          },
+          "capacity_ml": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Ml"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "PaintUpdate"
+      },
+      "PaletteCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "color_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Color Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PaletteCreate"
+      },
+      "PaletteRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "color_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Color Ids"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "color_ids",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PaletteRead"
+      },
+      "PaletteSummary": {
+        "properties": {
+          "n": {
+            "type": "integer",
+            "title": "N",
+            "description": "Colours in the palette"
+          },
+          "within": {
+            "type": "integer",
+            "title": "Within"
+          },
+          "uncertain": {
+            "type": "integer",
+            "title": "Uncertain"
+          },
+          "out": {
+            "type": "integer",
+            "title": "Out"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending",
+            "description": "Colours whose match is still being computed (0 without an active model)"
+          },
+          "worst_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worst De",
+            "description": "Largest closest-mix dE2000 among those computed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "n",
+          "within",
+          "uncertain",
+          "out",
+          "pending",
+          "worst_de"
+        ],
+        "title": "PaletteSummary"
+      },
+      "PaletteUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "color_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array",
+                "maxItems": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Ids",
+            "description": "Replaces the order"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PaletteUpdate"
       },
       "PredictRequest": {
         "properties": {
@@ -6985,6 +9229,40 @@
           "noise_floor_de"
         ],
         "title": "ResidualOut"
+      },
+      "SampleErrorOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "de2000": {
+            "type": "number",
+            "title": "De2000"
+          },
+          "holdout": {
+            "type": "boolean",
+            "title": "Holdout"
+          },
+          "outlier": {
+            "type": "boolean",
+            "title": "Outlier"
+          },
+          "major": {
+            "type": "boolean",
+            "title": "Major",
+            "description": "The paint is a big part of this sample (its masstone or tint, or >= 25 % of a mixture); only these can set status 'review'"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "de2000",
+          "holdout",
+          "outlier",
+          "major"
+        ],
+        "title": "SampleErrorOut"
       },
       "SampleRead": {
         "properties": {
@@ -7334,6 +9612,18 @@
           "nearest_de": {
             "type": "number",
             "title": "Nearest De"
+          },
+          "gamut_margin_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gamut Margin De",
+            "description": "dE2000 from the target to the reachable gamut's edge at its L*: positive inside, negative outside (negative exactly when in_gamut is false)"
           },
           "warnings": {
             "items": {

@@ -9,6 +9,7 @@ from sqlmodel import Session, col, select
 
 from paintmixer.api.errors import ApiError, bad_request, not_found
 from paintmixer.api.schemas import AppSettings, GamutResponse, GamutSliceOut, TargetIn
+from paintmixer.calibration.accuracy import PaintQuality, paint_quality
 from paintmixer.calibration.format import CalibrationSampleData, SampleType, Substrate
 from paintmixer.calibration.strength import PaintStrength, tinting_strengths
 from paintmixer.colorsci.convert import (
@@ -26,7 +27,8 @@ from paintmixer.measurement.selftest import SelftestThresholds
 from paintmixer.solver.gamut import Gamut
 from paintmixer.solver.gamut_chart import boundary_hex
 from paintmixer.solver.model import PoolModel
-from paintmixer.solver.solve import Target
+from paintmixer.solver.refine import Weights
+from paintmixer.solver.solve import SolveOptions, Target
 
 SETTINGS_KEY = "app"
 
@@ -38,7 +40,13 @@ def load_settings(session: Session) -> AppSettings:
     row = session.get(m.Setting, SETTINGS_KEY)
     if row is None or not isinstance(row.value, dict):
         return AppSettings()
-    return AppSettings.model_validate({**AppSettings().model_dump(), **row.value})
+    merged = {**AppSettings().model_dump(), **row.value}
+    # Settings saved before machine_max_batch_ml existed may hold a larger batch than the
+    # default maximum (250 ml). Raise the maximum to that batch rather than refuse to load;
+    # PATCH /settings still refuses a new batch above the maximum.
+    if merged["batch_volume_ml"] > merged["machine_max_batch_ml"]:
+        merged["machine_max_batch_ml"] = merged["batch_volume_ml"]
+    return AppSettings.model_validate(merged)
 
 
 def save_settings(session: Session, settings: AppSettings) -> AppSettings:
@@ -178,6 +186,58 @@ def gamut_response(model: PoolModel, fm: m.FittedModel, g: Gamut, max_paints: in
             )
             for sl in g.slices
         ],
+    )
+
+
+def current_batches(session: Session, paint_ids: list[str]) -> dict[str, str]:
+    """Each paint's batch code now (recorded on a model when it is made)."""
+    return {p.id: p.batch_code for p in all_paints(session) if p.id in paint_ids}
+
+
+def model_paint_quality(session: Session, fm: m.FittedModel) -> dict[str, PaintQuality]:
+    """Per-paint coverage and residuals of a fitted model (residuals joined with the samples
+    they came from; samples deleted since the fit are skipped)."""
+    residuals = list(fm.diagnostics.get("residuals", []))
+    ids = [r["sample_id"] for r in residuals]
+    rows = session.exec(
+        select(m.CalibrationSample).where(col(m.CalibrationSample.id).in_(ids))
+    ).all()
+    samples = {r.id: sample_to_data(r) for r in rows}
+    roles = {p.id: PaintRole(p.role) for p in all_paints(session)}
+    whites = [p for p in fm.paint_ids if roles.get(p) == PaintRole.WHITE]
+    return paint_quality(residuals, samples, fm.paint_ids, roles, whites[0] if whites else None)
+
+
+def model_paint_errors(session: Session, fm: m.FittedModel) -> dict[str, float] | None:
+    """Per-paint calibration error (dE2000) for the solver's ``uncertainty_de``; None for
+    models without residuals (swatch models)."""
+    if fm.source != "calibration":
+        return None
+    errors = {
+        pid: e
+        for pid, q in model_paint_quality(session, fm).items()
+        if (e := q.error_de) is not None
+    }
+    return errors or None
+
+
+def default_solve_options(session: Session, s: AppSettings, fm: m.FittedModel) -> SolveOptions:
+    """Solver options from the settings, as ``POST /solve`` uses them when the request sets
+    nothing (and the library match cache always)."""
+    w = s.weights
+    return SolveOptions(
+        max_paints=s.max_paints,
+        min_fraction=s.min_fraction,
+        illuminant=s.illuminant,
+        check_illuminants=tuple(s.check_illuminants),
+        batch_volume_ml=s.batch_volume_ml,
+        resolution_ml=s.dispenser_resolution_ml,
+        weights=Weights(de=w.de, n_paints=w.n_paints, cost=w.cost, metamerism=w.metamerism),
+        top_n=s.top_n,
+        seed=s.seed,
+        out_of_gamut_de=s.out_of_gamut_de,
+        accept_tolerance_de=s.accept_tolerance_de,
+        paint_error_de=model_paint_errors(session, fm),
     )
 
 

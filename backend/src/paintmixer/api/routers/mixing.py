@@ -6,6 +6,8 @@ pool when ``compute_workers`` is 0), so the event loop is never blocked.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import numpy as np
 from fastapi import APIRouter, Query, Request
 
@@ -31,6 +33,7 @@ from paintmixer.api.services import (
     ILLUMINANTS_REPORTED,
     active_model,
     all_paints,
+    default_solve_options,
     gamut_response,
     load_settings,
     pool_model,
@@ -47,7 +50,7 @@ from paintmixer.solver.multimix import (
 )
 from paintmixer.solver.ramp import ramp, ramp_fractions
 from paintmixer.solver.refine import Weights
-from paintmixer.solver.solve import Candidate, SolveOptions, gamut_for, predict, solve
+from paintmixer.solver.solve import Candidate, gamut_for, predict, solve
 
 router = APIRouter(tags=["mixing"], responses=ERROR_RESPONSES)
 
@@ -87,6 +90,8 @@ def candidate_out(
         dose_sensitivity=c.dose_sensitivity,
         objective=c.objective,
         warnings=c.warnings,
+        tags=c.tags,
+        uncertainty_de=None if c.uncertainty_de is None else round(c.uncertainty_de, 3),
     )
 
 
@@ -95,20 +100,28 @@ async def solve_recipe(body: SolveRequest, session: SessionDep, request: Request
     s = load_settings(session)
     model, fm = pool_model(session, body.pool)
     target = resolve_target(session, body.target)
-    w = body.weights or s.weights
-    opts = SolveOptions(
-        max_paints=body.max_paints or s.max_paints,
-        min_fraction=body.min_fraction if body.min_fraction is not None else s.min_fraction,
+    base = default_solve_options(session, s, fm)
+    w = body.weights
+    opts = replace(
+        base,
+        max_paints=body.max_paints or base.max_paints,
+        min_fraction=body.min_fraction if body.min_fraction is not None else base.min_fraction,
         include_white=body.include_white,
-        illuminant=body.illuminant or s.illuminant,
-        batch_volume_ml=body.batch_volume_ml or s.batch_volume_ml,
-        resolution_ml=body.resolution_ml or s.dispenser_resolution_ml,
-        weights=Weights(de=w.de, n_paints=w.n_paints, cost=w.cost, metamerism=w.metamerism),
-        top_n=body.top_n or s.top_n,
-        seed=body.seed if body.seed is not None else s.seed,
+        illuminant=body.illuminant or base.illuminant,
+        batch_volume_ml=body.batch_volume_ml or base.batch_volume_ml,
+        resolution_ml=body.resolution_ml or base.resolution_ml,
+        weights=base.weights
+        if w is None
+        else Weights(de=w.de, n_paints=w.n_paints, cost=w.cost, metamerism=w.metamerism),
+        top_n=body.top_n or base.top_n,
+        seed=body.seed if body.seed is not None else base.seed,
         search=body.search,
-        out_of_gamut_de=s.out_of_gamut_de,
     )
+    if opts.batch_volume_ml > s.machine_max_batch_ml:
+        raise bad_request(
+            "batch_too_large",
+            f"batch_volume_ml exceeds the machine maximum ({s.machine_max_batch_ml:g} ml)",
+        )
     if opts.max_paints * opts.min_fraction > 1:
         raise bad_request("bad_constraints", "max_paints x min_fraction must be <= 1")
     res = await run_compute(request.app, solve, model, target, opts, gamut_cache_key=fm.version)
@@ -126,6 +139,7 @@ async def solve_recipe(body: SolveRequest, session: SessionDep, request: Request
         candidates=[candidate_out(c, names, cost, s.currency) for c in res.candidates],
         in_gamut=res.in_gamut,
         nearest_de=res.nearest_de,
+        gamut_margin_de=None if res.gamut_margin_de is None else round(res.gamut_margin_de, 3),
         warnings=res.warnings,
         search=res.search,
         n_subsets=res.n_subsets,
