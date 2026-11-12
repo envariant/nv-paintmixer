@@ -1,10 +1,15 @@
 <script setup lang="ts">
-// Built in M6 (see PLAN.md); a screen fills the viewport below the top bar.
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import MixCompose from '../components/mix/MixCompose.vue'
+import MixRun from '../components/mix/MixRun.vue'
+
+/** Mix composes a recipe; with ?job=<id> it shows that job running on the machine. */
+const route = useRoute()
+const running = computed(() => !!route.query.job)
 </script>
 
 <template>
-  <section class="flex-1 min-h-0 flex flex-col" aria-label="Mix">
-    <div class="flex-1 min-h-0 overflow-auto p-stage" />
-    <footer class="h-footer flex-none flex items-center justify-end gap-4 px-stage border-t border-line" />
-  </section>
+  <MixRun v-if="running" />
+  <MixCompose v-else />
 </template>

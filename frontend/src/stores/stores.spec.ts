@@ -76,11 +76,13 @@ describe('mixer store', () => {
     expect(s.best?.rank).toBe(1)
     const job = await s.createJob(s.best!)
     expect(job.id).toBe(1)
-    expect(calls[1]!.body).toMatchObject({ components: { w: 0.7, c: 0.3 }, batch_volume_ml: 100 })
+    const jobCall = calls.find((c) => c.path === '/api/v1/jobs')!
+    expect(jobCall.body).toMatchObject({ components: { w: 0.7, c: 0.3 }, batch_volume_ml: 100 })
   })
   it('keeps the backend error code', async () => {
     mockFetch({ 'POST /api/v1/solve': { status: 409, json: { error: { code: 'no_active_model', message: 'fit first' } } } })
     const s = useMixerStore()
+    s.value = '#7a9e9f' // the store starts without a target
     await s.solve()
     expect(s.status).toBe('error')
     expect(s.error).toEqual({ code: 'no_active_model', message: 'fit first' })
@@ -102,5 +104,27 @@ describe('calibration store', () => {
     await s.startFit({ activate: true } as never)
     expect((await s.refreshRun()).status).toBe('running')
     expect((await s.refreshRun()).status).toBe('succeeded')
+  })
+})
+
+describe('mixer store: the Mix screen', () => {
+  it('drops an answer that a newer solve overtook, and loads the appearance', async () => {
+    let n = 0
+    const cand = (rank: number) => ({ rank, predicted_spectrum: [0.5], predicted_lab: [50, 0, 0], components: [], tags: [] })
+    const { calls } = mockFetch({
+      'POST /api/v1/solve': () => ({ json: { candidates: [cand(++n)], reference_spectrum: [0.5], batch_volume_ml: 100 } }),
+      'POST /api/v1/appearance': { json: { under: [{ illuminant: 'A', spectra: [{ display_lab: [40, 1, 2] }], de2000: [1.5] }] } },
+    })
+    const s = useMixerStore()
+    s.mode = 'hex'
+    s.value = '#7a5c80'
+    s.preview = 'A'
+    const first = s.solve()
+    const second = s.solve()
+    await Promise.all([first, second])
+    expect(s.result?.candidates[0]!.rank).toBe(2) // the later solve wins
+    expect(s.selectedRank).toBe(2)
+    expect(s.appearance?.de2000).toEqual([1.5])
+    expect(calls.find((c) => c.path === '/api/v1/appearance')!.body).toMatchObject({ illuminants: ['A'] })
   })
 })

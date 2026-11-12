@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { SERIES, ILLUMINANT, cctTint, seriesRange, nearestInSeries } from '../lib/colour'
+import { cctTint, seriesRange, nearestInSeries } from '../lib/colour'
+import { useIlluminantsStore } from '../stores/illuminants'
 
 /**
  * IlluminantMenu — one popover, two behaviours.
@@ -11,7 +12,8 @@ import { SERIES, ILLUMINANT, cctTint, seriesRange, nearestInSeries } from '../li
 const props = defineProps<{ variant: 'rows' | 'pills'; modelValue: string; label: string }>()
 const emit = defineEmits<{ 'update:modelValue': [code: string] }>()
 
-const currentSeries = () => ILLUMINANT[props.modelValue]?.series.id
+const illuminants = useIlluminantsStore() // GET /illuminants (built-in catalogue until loaded)
+const currentSeries = () => illuminants.byCode[props.modelValue]?.series.id
 </script>
 
 <template>
@@ -21,7 +23,7 @@ const currentSeries = () => ILLUMINANT[props.modelValue]?.series.id
     class="w-popover flex flex-col px-3.5 py-1 bg-page text-fg border border-line rounded-option shadow-popover text-left"
   >
     <div
-      v-for="(s, i) in SERIES"
+      v-for="(s, i) in illuminants.series"
       :key="s.id"
       :class="[i > 0 && 'border-t border-line', variant === 'pills' ? 'py-3' : 'py-1']"
       role="group"
@@ -34,7 +36,7 @@ const currentSeries = () => ILLUMINANT[props.modelValue]?.series.id
         :aria-selected="currentSeries() === s.id"
         class="block w-[calc(100%+16px)] -mx-2 p-2 rounded-tile text-left focus-ring"
         :class="currentSeries() === s.id ? 'bg-soft' : 'hover:bg-soft'"
-        @click="emit('update:modelValue', nearestInSeries(s, modelValue))"
+        @click="emit('update:modelValue', nearestInSeries(s, modelValue, illuminants.byCode))"
       >
         <span class="flex justify-between items-baseline gap-3 mb-2">
           <span class="text-ui font-semibold">{{ s.name }} <span class="text-caption text-fg-3 font-normal">{{ s.desc }}</span></span>

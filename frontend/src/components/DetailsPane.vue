@@ -18,6 +18,16 @@ const props = defineProps<{
   margin: number
 }>()
 const rows = computed(() => props.mix.paints.map((p) => ({ ...p, css: labToCss(p.lab).css })))
+// Scales from the data (the charts' defaults suit mid-tones): reflectance up to the highest curve,
+// a*/b* out to the furthest of the gamut outline and the two colours.
+const rMax = computed(() => {
+  const top = Math.max(0.42, ...props.targetCurve.map((p) => p.r), ...props.mixCurve.map((p) => p.r))
+  return Math.min(1, Math.ceil((top + 0.02) * 10) / 10)
+})
+const range = computed(() => {
+  const ab = [...props.gamut.flat(), props.target.a, props.target.b, props.mix.lab.a, props.mix.lab.b]
+  return Math.max(60, Math.ceil((Math.max(...ab.map(Math.abs)) + 5) / 20) * 20)
+})
 </script>
 
 <template>
@@ -43,7 +53,7 @@ const rows = computed(() => props.mix.paints.map((p) => ({ ...p, css: labToCss(p
         </tbody>
       </table>
     </div>
-    <SpectrumChart :target="targetCurve" :mix="mixCurve" :mix-name="mix.name" :mix-lab="mix.lab" />
-    <ReachChart :target="target" :mix="mix.lab" :mix-name="mix.name" :d-e="mix.dE" :margin="margin" :gamut="gamut" />
+    <SpectrumChart :target="targetCurve" :mix="mixCurve" :mix-name="mix.name" :mix-lab="mix.lab" :r-max="rMax" />
+    <ReachChart :target="target" :mix="mix.lab" :mix-name="mix.name" :d-e="mix.dE" :margin="margin" :gamut="gamut" :range="range" />
   </section>
 </template>

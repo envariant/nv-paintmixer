@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ILLUMINANT } from '../lib/colour'
 import { ICON } from '../lib/icons'
+import { useIlluminantsStore } from '../stores/illuminants'
 import IlluminantMenu from './IlluminantMenu.vue'
 
 /** Underlined select for the illuminant the match is solved for. Trigger shows "D65 (6504 K)"; menu opens upward. */
@@ -9,7 +9,8 @@ const props = defineProps<{ modelValue: string; label?: string }>()
 const emit = defineEmits<{ 'update:modelValue': [code: string] }>()
 
 const open = ref(false)
-const cct = computed(() => ILLUMINANT[props.modelValue]?.cct)
+const illuminants = useIlluminantsStore()
+const cct = computed(() => illuminants.byCode[props.modelValue]?.cct)
 function pick(code: string) { emit('update:modelValue', code); open.value = false }
 </script>
 

@@ -19,7 +19,10 @@ export interface Mix {
  * One row of "Ways to mix it". Every column is two lines:
  * well · name + tag / ColourMeta · ΔE / tier · n paints / dots · SGD / premium ("Baseline" for the cheapest).
  */
-const props = defineProps<{ mix: Mix; target: Lab; selected: boolean; wellMode: 'split' | 'concentric' | 'hover'; cheapest: number }>()
+const props = withDefaults(
+  defineProps<{ mix: Mix; target: Lab; selected: boolean; wellMode: 'split' | 'concentric' | 'hover'; cheapest: number; currency?: string }>(),
+  { currency: 'SGD' },
+)
 const emit = defineEmits<{ select: [id: string] }>()
 
 const tier = computed(() => tierOf(props.mix.dE))
@@ -39,7 +42,7 @@ const premium = computed(() => {
   >
     <InkWell :a="target" :b="mix.lab" :mode="wellMode" :size="36" />
     <span class="flex flex-col min-w-0">
-      <span class="truncate text-ui"><span class="font-semibold">{{ mix.name }}</span><span class="text-fg-3"> · {{ mix.tag }}</span></span>
+      <span class="truncate text-ui"><span class="font-semibold">{{ mix.name }}</span><span v-if="mix.tag" class="text-fg-3"> · {{ mix.tag }}</span></span>
       <ColourMeta :lab="mix.lab" />
     </span>
     <span class="flex flex-col">
@@ -56,7 +59,7 @@ const premium = computed(() => {
       </span>
     </span>
     <span class="flex flex-col items-end">
-      <span class="n text-ui font-medium">SGD {{ mix.cost.toFixed(2) }}</span>
+      <span class="n text-ui font-medium">{{ currency }} {{ mix.cost.toFixed(2) }}</span>
       <span class="text-caption text-fg-3">{{ premium }}</span>
     </span>
   </button>

@@ -17,3 +17,11 @@ describe('formatDate', () => {
     expect(formatDate('2026-09-18T10:00:00Z')).toBe('18 Sep 2026')
   })
 })
+
+describe('stepText', () => {
+  it('writes dE as ΔE', async () => {
+    const { stepText } = await import('./format')
+    expect(stepText('Within tolerance (dE 0.13): done')).toBe('Within tolerance (ΔE 0.13): done')
+    expect(stepText(undefined)).toBe('')
+  })
+})

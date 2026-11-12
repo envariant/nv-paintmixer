@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ILLUMINANT, cctTint } from '../lib/colour'
+import { cctTint } from '../lib/colour'
 import { ICON } from '../lib/icons'
+import { useIlluminantsStore } from '../stores/illuminants'
 import IlluminantMenu from './IlluminantMenu.vue'
 
 /**
@@ -13,7 +14,8 @@ const props = defineProps<{ modelValue: string }>()
 const emit = defineEmits<{ 'update:modelValue': [code: string] }>()
 
 const open = ref(false)
-const series = computed(() => ILLUMINANT[props.modelValue].series)
+const illuminants = useIlluminantsStore() // GET /illuminants (built-in catalogue until loaded)
+const series = computed(() => illuminants.byCode[props.modelValue]!.series)
 const seriesLabel = computed(() => series.value.id)
 function pick(code: string) { emit('update:modelValue', code); open.value = false }
 </script>

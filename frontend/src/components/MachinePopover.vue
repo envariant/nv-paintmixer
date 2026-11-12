@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { hexToLab } from '../lib/colour'
-import { formatDate } from '../lib/format'
+import { formatDate, stepText } from '../lib/format'
 import type { JobBrief, MachineStatus } from '../stores/machine'
 import DeltaReadout from './DeltaReadout.vue'
 import InkWell from './InkWell.vue'
@@ -54,7 +54,7 @@ const wells = (j: JobBrief) => ({
         <span class="flex flex-col min-w-0 flex-1">
           <span class="text-ui font-semibold truncate">{{ job.name }}</span>
           <span class="text-caption text-accent-fg truncate">
-            {{ job.paused ? 'Paused' : statusText(job) }}<template v-if="job.step"> · {{ job.step }}</template>
+            {{ job.paused ? 'Paused' : statusText(job) }}<template v-if="job.step"> · {{ stepText(job.step) }}</template>
           </span>
         </span>
         <DeltaReadout v-if="job.last_de != null" :value="job.last_de" />

@@ -370,4 +370,25 @@ introduced it.
   `GET /machine` every 2 s. Its popover shows the running job: step, progress, pour volume,
   last dE, Cancel job with an inline confirm, and Go to job, which opens Mix with `?job=<id>`.
   It also lists the recent jobs. Export log arrives with item 11 (`GET /jobs/export.csv`).
+- **M6 Mix screen**
+  - **Target:** the handoff gives Mix no target entry of its own, so it comes from the Library
+    ("Mix this colour", `/mix?color=<id>`), or is typed as hex or L a b in the empty stage, as
+    its next step.
+  - **Solving:** re-solves (debounced 300 ms) when the target, Match under, Max paints or
+    Volume changes, asking for 3 ways to mix it. A newer solve makes an older answer stale.
+    Max paints starts at 4 (the design's default), capped by the active model's paints;
+    Volume starts at the settings' batch, capped by the machine maximum.
+  - **Preview light:** changing it only asks `POST /appearance`. The stage, the wells and the
+    ΔE shown use the colours seen under that light, as plan A1 says (the starter `MixOption`
+    called its ΔE "under the solve illuminant"). Choosing Match under also moves the preview.
+  - **Mix rows:** named Mix A/B/C in the solver's order, which sorting does not change, each
+    with its first tag. The cost per mix is in the API's currency.
+  - **Details pane:** the curves run 400–700 nm. The chart scales follow the data (pale
+    colours and high chroma). The reach outline is the gamut slice nearest the target's L*.
+  - **Running mode:** Dispense creates the job, dispenses it, and opens Mix with
+    `?job=<id>`. The steps are Pour, Measure, Decide. The stage's "planned" colour is the job's
+    target, so the band's ΔE (measured vs target) describes the pair on the stage. The rounds
+    trail shows each measured round. While pouring, the footer offers Pause and Resume; while
+    waiting, Correct again (`/correct`, then pour) and Accept; when finished, New mix.
+  - The backend's step text writes "dE"; the UI shows "ΔE".
 
