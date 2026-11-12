@@ -190,3 +190,12 @@ def test_swatch_model_has_no_uncertainty(demo: TestClient) -> None:
         assert all(c["uncertainty_de"] is None for c in r.json()["candidates"])
     finally:
         demo.post(f"{API}/models/cmykw-demo@1/activate")
+
+
+def test_nearest_de_is_the_closest_candidate() -> None:
+    """Candidates are in objective order, so the first is not always the closest (a light grey
+    on the starter set: black + white wins on objective, a three-paint mix is closer)."""
+    m = pool_model(5)
+    for lab in ([80, 0, 0], [60, -10, 15], [50, 75, 60]):
+        res = solve(m, Target(lab=np.array(lab, dtype=float)), SolveOptions(top_n=3), "test")
+        assert res.nearest_de == pytest.approx(min(c.de2000 for c in res.candidates)), lab
