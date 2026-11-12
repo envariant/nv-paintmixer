@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api, type Schemas, unwrap } from '../api/client'
 
-export type AppSettings = Schemas['AppSettings']
+/** As read from the API: the settable fields plus the fixed observer and geometry. */
+export type AppSettings = Schemas['AppSettingsRead']
 
 /** GET / PATCH /settings. */
 export const useSettingsStore = defineStore('settings', () => {

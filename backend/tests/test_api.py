@@ -40,7 +40,7 @@ def test_health_and_openapi(client: TestClient) -> None:
 
 def test_settings_roundtrip(client: TestClient) -> None:
     s = client.get(f"{API}/settings").json()
-    assert s["currency"] == "SGD" and s["max_paints"] == 5
+    assert s["currency"] == "SGD" and s["max_paints"] == 4
     r = client.patch(f"{API}/settings", json={"batch_volume_ml": 250, "weights": {"cost": 2.0}})
     assert r.status_code == 200
     assert r.json()["batch_volume_ml"] == 250 and r.json()["weights"]["cost"] == 2.0

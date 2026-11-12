@@ -188,4 +188,8 @@ Progress notes per milestone are appended below as work completes.
   Playwright smoke test (`make e2e`) runs the real backend on a fresh demo database: library
   colour → mix → dispense on the simulator → run screen, Models rack, Settings save. Also
   fixed: `nearest_de` is the closest candidate's dE, not the first's.
+- **Frontend support, item 11** (plan B6): `max_paints` default 4, bounded by the model's
+  paint count (`bad_constraints` above it); `observer` / `geometry` / `read_only` on
+  `GET /settings`, shown under Settings → Advanced; `GET /jobs/export.csv` and Export log in
+  the machine popover (also covered by the Playwright smoke test).
 

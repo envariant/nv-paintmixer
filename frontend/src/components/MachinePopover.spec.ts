@@ -56,6 +56,9 @@ describe('MachinePopover', () => {
     expect(w.text()).toContain('ΔE 0.63')
     await w.get('ul button').trigger('click')
     expect(w.emitted('go-to-job')).toEqual([[3]])
+    const link = w.get('[data-testid=export-log]')
+    expect(link.attributes('href')).toBe('/api/v1/jobs/export.csv')
+    expect(link.attributes('download')).toBe('paintmixer-jobs.csv')
   })
 
   it('says when the job is paused', () => {

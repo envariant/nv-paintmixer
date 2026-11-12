@@ -21,6 +21,14 @@ test('mix a library colour on the simulated machine', async ({ page }) => {
   // the machine popover lists the finished job
   await page.getByTestId('machine-pill').click()
   await expect(page.getByRole('list', { name: 'Recent jobs' })).toContainText('Lagoon Teal')
+
+  // Export log downloads the job log as CSV
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByTestId('export-log').click()])
+  expect(download.suggestedFilename()).toBe('paintmixer-jobs.csv')
+  const csv = await (await download.createReadStream()).toArray()
+  const lines = Buffer.concat(csv).toString('utf8').trim().split('\n')
+  expect(lines[0]).toBe('id,name,created,status,rounds,final_de,poured_ml,paints')
+  expect(lines[1]).toContain('Lagoon Teal')
 })
 
 test('models rack and settings', async ({ page }) => {

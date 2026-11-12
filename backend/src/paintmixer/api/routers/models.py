@@ -24,6 +24,7 @@ from paintmixer.api.lines import (
     set_active,
 )
 from paintmixer.api.schemas import (
+    MAX_PAINTS_CAP,
     CoverageOut,
     GamutResponse,
     ModelDetail,
@@ -39,6 +40,7 @@ from paintmixer.api.schemas import (
 )
 from paintmixer.api.services import (
     all_paints,
+    check_max_paints,
     gamut_response,
     km_of,
     load_settings,
@@ -303,7 +305,12 @@ def model_spectra(
 
 
 _POOL_Q = Query(None, description="Comma-separated paint ids; default = every paint in the model")
-_MAX_Q = Query(None, ge=1, le=8, description="Most paints per mixture; default = settings")
+_MAX_Q = Query(
+    None,
+    ge=1,
+    le=MAX_PAINTS_CAP,
+    description="Most paints per mixture (at most the model's paints); default = settings",
+)
 
 
 async def _model_gamut(
@@ -312,6 +319,7 @@ async def _model_gamut(
     fm = resolve_model(session, ref)
     ids = [p.strip() for p in pool.split(",") if p.strip()] if pool else None
     model, fm = pool_model(session, ids, fm)
+    check_max_paints(max_paints, fm)
     k = max_paints or load_settings(session).max_paints
     g = await run_compute(request.app, gamut_for, model, k, fm.version)
     return model, fm, g, k

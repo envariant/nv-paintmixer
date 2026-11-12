@@ -376,7 +376,7 @@ introduced it.
     its next step.
   - **Solving:** re-solves (debounced 300 ms) when the target, Match under, Max paints or
     Volume changes, asking for 3 ways to mix it. A newer solve makes an older answer stale.
-    Max paints starts at 4 (the design's default), capped by the active model's paints;
+    Max paints starts at the settings value (default 4), capped by the active model's paints;
     Volume starts at the settings' batch, capped by the machine maximum.
   - **Preview light:** changing it only asks `POST /appearance`. The stage, the wells and the
     ΔE shown use the colours seen under that light, as plan A1 says (the starter `MixOption`
@@ -429,5 +429,27 @@ introduced it.
     still counts as an unsaved change until Save.
   - Decimal values use a decimal field that commits on change and clamps to the API's limits,
     because the starter `NumberField` rounds to whole numbers.
-  - The read-only observer and geometry block comes with item 11 (plan B6).
-
+  - Advanced also shows the observer and geometry as read-only text marked "fixed"
+    (item 11).
+- **Item 11 (plan B6, small items)**
+  - **Max paints:** the default is now 4 (was 5). Requests may ask for up to the model's
+    paint count: `max_paints` above it on `POST /solve`, `GET /gamut`,
+    `GET /models/{ref}/gamut` or `PATCH /settings` (against the active model) is a 422
+    `bad_constraints` with `paints_in_model` in the details. The schema ceiling is 64, the
+    channel limit, instead of 8. A value that comes from settings is not checked: the solver
+    already uses min(max_paints, pool), so switching to a smaller model does not break solves.
+    Settings already saved keep their stored value (5 on existing installs); only new
+    databases start at 4. The Mix screen starts at the settings value, capped by the model;
+    the Settings stepper runs 1…N over the active model's paints.
+  - **Observer / geometry:** `GET` and `PATCH /settings` return `AppSettingsRead`, with
+    `observer` ("CIE 1931 2°"), `geometry` ("45/0, UV-cut (M2-like)", per
+    docs/measurement.md) and `read_only: ["observer", "geometry"]`. They are not stored;
+    sending them to `PATCH` is a 422 like any unknown field.
+  - **Export log:** `GET /jobs/export.csv` (optional `status` filter), newest first. Columns:
+    id, name, created (ISO 8601 with +00:00), status, rounds (measured rounds), final_de (the
+    last measured dE2000 to the target, two decimals, blank before any measurement),
+    poured_ml (what is in the cup), paints (recipe paints by name, "; "-separated). Name and
+    paints cells that start with = + - @ get a leading apostrophe so a spreadsheet does not
+    read them as formulas. "Export log" in the machine popover downloads it.
+  - **Dates:** unchanged; the API sends ISO datetimes and the client formats them with the
+    year.

@@ -8,10 +8,11 @@ import { cctTint } from '../lib/colour'
 import { ICON } from '../lib/icons'
 import { applyTheme, savedTheme, type Theme } from '../lib/theme'
 import { useIlluminantsStore } from '../stores/illuminants'
+import { useModelStore } from '../stores/model'
 import { useSettingsStore } from '../stores/settings'
 
 /** Settings: two-column sections; footer with the unsaved count · Discard · Save. */
-type Draft = Required<Pick<Schemas['AppSettings'],
+type Draft = Required<Pick<Schemas['AppSettingsRead'],
   | 'illuminant' | 'accept_tolerance_de' | 'check_illuminants'
   | 'dispenser_channels' | 'machine_max_batch_ml' | 'batch_volume_ml' | 'dispenser_resolution_ml'
   | 'dispenser_transport' | 'dispenser_address' | 'low_level_warn_pct'
@@ -22,6 +23,9 @@ type Draft = Required<Pick<Schemas['AppSettings'],
 
 const store = useSettingsStore()
 const illuminants = useIlluminantsStore()
+const model = useModelStore()
+// the stepper runs 1…N over the active model's paints (8 until a model is loaded)
+const paintsInModel = computed(() => model.active?.paint_ids.length ?? 8)
 const saved = ref<Draft | null>(null)
 const draft = ref<Draft | null>(null)
 const theme = ref<Theme>(savedTheme())
@@ -39,10 +43,11 @@ const KEYS = [
   'saunderson_k1', 'saunderson_k2', 'min_fraction', 'out_of_gamut_de', 'weights',
 ] as const
 
-function pick(s: Schemas['AppSettings']): Draft {
+function pick(s: Schemas['AppSettingsRead']): Draft {
   return JSON.parse(JSON.stringify(Object.fromEntries(KEYS.map((k) => [k, s[k]])))) as Draft
 }
 onMounted(async () => {
+  void model.loadActive()
   const s = await store.load()
   if (s) {
     saved.value = pick(s)
@@ -167,7 +172,7 @@ const THEMES = [
               <input v-model="draft.currency" maxlength="3" aria-label="Currency code" class="n flex-1 min-w-0 bg-transparent text-body font-semibold uppercase outline-none" />
             </label>
             <span class="text-fg-2">Max paints</span>
-            <StepperField v-model="draft.max_paints" :min="1" :max="8" label="Default maximum number of paints" />
+            <StepperField v-model="draft.max_paints" :min="1" :max="Math.max(paintsInModel, draft.max_paints)" label="Default maximum number of paints" />
             <span class="text-fg-2">Theme</span>
             <div class="seg justify-self-start" role="radiogroup" aria-label="Theme">
               <button v-for="t in THEMES" :key="t.id" role="radio" :aria-checked="theme === t.id" class="focus-ring" @click="theme = t.id">{{ t.label }}</button>
@@ -184,6 +189,10 @@ const THEMES = [
             </button>
           </h2>
           <div v-if="advanced" class="grid grid-cols-[160px_minmax(0,1fr)] items-center gap-x-4 gap-y-3 text-ui">
+            <span class="text-fg-2">Observer</span>
+            <span class="n text-body font-semibold" data-testid="observer">{{ store.settings?.observer }} <span class="text-caption font-normal text-fg-3">· fixed</span></span>
+            <span class="text-fg-2">Geometry</span>
+            <span class="n text-body font-semibold" data-testid="geometry">{{ store.settings?.geometry }} <span class="text-caption font-normal text-fg-3">· fixed</span></span>
             <span class="text-fg-2">Saunderson k1</span>
             <DecimalField v-model="draft.saunderson_k1" :min="0" :max="0.99" :step="0.01" label="Saunderson k1" />
             <span class="text-fg-2">Saunderson k2</span>

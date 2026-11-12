@@ -15,6 +15,7 @@ from paintmixer.api.compute import run_compute
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request
 from paintmixer.api.schemas import (
+    MAX_PAINTS_CAP,
     CandidateOut,
     ComponentOut,
     GamutResponse,
@@ -33,6 +34,7 @@ from paintmixer.api.services import (
     ILLUMINANTS_REPORTED,
     active_model,
     all_paints,
+    check_max_paints,
     default_solve_options,
     gamut_response,
     load_settings,
@@ -99,6 +101,7 @@ def candidate_out(
 async def solve_recipe(body: SolveRequest, session: SessionDep, request: Request) -> SolveResponse:
     s = load_settings(session)
     model, fm = pool_model(session, body.pool)
+    check_max_paints(body.max_paints, fm)
     target = resolve_target(session, body.target)
     base = default_solve_options(session, s, fm)
     w = body.weights
@@ -271,12 +274,13 @@ async def gamut(
     session: SessionDep,
     request: Request,
     pool: str | None = Query(None, description="Comma-separated paint ids; default = loaded"),
-    max_paints: int | None = Query(None, ge=1, le=8),
+    max_paints: int | None = Query(None, ge=1, le=MAX_PAINTS_CAP),
 ) -> GamutResponse:
     """a*b* boundary (max chroma per 10° hue bin) at L* slices every 10 units, for the active
     model. ``GET /models/{version}/gamut`` does the same for any model version."""
     ids = [p.strip() for p in pool.split(",") if p.strip()] if pool else None
     model, fm = pool_model(session, ids)
+    check_max_paints(max_paints, fm)
     k = max_paints or load_settings(session).max_paints
     g = await run_compute(request.app, gamut_for, model, k, fm.version)
     return gamut_response(model, fm, g, k)

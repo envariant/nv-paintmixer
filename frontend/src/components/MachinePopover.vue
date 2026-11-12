@@ -8,7 +8,7 @@ import InkWell from './InkWell.vue'
 
 /**
  * MachinePopover (380 px) under the machine pill: the running job (Cancel job → inline confirm,
- * Go to job) and the recent jobs.
+ * Go to job), the recent jobs and Export log (GET /jobs/export.csv).
  */
 const props = defineProps<{ machine: MachineStatus }>()
 const emit = defineEmits<{ 'go-to-job': [id: number]; 'cancel-job': [id: number] }>()
@@ -92,7 +92,15 @@ const wells = (j: JobBrief) => ({
       </div>
     </div>
 
-    <div class="px-4 pb-1 text-caption text-fg-3">Recent jobs</div>
+    <div class="flex items-center justify-between px-4 pb-1">
+      <span class="text-caption text-fg-3">Recent jobs</span>
+      <a
+        href="/api/v1/jobs/export.csv"
+        download="paintmixer-jobs.csv"
+        class="text-caption font-medium text-accent-fg rounded-pill hover:underline focus-ring"
+        data-testid="export-log"
+      >Export log</a>
+    </div>
     <ul class="m-0 p-0 list-none pb-2" aria-label="Recent jobs">
       <li v-if="!machine.recent.length" class="px-4 py-2 text-ui text-fg-3">None yet</li>
       <li v-for="j in machine.recent" :key="j.id">

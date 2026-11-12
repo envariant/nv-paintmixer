@@ -58,7 +58,7 @@ onMounted(async () => {
     mixer.preview = matchUnder.value
     volume.value = Math.min(s.batch_volume_ml ?? 100, s.machine_max_batch_ml ?? 250)
   }
-  maxPaints.value = Math.min(4, paintsInModel.value)
+  maxPaints.value = Math.min(s?.max_paints ?? 4, paintsInModel.value)
   await loadTargetFromRoute()
 })
 

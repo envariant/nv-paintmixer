@@ -49,6 +49,20 @@ def load_settings(session: Session) -> AppSettings:
     return AppSettings.model_validate(merged)
 
 
+def check_max_paints(max_paints: int | None, fm: m.FittedModel | None) -> None:
+    """A requested ``max_paints`` may be at most the model's paint count (the UI stepper is
+    1..N). Values taken from settings are not checked: the solver uses min(max_paints, pool)."""
+    if max_paints is None or fm is None:
+        return
+    n = len(fm.paint_ids)
+    if max_paints > n:
+        raise bad_request(
+            "bad_constraints",
+            f"max_paints ({max_paints}) is more than the paints in model v{fm.version} ({n})",
+            {"max_paints": max_paints, "paints_in_model": n},
+        )
+
+
 def save_settings(session: Session, settings: AppSettings) -> AppSettings:
     row = session.get(m.Setting, SETTINGS_KEY)
     data = settings.model_dump(mode="json")
@@ -122,6 +136,10 @@ def active_model(session: Session) -> m.FittedModel:
             409, "no_active_model", "No fitted model is active: upload calibration data and fit."
         )
     return fm
+
+
+def active_model_or_none(session: Session) -> m.FittedModel | None:
+    return session.exec(select(m.FittedModel).where(col(m.FittedModel.active))).first()
 
 
 def km_of(fm: m.FittedModel) -> KMModel:
