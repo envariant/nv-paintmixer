@@ -1,0 +1,85 @@
+/* PaintMixer tokens — RGB channels so Tailwind can apply <alpha-value>; hex in comments.
+   Theme is a class swap on <html> (.theme-light / .theme-dark); with neither, the OS preference wins. */
+:root, .theme-light {
+  color-scheme: light;
+  --pm-page: 255 255 255;        /* #FFFFFF  page, popovers, chart surfaces */
+  --pm-soft: 244 244 244;        /* #F4F4F4  joined cards, detail pane, strips */
+  --pm-line: 230 230 230;        /* #E6E6E6  hairlines, dividers */
+  --pm-line-strong: 140 140 140; /* #8C8C8C  field underlines, ghost outlines */
+  --pm-fg: 20 20 20;             /* #141414 */
+  --pm-fg2: 85 85 85;            /* #555555 */
+  --pm-fg3: 107 107 107;         /* #6B6B6B  captions, ColourMeta */
+  --pm-surround: 118 118 118;    /* #767676  N5 swatch surround — same in both themes */
+  --pm-accent: 51 89 127;        /* #33597F  primary action */
+  --pm-accent-hover: 42 74 106;  /* #2A4A6A */
+  --pm-on-accent: 255 255 255;   /* #FFFFFF */
+  --pm-accent-weak: 233 238 244; /* #E9EEF4 */
+  --pm-accent-fg: 46 83 120;     /* #2E5378  running-job text */
+  --pm-success: 44 106 69;       /* #2C6A45 */
+  --pm-warning: 134 86 0;        /* #865600 */
+  --pm-danger: 163 48 42;        /* #A3302A */
+  --pm-focus: 51 89 127;         /* #33597F */
+}
+
+.theme-dark {
+  color-scheme: dark;
+  --pm-page: 18 18 18;           /* #121212 */
+  --pm-soft: 28 28 28;           /* #1C1C1C */
+  --pm-line: 42 42 42;           /* #2A2A2A */
+  --pm-line-strong: 110 110 110; /* #6E6E6E */
+  --pm-fg: 237 237 237;          /* #EDEDED */
+  --pm-fg2: 176 176 176;         /* #B0B0B0 */
+  --pm-fg3: 154 154 154;         /* #9A9A9A */
+  --pm-surround: 118 118 118;    /* #767676 */
+  --pm-accent: 138 174 210;      /* #8AAED2 */
+  --pm-accent-hover: 163 193 222;/* #A3C1DE */
+  --pm-on-accent: 13 22 32;      /* #0D1620 */
+  --pm-accent-weak: 28 39 51;    /* #1C2733 */
+  --pm-accent-fg: 157 187 218;   /* #9DBBDA */
+  --pm-success: 127 195 152;     /* #7FC398 */
+  --pm-warning: 224 174 82;      /* #E0AE52 */
+  --pm-danger: 238 144 135;      /* #EE9087 */
+  --pm-focus: 138 174 210;       /* #8AAED2 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.theme-light) {
+    color-scheme: dark;
+    --pm-page: 18 18 18;
+    --pm-soft: 28 28 28;
+    --pm-line: 42 42 42;
+    --pm-line-strong: 110 110 110;
+    --pm-fg: 237 237 237;
+    --pm-fg2: 176 176 176;
+    --pm-fg3: 154 154 154;
+    --pm-surround: 118 118 118;
+    --pm-accent: 138 174 210;
+    --pm-accent-hover: 163 193 222;
+    --pm-on-accent: 13 22 32;
+    --pm-accent-weak: 28 39 51;
+    --pm-accent-fg: 157 187 218;
+    --pm-success: 127 195 152;
+    --pm-warning: 224 174 82;
+    --pm-danger: 238 144 135;
+    --pm-focus: 138 174 210;
+  }
+}
+
+html { font-family: Inter, system-ui, sans-serif; font-feature-settings: 'tnum' 1, 'cv11' 1; -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: rgb(var(--pm-page)); color: rgb(var(--pm-fg)); font-size: 14px; line-height: 1.5; }
+
+/* Never filter, blend or fade anything that shows a measured colour. */
+.pm-colour { filter: none !important; mix-blend-mode: normal !important; opacity: 1 !important; }
+
+/* Ink: a very small inner shadow on every swatch and ink well, drawn as an overlay on the
+   colour container (not on each half), so split / concentric comparisons get no seam or border. */
+:root { --pm-ink: inset 0 1px 2px rgb(0 0 0 / 0.28), inset 0 0 0 0.5px rgb(0 0 0 / 0.12); }
+.pm-ink { position: relative; }
+.pm-ink::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: var(--pm-ink); pointer-events: none; z-index: 2; }
+.pm-ink-well::after { content: ''; position: absolute; inset: 3px; border-radius: 9999px; box-shadow: var(--pm-ink); pointer-events: none; z-index: 2; }
+
+/* Underlined fields: the caret is the focus indicator, so no outline on text entry. */
+.pm-field input { outline: none; box-shadow: none; }
+.pm-field input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+.pm-field input[type='number']::-webkit-inner-spin-button,
+.pm-field input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
