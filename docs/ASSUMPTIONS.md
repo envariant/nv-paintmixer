@@ -391,4 +391,16 @@ introduced it.
     trail shows each measured round. While pouring, the footer offers Pause and Resume; while
     waiting, Correct again (`/correct`, then pour) and Accept; when finished, New mix.
   - The backend's step text writes "dE"; the UI shows "ΔE".
+- **M6 Library**
+  - **Tiles:** match summaries come from `GET /colors?with_match=true`, polled every 2 s while
+    some are still being computed. A tile's dot shows reach: amber for near the edge, red for
+    out of reach. The detail card (shared `DetailCard`, also used by Models) shows best match ΔE
+    ± uncertainty, paints, cost per 250 ml and the best-mix composition.
+  - **Footer:** Add to palette (a menu of palettes, or a new one), then Mix this colour, which
+    opens `/mix?color=<id>`.
+  - **Palette band:** the band's summary is `GET /palettes/{id}/summary`. Export downloads the
+    palette as CSV from the browser (name, hex, L a b, best ΔE, reach). The handoff's
+    "mix-all" action is left out: the backend has no way to dispense several colours as one job.
+  - **Builder:** +/✓ badges on the tiles; the side panel has the name, the colours in the order
+    they were added (remove with ×), and live reach.
 
