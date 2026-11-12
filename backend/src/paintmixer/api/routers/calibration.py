@@ -13,6 +13,7 @@ from paintmixer.api.compute import submit_background
 from paintmixer.api.deps import ConfigDep, SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request, not_found
 from paintmixer.api.importers import create_fit_run, report_out, run_fit, store_calibration
+from paintmixer.api.routers.models import announce_model
 from paintmixer.api.schemas import (
     FitRequest,
     FitRunRead,
@@ -26,6 +27,7 @@ from paintmixer.api.services import (
 from paintmixer.calibration.format import parse_calibration_csv
 from paintmixer.colorsci.convert import reflectance_to_srgb, srgb_to_hex
 from paintmixer.db import models as m
+from paintmixer.db.session import get_engine
 
 router = APIRouter(prefix="/calibration", tags=["calibration"], responses=ERROR_RESPONSES)
 
@@ -134,8 +136,18 @@ def start_fit(
     if fut is None:
         background.add_task(run_fit, config.database_url, run.id)
         background.add_task(matches.request_refresh, app, proactive=True)
-    else:  # a new active model changes the library matches
-        fut.add_done_callback(lambda _f: matches.request_refresh(app, proactive=True))
+    else:  # the worker process has no event hub: announce the model from here
+        url, run_id = config.database_url, run.id
+
+        def finished(_f: object) -> None:
+            with Session(get_engine(url)) as s:
+                done = s.get(m.FitRun, run_id)
+                fm = s.get(m.FittedModel, done.model_id) if done and done.model_id else None
+                if fm is not None:
+                    announce_model(s, fm, "created")
+            matches.request_refresh(app, proactive=True)
+
+        fut.add_done_callback(finished)
     return _run_out(session, run)
 
 

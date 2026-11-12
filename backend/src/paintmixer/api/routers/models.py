@@ -10,7 +10,7 @@ from fastapi import APIRouter, Path, Query, Request
 from fastapi.responses import Response
 from sqlmodel import Session, col, select
 
-from paintmixer.api import matches
+from paintmixer.api import events, matches
 from paintmixer.api.compute import run_compute
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request, not_found
@@ -201,7 +201,13 @@ def activate_model(ref: Annotated[str, _REF], session: SessionDep) -> ModelSumma
     set_active(session, fm)
     session.commit()
     session.refresh(fm)
+    announce_model(session, fm, "activated")
     return summary(session, fm)
+
+
+def announce_model(session: Session, fm: m.FittedModel, kind: str) -> None:
+    """``model`` event: a version was ``created`` (and maybe activated) or ``activated``."""
+    events.publish(session, "model", {"event": kind, "model": summary(session, fm)})
 
 
 @router.get("/{ref}/paint-accuracy", response_model=list[PaintAccuracyOut])

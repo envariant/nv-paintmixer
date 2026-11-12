@@ -4434,6 +4434,145 @@
           }
         }
       }
+    },
+    "/api/v1/events": {
+      "get": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Event Stream",
+        "description": "Live events (``text/event-stream``), for an ``EventSource``. Polling\n``GET /jobs/{id}`` and ``GET /machine`` stays available and returns the same data.\n\nEvent types (``event:`` field; ``data:`` is JSON):\n\n* ``job``: a job changed: a ``JobBrief`` (status, step, progress, paused, running, round, last\n  dE and colour);\n* ``machine``: the machine status (as ``GET /machine``); also sent once on connect;\n* ``match``: a library colour's cached match: ``{color_id, match}``;\n* ``matches``: the library refresh: ``{state: refreshing | idle, pending}``;\n* ``model``: ``{event: created | activated, model}``;\n* ``hello``: first, on connect: ``{boot, last_event_id, types}``;\n* ``reset``: the stream cannot say what was missed (resumed from an unknown or expired id, or the\n  client fell too far behind): refetch the state you show, then keep listening.\n\nEvery event except ``hello``, ``reset`` and the connect snapshot has an ``id``; the browser\nsends the last one back as ``Last-Event-ID`` when it reconnects, and missed events are\nreplayed. Comments (``: keepalive``) are sent every 15 s.",
+        "operationId": "event_stream_api_v1_events_get",
+        "parameters": [
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated event types; default: all",
+              "title": "Types"
+            },
+            "description": "Comma-separated event types; default: all"
+          },
+          {
+            "name": "job_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only job events of this job",
+              "title": "Job Id"
+            },
+            "description": "Only job events of this job"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Close after this many events",
+              "title": "Limit"
+            },
+            "description": "Close after this many events"
+          },
+          {
+            "name": "last_event_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Resume after this event (the Last-Event-ID header takes precedence)",
+              "title": "Last Event Id"
+            },
+            "description": "Resume after this event (the Last-Event-ID header takes precedence)"
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event stream",
+            "content": {
+              "text/event-stream": {}
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6539,6 +6678,11 @@
           "paused": {
             "type": "boolean",
             "title": "Paused",
+            "default": false
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running",
             "default": false
           },
           "updated_at": {

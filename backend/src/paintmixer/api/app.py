@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from paintmixer import __version__
-from paintmixer.api import matches
+from paintmixer.api import events, matches
 from paintmixer.api.compute import make_executor
 from paintmixer.api.errors import install_error_handlers
 from paintmixer.api.routers import (
@@ -26,9 +26,12 @@ from paintmixer.api.routers import (
     system,
     worksheet,
 )
+from paintmixer.api.routers import (
+    events as events_router,
+)
 from paintmixer.api.runner import MachineRunner, recover_interrupted
 from paintmixer.config import Settings, get_settings
-from paintmixer.db.session import migrate
+from paintmixer.db.session import get_engine, migrate
 
 API_PREFIX = "/api/v1"
 
@@ -59,10 +62,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         recover_interrupted(cfg.database_url)  # jobs the machine held when the server stopped
         app_.state.runner = MachineRunner(cfg.database_url)
         app_.state.loop = asyncio.get_running_loop()  # for matches.request_refresh
+        app_.state.events.loop = app_.state.loop
+        events.register(get_engine(cfg.database_url), app_.state.events)
         try:
             yield
         finally:
             await matches.stop(app_)
+            events.register(get_engine(cfg.database_url), None)
+            app_.state.events.loop = None
             app_.state.runner.stop()
             app_.state.loop = None
             if app_.state.executor is not None:
@@ -81,6 +88,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.executor = None
     app.state.loop = None
     app.state.match_task = None
+    app.state.events = events.EventHub()
     app.state.match_failed = set()  # api.matches: inputs whose solve failed
     install_error_handlers(app)
     for r in (
@@ -96,6 +104,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         mixing,
         jobs,
         machine,
+        events_router,
     ):
         app.include_router(r.router, prefix=API_PREFIX)
     return app

@@ -323,4 +323,18 @@ introduced it.
   use. Both real transports are tested against the simulated firmware: TCP on a local
   socket, serial (`pyserial`) on a pseudo-terminal pair standing in for the USB or Bluetooth
   link.
+- **Live events (SSE)** `GET /events` streams `job`, `machine`, `match`, `matches` and `model`
+  events as server-sent events. It carries the same data as polling `GET /jobs/{id}` and
+  `GET /machine`, which stay the frontend's mechanism for now. Every job save publishes the
+  job's brief and the machine status, so the runner and the endpoints need no separate event
+  code. Publishers find the app's hub through the database engine, which also works from the
+  runner's thread. A fit in a worker process is announced by the parent when it finishes.
+
+  Event ids are `<boot>:<n>`, and the last 1000 events are kept. A reconnecting
+  `EventSource` sends `Last-Event-ID` and gets the missed events. If they are gone or the id
+  is from an earlier server run, it gets `reset` and should refetch. A client more than 1000
+  events behind is also reset. A connect without resume starts with a `machine` snapshot,
+  and keep-alive comments go out every 15 s. Events are in-process, so the server runs as a
+  single worker, as the job runner already requires. A reverse proxy must not buffer the
+  stream; the response sends `X-Accel-Buffering: no` for nginx.
 

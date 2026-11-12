@@ -167,4 +167,7 @@ Progress notes per milestone are appended below as work completes.
      (`hardware.protocol`, docs/dispenser_protocol.md) over TCP / serial (USB, Bluetooth) or
      the simulated firmware (`hardware.firmware_sim`); settings `dispenser_transport` /
      `dispenser_address`.
+  - Live events: `GET /events` (server-sent events: job, machine, match, matches, model;
+    resume with `Last-Event-ID`, `reset` when it cannot), `api.events` hub, machine status
+    shared with `GET /machine` (`api.machine_state`). The frontend keeps polling for now.
 

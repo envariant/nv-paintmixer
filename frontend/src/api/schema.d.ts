@@ -1017,6 +1017,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Event Stream
+         * @description Live events (``text/event-stream``), for an ``EventSource``. Polling
+         *     ``GET /jobs/{id}`` and ``GET /machine`` stays available and returns the same data.
+         *
+         *     Event types (``event:`` field; ``data:`` is JSON):
+         *
+         *     * ``job``: a job changed: a ``JobBrief`` (status, step, progress, paused, running, round, last
+         *       dE and colour);
+         *     * ``machine``: the machine status (as ``GET /machine``); also sent once on connect;
+         *     * ``match``: a library colour's cached match: ``{color_id, match}``;
+         *     * ``matches``: the library refresh: ``{state: refreshing | idle, pending}``;
+         *     * ``model``: ``{event: created | activated, model}``;
+         *     * ``hello``: first, on connect: ``{boot, last_event_id, types}``;
+         *     * ``reset``: the stream cannot say what was missed (resumed from an unknown or expired id, or the
+         *       client fell too far behind): refetch the state you show, then keep listening.
+         *
+         *     Every event except ``hello``, ``reset`` and the connect snapshot has an ``id``; the browser
+         *     sends the last one back as ``Last-Event-ID`` when it reconnects, and missed events are
+         *     replayed. Comments (``: keepalive``) are sent every 15 s.
+         */
+        get: operations["event_stream_api_v1_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1802,6 +1839,11 @@ export interface components {
              * @default false
              */
             paused?: boolean;
+            /**
+             * Running
+             * @default false
+             */
+            running?: boolean;
             /**
              * Updated At
              * Format: date-time
@@ -6622,6 +6664,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MachineStatus"];
+                };
+            };
+        };
+    };
+    event_stream_api_v1_events_get: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated event types; default: all */
+                types?: string | null;
+                /** @description Only job events of this job */
+                job_id?: number | null;
+                /** @description Close after this many events */
+                limit?: number | null;
+                /** @description Resume after this event (the Last-Event-ID header takes precedence) */
+                last_event_id?: string | null;
+            };
+            header?: {
+                "Last-Event-ID"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Event stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

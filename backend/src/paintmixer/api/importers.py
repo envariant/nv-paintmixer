@@ -310,6 +310,7 @@ def run_fit(db_url: str, run_id: int) -> None:
             s.commit()
             s.refresh(fm)
             model_id = fm.id
+            _announce(s, fm)
             created = f"model v{fm.version} ({model_ref(line.slug, fm.revision)}) created"
         update(
             status="succeeded",
@@ -410,4 +411,11 @@ def store_swatch_model(
     session.add(fm)
     session.commit()
     session.refresh(fm)
+    _announce(session, fm)
     return fm
+
+
+def _announce(session: Session, fm: m.FittedModel) -> None:
+    from paintmixer.api.routers.models import announce_model  # the router imports this module
+
+    announce_model(session, fm, "created")

@@ -28,8 +28,10 @@ from anyio import to_thread
 from fastapi import Depends, FastAPI, Request
 from sqlmodel import Session, col, select
 
+from paintmixer.api import events
 from paintmixer.api.compute import run_compute
 from paintmixer.api.errors import ApiError
+from paintmixer.api.schemas import ColorMatchOut
 from paintmixer.api.services import default_solve_options, load_settings, pool_model
 from paintmixer.db import models as m
 from paintmixer.db.models import utcnow
@@ -154,6 +156,12 @@ def store(session: Session, color_id: int, p: Plan, ch: str, fields: dict[str, A
     row.updated_at = utcnow()
     session.add(row)
     session.commit()
+    session.refresh(row)
+    events.publish(
+        session,
+        "match",
+        {"color_id": color_id, "match": ColorMatchOut.model_validate(row, from_attributes=True)},
+    )
 
 
 async def refresh(app: FastAPI) -> None:
@@ -167,8 +175,13 @@ async def refresh(app: FastAPI) -> None:
                 return plan(s, failed)
 
         p = await to_thread.run_sync(_plan)
+        hub: events.EventHub | None = getattr(app.state, "events", None)
         if p is None or not p.todo:
+            if hub is not None:
+                hub.publish("matches", {"state": "idle", "pending": 0})
             return
+        if hub is not None:
+            hub.publish("matches", {"state": "refreshing", "pending": len(p.todo)})
         tolerance = p.opts.accept_tolerance_de
         sem = asyncio.Semaphore(max(1, app.state.settings.compute_workers))
 

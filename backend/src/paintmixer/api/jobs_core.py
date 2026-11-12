@@ -15,6 +15,8 @@ from typing import Any
 import numpy as np
 from sqlmodel import Session, select
 
+from paintmixer.api import events
+from paintmixer.api.machine_state import job_brief, machine_snapshot
 from paintmixer.api.schemas import JobRead
 from paintmixer.api.services import all_paints, km_of, pool_model
 from paintmixer.colorsci.convert import lab_to_srgb, srgb_to_hex
@@ -34,6 +36,9 @@ def save(session: Session, j: m.Job) -> JobRead:
     session.add(j)
     session.commit()
     session.refresh(j)
+    if events.hub_for(session) is not None:
+        events.publish(session, "job", job_brief(j))
+        events.publish(session, "machine", machine_snapshot(session))
     return JobRead.model_validate(j.model_dump())
 
 

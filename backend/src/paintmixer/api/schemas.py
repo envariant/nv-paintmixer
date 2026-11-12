@@ -1081,6 +1081,7 @@ class JobBrief(_Out):
     step: str = ""
     progress: float = 0.0
     paused: bool = False
+    running: bool = False
     updated_at: datetime
 
 
