@@ -403,4 +403,18 @@ introduced it.
     "mix-all" action is left out: the backend has no way to dispense several colours as one job.
   - **Builder:** +/✓ badges on the tiles; the side panel has the name, the colours in the order
     they were added (remove with ×), and live reach.
+- **M6 Models**
+  - **Model menu:** lists every version grouped by line ("CMYKW demo (synthetic) · @2", label,
+    source, date, Active). Viewing a version does not activate it; the footer offers "Make
+    active". Swatches and captions show the viewed version's masstones
+    (`GET /models/{ref}/spectra`); `PaintRead.model_hex` is always the active model's.
+  - **Readings strip:** readings count, problems (the model's fit warnings, expandable), the
+    latest fit with its progress, Import readings (CSV, appended), and Fit new version. The new
+    version goes into the viewed model's line and is not activated, so it can be reviewed
+    first.
+  - **Rack:** the accuracy strip shows every fitted sample. Status words: Calibrated, Review
+    samples, Needs samples, Stale · new batch, Not calibrated.
+  - **Refill:** happens in the detail card. It asks for the reservoir size when the paint has
+    none (the demo's paints don't); an empty level means full; a changed batch code records a
+    new lot.
 
