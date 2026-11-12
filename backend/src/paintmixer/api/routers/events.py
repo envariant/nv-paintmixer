@@ -104,6 +104,10 @@ async def event_stream(
                 try:
                     ev = await asyncio.wait_for(sub.queue.get(), KEEPALIVE_S)
                 except TimeoutError:
+                    # a quiet stream learns that its client left here, not only when a write
+                    # fails (servers differ in when that happens)
+                    if await request.is_disconnected():
+                        return
                     yield ": keepalive\n\n"
                     continue
                 if wants(ev):
