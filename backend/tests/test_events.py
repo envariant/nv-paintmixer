@@ -147,6 +147,10 @@ def test_missed_job_events_are_replayed(c: TestClient) -> None:
 
 def test_live_events_while_a_job_runs(c: TestClient) -> None:
     job_id = _job(c)
+    hub = c.app.state.events  # type: ignore[attr-defined]
+    # streams other tests closed from the client side may still be registered: the test client
+    # reports a disconnect only when the server next writes, so compare with what was there
+    before = hub.n_subscribers
     got: list[Ev] = []
 
     def listen() -> None:
@@ -173,10 +177,10 @@ def test_live_events_while_a_job_runs(c: TestClient) -> None:
     assert machine[0]["label"] == "Machine ready"  # the connect snapshot
     assert any(m["state"] == "pouring" for m in machine)
     assert got[-1]["data"]["running"] is False
-    deadline = time.monotonic() + 2  # the server notices the closed stream at its next write
-    while c.app.state.events.n_subscribers and time.monotonic() < deadline:  # type: ignore[attr-defined]
+    deadline = time.monotonic() + 5  # the server notices the closed stream at its next write
+    while hub.n_subscribers > before and time.monotonic() < deadline:
         time.sleep(0.05)
-    assert c.app.state.events.n_subscribers == 0  # type: ignore[attr-defined]
+    assert hub.n_subscribers <= before  # this stream's subscriber is gone
 
 
 def test_unknown_resume_id_asks_for_a_reset(c: TestClient) -> None:
