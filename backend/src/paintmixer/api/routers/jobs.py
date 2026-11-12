@@ -210,10 +210,14 @@ def dispense(job_id: int, body: DispenseRequest, session: SessionDep, request: R
 def pause(job_id: int, session: SessionDep, request: Request) -> JobRead:
     """Pause a queued or running job before its next channel."""
     j = _get(session, job_id)
-    if not _runner(request).pause(job_id):
+
+    def record() -> None:
+        j.paused = True
+        save(session, j)
+
+    if not _runner(request).pause(job_id, record):
         raise ApiError(409, "bad_state", f"job is not on the machine (status is {j.status!r})")
-    j.paused = True
-    return save(session, j)
+    return JobRead.model_validate(j.model_dump())
 
 
 @router.post("/{job_id}/resume", response_model=JobRead)
