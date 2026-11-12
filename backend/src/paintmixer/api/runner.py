@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import threading
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -110,12 +111,17 @@ class MachineRunner:
         with self._cv:
             return job_id in self._controls
 
-    def pause(self, job_id: int) -> bool:
+    def pause(self, job_id: int, record: Callable[[], None] | None = None) -> bool:
+        """Pause before the next channel. ``record`` (persisting the paused flag) runs while
+        the runner still holds the job, so it cannot land after the job has finished. False
+        if the runner does not hold the job."""
         with self._cv:
             c = self._controls.get(job_id)
-        if c is None:
-            return False
-        c.resume.clear()
+            if c is None:
+                return False
+            c.resume.clear()
+            if record is not None:
+                record()
         return True
 
     def resume(self, job_id: int) -> bool:
@@ -176,10 +182,12 @@ class MachineRunner:
                 log.exception("job %s failed on the machine", job_id)
                 self._update(job_id, status="needs_attention", step=f"Machine error: {e}")
             finally:
-                self._update(job_id, running=False, paused=False)
+                # let go of the job first: once it reads running=false, pause / resume /
+                # cancel are refused, and a pause recorded before this is cleared below
                 with self._cv:
                     self._controls.pop(job_id, None)
                     self._current = None
+                self._update(job_id, running=False, paused=False)
 
     def _update(self, job_id: int, **fields: Any) -> None:
         with Session(get_engine(self.url)) as s:

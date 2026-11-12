@@ -49,14 +49,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Settings */
+        /**
+         * Get Settings
+         * @description Settings, plus the fixed observer and geometry (``read_only``).
+         */
         get: operations["get_settings_api_v1_settings_get"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Update Settings */
+        /**
+         * Update Settings
+         * @description Change settings. ``max_paints`` may be at most the active model's paint count; the
+         *     read-only fields (observer, geometry) are rejected as unknown.
+         */
         patch: operations["update_settings_api_v1_settings_patch"];
         trace?: never;
     };
@@ -843,6 +850,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Jobs
+         * @description The job log as CSV (Export log in the machine popover), newest first. Columns: id,
+         *     name, created (ISO 8601, UTC), status, rounds, final_de, poured_ml, paints.
+         */
+        get: operations["export_jobs_api_v1_jobs_export_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs/{job_id}": {
         parameters: {
             query?: never;
@@ -1058,8 +1086,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** AppSettings */
-        AppSettings: {
+        /**
+         * AppSettingsRead
+         * @description Settings as returned by the API, with the fixed colorimetry (Settings → Advanced).
+         */
+        AppSettingsRead: {
             /**
              * Currency
              * @default SGD
@@ -1107,7 +1138,8 @@ export interface components {
             illuminant?: components["schemas"]["Illuminant"];
             /**
              * Max Paints
-             * @default 5
+             * @description Most paints per mix; at most the active model's paint count
+             * @default 4
              */
             max_paints?: number;
             /**
@@ -1206,6 +1238,23 @@ export interface components {
              * @default 25
              */
             low_level_warn_pct?: number;
+            /**
+             * Observer
+             * @description Standard observer; fixed, not settable
+             * @default CIE 1931 2°
+             */
+            observer?: string;
+            /**
+             * Geometry
+             * @description Measurement geometry; fixed, not settable
+             * @default 45/0, UV-cut (M2-like)
+             */
+            geometry?: string;
+            /**
+             * Read Only
+             * @description Fields that are fixed in this version and cannot be changed by PATCH
+             */
+            read_only?: string[];
         };
         /** AppSettingsUpdate */
         AppSettingsUpdate: {
@@ -2946,7 +2995,10 @@ export interface components {
              * @description Paint ids; default = loaded paints
              */
             pool?: string[] | null;
-            /** Max Paints */
+            /**
+             * Max Paints
+             * @description At most the model's paint count
+             */
             max_paints?: number | null;
             /** Min Fraction */
             min_fraction?: number | null;
@@ -3421,7 +3473,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AppSettings"];
+                    "application/json": components["schemas"]["AppSettingsRead"];
                 };
             };
         };
@@ -3445,7 +3497,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AppSettings"];
+                    "application/json": components["schemas"]["AppSettingsRead"];
                 };
             };
             /** @description Validation Error */
@@ -5529,7 +5581,7 @@ export interface operations {
             query?: {
                 /** @description Comma-separated paint ids; default = every paint in the model */
                 pool?: string | null;
-                /** @description Most paints per mixture; default = settings */
+                /** @description Most paints per mixture (at most the model's paints); default = settings */
                 max_paints?: number | null;
             };
             header?: never;
@@ -5584,7 +5636,7 @@ export interface operations {
             query?: {
                 /** @description Comma-separated paint ids; default = every paint in the model */
                 pool?: string | null;
-                /** @description Most paints per mixture; default = settings */
+                /** @description Most paints per mixture (at most the model's paints); default = settings */
                 max_paints?: number | null;
                 /** @description Panels per row */
                 columns?: number;
@@ -6209,6 +6261,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_jobs_api_v1_jobs_export_csv_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job log as CSV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
                 };
             };
             /** @description Not found */

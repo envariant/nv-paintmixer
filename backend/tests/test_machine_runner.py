@@ -117,6 +117,39 @@ def test_pause_and_resume_between_channels(c: TestClient) -> None:
     assert c.post(f"{API}/jobs/{job['id']}/pause").status_code == 409  # not on the machine
 
 
+def test_runner_lets_go_of_a_job_before_it_reads_as_finished(
+    c: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Once a job reads running=false, pause / resume / cancel must be refused: the runner
+    has to let go of the job before it writes running=false, not after."""
+    runner = c.app.state.runner  # type: ignore[attr-defined]
+    held_when_finished: list[bool] = []
+    update = runner._update
+
+    def spy(job_id: int, **fields: Any) -> None:
+        if fields.get("running") is False:
+            held_when_finished.append(runner.holds(job_id))
+        update(job_id, **fields)
+
+    monkeypatch.setattr(runner, "_update", spy)
+    job = _job(c)
+    dispense(c, job["id"])
+    assert held_when_finished == [False]
+    assert c.post(f"{API}/jobs/{job['id']}/pause").status_code == 409
+
+
+def test_pause_racing_the_end_of_a_job_leaves_it_unpaused(c: TestClient) -> None:
+    """A pause the runner accepts is written before the job finishes; one it refuses is not
+    written at all. Either way a finished job never stays paused."""
+    for _ in range(5):
+        job = _job(c)
+        c.post(f"{API}/jobs/{job['id']}/dispense", json={"simulate_ml_per_s": 2000})
+        while c.post(f"{API}/jobs/{job['id']}/pause").status_code == 200:
+            c.post(f"{API}/jobs/{job['id']}/resume")
+        j = wait_job(c, job["id"])
+        assert not j["running"] and not j["paused"], j
+
+
 def test_cancel_stops_between_channels_and_keeps_the_pour(c: TestClient) -> None:
     job = _job(c)
     c.post(f"{API}/jobs/{job['id']}/dispense", json={"simulate_ml_per_s": 100})

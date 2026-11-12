@@ -337,4 +337,119 @@ introduced it.
   and keep-alive comments go out every 15 s. Events are in-process, so the server runs as a
   single worker, as the job runner already requires. A reverse proxy must not buffer the
   stream; the response sends `X-Accel-Buffering: no` for nginx.
-
+- **Design handoff integration** The bundle sits unchanged in `design/handoff/`. The app imports
+  `tokens.css` first, then Tailwind v4 loads the handoff's v3 `tailwind.config.js` with
+  `@config`, which brings radii, type sizes, heights, shadows, `darkMode` on `.theme-dark` and
+  the plugin for `.btn-*`, `.field` and `.seg`. The colours are defined again in a v4 `@theme`
+  block on the same `tokens.css` variables: v4 does not fill the v3 `<alpha-value>`
+  placeholder, so opacity modifiers (`bg-fg/25` in `ResidualStrip`) would otherwise render
+  opaque. Fonts (Inter, JetBrains Mono) are not bundled, so the system font is used until they
+  are added.
+- **Colour helpers merged** `lib/colour.ts` takes the handoff's helpers (match tiers, calibration
+  grades, `fmt`, `colourMeta`, the illuminant catalogue, `cctTint`, the impression line) with
+  one deliberate difference. `labToCss` / `labToHex` use the backend's conversion: sRGB with
+  CSS Color 4 gamut mapping, via `lib/km.ts`, instead of the handoff's per-channel clipping, so
+  a colour shows the same hex as in every API response. A test checks every swatch in the
+  parity fixture, gamut-mapped ones included. `clipped` means "outside sRGB, gamut-mapped".
+  - The handoff's text says Lab is D65/10°; the backend and this conversion use the CIE 1931
+    2° observer, as the original spec requires. This is still open (see PLAN.md).
+  - The old `deltaEBadge` is gone: its "Excellent match … Poor match" wording is what the design
+    reserves for calibration grades, and its thresholds matched neither scale. Matches use the
+    design's tiers (Indistinguishable / Barely visible / Visible difference / Mismatch at
+    1 / 2 / 5); calibration uses `calibrationGrade` (0.4 / 1 / 2, as the backend).
+  - `formatMoney` prints the design's `SGD 12.77`.
+  - `fmt` prints `0.0` rather than `−0.0` for values that round to zero.
+- **Illuminant list** The illuminants store loads `GET /illuminants`. Until it loads, or if it
+  fails, the store uses the built-in catalogue (`SERIES`), which the parity fixture keeps equal
+  to the backend's.
+- **M6 app shell** The handoff's starter components are copied into `frontend/src/components`
+  with their imports pointed at `lib/colour` and `lib/icons`; `design/handoff/` stays the
+  untouched reference. The app is four routes (Mix, Library, Models, Settings) in a kiosk
+  layout: the top bar, then a screen that scrolls only inside. The handoff has no logo artwork,
+  so the logo is three overlapping C/M/Y circles until one is supplied. The machine pill polls
+  `GET /machine` every 2 s. Its popover shows the running job: step, progress, pour volume,
+  last dE, Cancel job with an inline confirm, and Go to job, which opens Mix with `?job=<id>`.
+  It also lists the recent jobs. Export log arrives with item 11 (`GET /jobs/export.csv`).
+- **M6 Mix screen**
+  - **Target:** the handoff gives Mix no target entry of its own, so it comes from the Library
+    ("Mix this colour", `/mix?color=<id>`), or is typed as hex or L a b in the empty stage, as
+    its next step.
+  - **Solving:** re-solves (debounced 300 ms) when the target, Match under, Max paints or
+    Volume changes, asking for 3 ways to mix it. A newer solve makes an older answer stale.
+    Max paints starts at the settings value (default 4), capped by the active model's paints;
+    Volume starts at the settings' batch, capped by the machine maximum.
+  - **Preview light:** changing it only asks `POST /appearance`. The stage, the wells and the
+    ΔE shown use the colours seen under that light, as plan A1 says (the starter `MixOption`
+    called its ΔE "under the solve illuminant"). Choosing Match under also moves the preview.
+  - **Mix rows:** named Mix A/B/C in the solver's order, which sorting does not change, each
+    with its first tag. The cost per mix is in the API's currency.
+  - **Details pane:** the curves run 400–700 nm. The chart scales follow the data (pale
+    colours and high chroma). The reach outline is the gamut slice nearest the target's L*.
+  - **Running mode:** Dispense creates the job, dispenses it, and opens Mix with
+    `?job=<id>`. The steps are Pour, Measure, Decide. The stage's "planned" colour is the job's
+    target, so the band's ΔE (measured vs target) describes the pair on the stage. The rounds
+    trail shows each measured round. While pouring, the footer offers Pause and Resume; while
+    waiting, Correct again (`/correct`, then pour) and Accept; when finished, New mix.
+  - The backend's step text writes "dE"; the UI shows "ΔE".
+- **M6 Library**
+  - **Tiles:** match summaries come from `GET /colors?with_match=true`, polled every 2 s while
+    some are still being computed. A tile's dot shows reach: amber for near the edge, red for
+    out of reach. The detail card (shared `DetailCard`, also used by Models) shows best match ΔE
+    ± uncertainty, paints, cost per 250 ml and the best-mix composition.
+  - **Footer:** Add to palette (a menu of palettes, or a new one), then Mix this colour, which
+    opens `/mix?color=<id>`.
+  - **Palette band:** the band's summary is `GET /palettes/{id}/summary`. Export downloads the
+    palette as CSV from the browser (name, hex, L a b, best ΔE, reach). The handoff's
+    "mix-all" action is left out: the backend has no way to dispense several colours as one job.
+  - **Builder:** +/✓ badges on the tiles; the side panel has the name, the colours in the order
+    they were added (remove with ×), and live reach.
+- **M6 Models**
+  - **Model menu:** lists every version grouped by line ("CMYKW demo (synthetic) · @2", label,
+    source, date, Active). Viewing a version does not activate it; the footer offers "Make
+    active". Swatches and captions show the viewed version's masstones
+    (`GET /models/{ref}/spectra`); `PaintRead.model_hex` is always the active model's.
+  - **Readings strip:** readings count, problems (the model's fit warnings, expandable), the
+    latest fit with its progress, Import readings (CSV, appended), and Fit new version. The new
+    version goes into the viewed model's line and is not activated, so it can be reviewed
+    first.
+  - **Rack:** the accuracy strip shows every fitted sample. Status words: Calibrated, Review
+    samples, Needs samples, Stale · new batch, Not calibrated.
+  - **Refill:** happens in the detail card. It asks for the reservoir size when the paint has
+    none (the demo's paints don't); an empty level means full; a changed batch code records a
+    new lot.
+- **M6 Settings** Four two-column sections: Judging colour (match in, accept tolerance, also
+  check under), Machine, Cost & display, and Advanced colour science (collapsed). The footer
+  shows the unsaved count, Discard and Save; Save sends only the changed fields
+  (`PATCH /settings`) and shows the API's validation message if it refuses.
+  - "Also check under" offers every illuminant as a chip, at most 6, the API's limit.
+  - Machine connection is Simulator / Wi-Fi (tcp) / USB or Bluetooth (serial), with the
+    address.
+  - The theme (System / Light / Dark) is a per-device choice: it is saved in local storage
+    and applied as `.theme-light` / `.theme-dark` on `<html>`, as `tokens.css` expects. It
+    still counts as an unsaved change until Save.
+  - Decimal values use a decimal field that commits on change and clamps to the API's limits,
+    because the starter `NumberField` rounds to whole numbers.
+  - Advanced also shows the observer and geometry as read-only text marked "fixed"
+    (item 11).
+- **Item 11 (plan B6, small items)**
+  - **Max paints:** the default is now 4 (was 5). Requests may ask for up to the model's
+    paint count: `max_paints` above it on `POST /solve`, `GET /gamut`,
+    `GET /models/{ref}/gamut` or `PATCH /settings` (against the active model) is a 422
+    `bad_constraints` with `paints_in_model` in the details. The schema ceiling is 64, the
+    channel limit, instead of 8. A value that comes from settings is not checked: the solver
+    already uses min(max_paints, pool), so switching to a smaller model does not break solves.
+    Settings already saved keep their stored value (5 on existing installs); only new
+    databases start at 4. The Mix screen starts at the settings value, capped by the model;
+    the Settings stepper runs 1…N over the active model's paints.
+  - **Observer / geometry:** `GET` and `PATCH /settings` return `AppSettingsRead`, with
+    `observer` ("CIE 1931 2°"), `geometry` ("45/0, UV-cut (M2-like)", per
+    docs/measurement.md) and `read_only: ["observer", "geometry"]`. They are not stored;
+    sending them to `PATCH` is a 422 like any unknown field.
+  - **Export log:** `GET /jobs/export.csv` (optional `status` filter), newest first. Columns:
+    id, name, created (ISO 8601 with +00:00), status, rounds (measured rounds), final_de (the
+    last measured dE2000 to the target, two decimals, blank before any measurement),
+    poured_ml (what is in the cup), paints (recipe paints by name, "; "-separated). Name and
+    paints cells that start with = + - @ get a leading apostrophe so a spreadsheet does not
+    read them as formulas. "Export log" in the machine popover downloads it.
+  - **Dates:** unchanged; the API sends ISO datetimes and the client formats them with the
+    year.

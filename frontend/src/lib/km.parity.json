@@ -2639,6 +2639,116 @@
    "out_of_gamut": true
   }
  ],
+ "illuminants": [
+  {
+   "id": "D",
+   "name": "D series",
+   "description": "Daylight",
+   "default": "D65",
+   "members": [
+    {
+     "code": "D50",
+     "cct": 5003
+    },
+    {
+     "code": "D55",
+     "cct": 5503
+    },
+    {
+     "code": "D65",
+     "cct": 6504
+    },
+    {
+     "code": "D75",
+     "cct": 7504
+    },
+    {
+     "code": "D93",
+     "cct": 9300
+    }
+   ]
+  },
+  {
+   "id": "A",
+   "name": "A",
+   "description": "Incandescent / tungsten",
+   "default": "A",
+   "members": [
+    {
+     "code": "A",
+     "cct": 2856
+    }
+   ]
+  },
+  {
+   "id": "F",
+   "name": "F series",
+   "description": "Fluorescent",
+   "default": "F11",
+   "members": [
+    {
+     "code": "F2",
+     "cct": 4230
+    },
+    {
+     "code": "F7",
+     "cct": 6500
+    },
+    {
+     "code": "F11",
+     "cct": 4000
+    },
+    {
+     "code": "F12",
+     "cct": 3000
+    }
+   ]
+  },
+  {
+   "id": "LED",
+   "name": "LED series",
+   "description": "White LEDs",
+   "default": "LED-B3",
+   "members": [
+    {
+     "code": "LED-B1",
+     "cct": 2733
+    },
+    {
+     "code": "LED-B2",
+     "cct": 2998
+    },
+    {
+     "code": "LED-B3",
+     "cct": 4103
+    },
+    {
+     "code": "LED-B4",
+     "cct": 5109
+    },
+    {
+     "code": "LED-B5",
+     "cct": 6598
+    }
+   ]
+  },
+  {
+   "id": "ID",
+   "name": "ID series",
+   "description": "Indoor daylight",
+   "default": "ID65",
+   "members": [
+    {
+     "code": "ID50",
+     "cct": 5003
+    },
+    {
+     "code": "ID65",
+     "cct": 6504
+    }
+   ]
+  }
+ ],
  "ramp": {
   "paint_a": "phthalo-blue",
   "paint_b": "titanium-white",

@@ -47,7 +47,7 @@ dataclasses/arrays.
 | M3 | Calibration fit + report | done |
 | M4 | Solver + gamut + scaling tests | done |
 | M5 | Worksheet generator + full API | done |
-| M6 | Frontend from the Claude Design handoff | **blocked**: no `design/handoff/` bundle; API client, stores, composables + Vitest done |
+| M6 | Frontend from the Claude Design handoff | done (Mix, Library, Models, Settings, machine pill; Playwright smoke test) |
 | M7 | Measurement sources, spotread parser, `paintmixer measure session` | done |
 | M8 | Dispenser simulator, closed-loop correction, jobs | done |
 | M9 | Hardening + docs | done |
@@ -170,4 +170,26 @@ Progress notes per milestone are appended below as work completes.
   - Live events: `GET /events` (server-sent events: job, machine, match, matches, model;
     resume with `Last-Event-ID`, `reset` when it cannot), `api.events` hub, machine status
     shared with `GET /machine` (`api.machine_state`). The frontend keeps polling for now.
+  10. Frontend integration: design handoff in `design/handoff/` (unchanged); `tokens.css` +
+      the handoff Tailwind theme via `@config`, colours also as v4 `@theme` (opacity
+      modifiers); `lib/colour.ts` merged with the handoff's helpers (backend-identical
+      Lab → hex, match tiers vs calibration grades); `lib/icons.ts`; illuminants store on
+      `GET /illuminants` with the built-in catalogue as fallback (parity fixture). The handoff
+      says Lab D65/10°; the app keeps 2° (spec, confirmed). Inter and JetBrains Mono are
+      bundled with `@fontsource`.
+- **M6** Screens from the handoff, as a tablet kiosk (Vue Router: Mix, Library, Models,
+  Settings): top bar with the machine pill and popover (status, recent jobs, cancel); Mix
+  (target entry by hex / Lab / library, three tagged ways to mix, light tabs and appearance,
+  details pane, dispense) and its running state (progress steps, rounds trail, accept,
+  pause / resume, correct again); Library (match tiers from the cache, search, palette menu and
+  band, palette builder, mix this colour); Models (rack rows with level bar, per-paint grade
+  and status, masstones of the selected version, model menu); Settings (accept tolerance,
+  lights to check, machine batch, low-level warning, theme). The frontend still polls.
+  Playwright smoke test (`make e2e`) runs the real backend on a fresh demo database: library
+  colour → mix → dispense on the simulator → run screen, Models rack, Settings save. Also
+  fixed: `nearest_de` is the closest candidate's dE, not the first's.
+- **Frontend support, item 11** (plan B6): `max_paints` default 4, bounded by the model's
+  paint count (`bad_constraints` above it); `observer` / `geometry` / `read_only` on
+  `GET /settings`, shown under Settings → Advanced; `GET /jobs/export.csv` and Export log in
+  the machine popover (also covered by the Playwright smoke test).
 

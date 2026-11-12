@@ -10,8 +10,13 @@ abandons it (``cancelled``) and records what was already poured.
 
 from __future__ import annotations
 
+import csv
+import io
+from datetime import UTC, datetime
+
 import numpy as np
 from fastapi import APIRouter, Query, Request
+from fastapi.responses import Response
 from sqlmodel import Session, col, select
 
 from paintmixer.api.deps import SessionDep
@@ -99,6 +104,71 @@ def list_jobs(session: SessionDep, status: str | None = Query(None)) -> list[Job
     return [JobRead.model_validate(j.model_dump()) for j in session.exec(q).all()]
 
 
+EXPORT_COLUMNS = (
+    "id",
+    "name",
+    "created",
+    "status",
+    "rounds",
+    "final_de",
+    "poured_ml",
+    "paints",
+)
+
+
+def _cell(text: str) -> str:
+    """Text cells that a spreadsheet would read as a formula get a leading apostrophe."""
+    return f"'{text}" if text[:1] in ("=", "+", "-", "@", "\t", "\r") else text
+
+
+def _iso_utc(dt: datetime) -> str:
+    return (dt if dt.tzinfo else dt.replace(tzinfo=UTC)).isoformat()
+
+
+def export_rows(session: Session, jobs: list[m.Job]) -> list[dict[str, str]]:
+    """One row per job for the machine log: rounds measured, the last measured dE2000 to the
+    target (blank before any measurement), the volume in the cup and the paints by name."""
+    names = {p.id: p.name for p in session.exec(select(m.Paint)).all()}
+    rows = []
+    for j in jobs:
+        de = (j.measured or {}).get("de_to_target")
+        rows.append(
+            {
+                "id": str(j.id),
+                "name": _cell(j.name),
+                "created": _iso_utc(j.created_at),
+                "status": j.status,
+                "rounds": str(sum(1 for c in j.corrections if c.get("kind") == "round")),
+                "final_de": "" if de is None else f"{de:.2f}",
+                "poured_ml": f"{poured_ml(j):.1f}",
+                "paints": _cell("; ".join(names.get(p, p) for p in j.recipe.get("paint_ids", []))),
+            }
+        )
+    return rows
+
+
+@router.get(
+    "/export.csv",
+    response_class=Response,
+    responses={200: {"content": {"text/csv": {}}, "description": "Job log as CSV"}},
+)
+def export_jobs(session: SessionDep, status: str | None = Query(None)) -> Response:
+    """The job log as CSV (Export log in the machine popover), newest first. Columns: id,
+    name, created (ISO 8601, UTC), status, rounds, final_de, poured_ml, paints."""
+    q = select(m.Job).order_by(col(m.Job.id).desc())
+    if status is not None:
+        q = q.where(m.Job.status == status)
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=EXPORT_COLUMNS, lineterminator="\n")
+    w.writeheader()
+    w.writerows(export_rows(session, list(session.exec(q).all())))
+    return Response(
+        buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="paintmixer-jobs.csv"'},
+    )
+
+
 @router.get("/{job_id}", response_model=JobRead)
 def get_job(job_id: int, session: SessionDep) -> JobRead:
     return JobRead.model_validate(_get(session, job_id).model_dump())
@@ -140,10 +210,14 @@ def dispense(job_id: int, body: DispenseRequest, session: SessionDep, request: R
 def pause(job_id: int, session: SessionDep, request: Request) -> JobRead:
     """Pause a queued or running job before its next channel."""
     j = _get(session, job_id)
-    if not _runner(request).pause(job_id):
+
+    def record() -> None:
+        j.paused = True
+        save(session, j)
+
+    if not _runner(request).pause(job_id, record):
         raise ApiError(409, "bad_state", f"job is not on the machine (status is {j.status!r})")
-    j.paused = True
-    return save(session, j)
+    return JobRead.model_validate(j.model_dump())
 
 
 @router.post("/{job_id}/resume", response_model=JobRead)

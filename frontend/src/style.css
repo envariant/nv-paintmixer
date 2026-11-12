@@ -1,1 +1,30 @@
+/* Design tokens first (CSS variables, light / dark / system, .pm-colour, .pm-ink, .pm-field),
+   then Tailwind v4 with the handoff's theme. The handoff's tailwind.config.js is a v3 config;
+   v4 loads it through @config (radii, type sizes, heights, shadows, darkMode and the plugin for
+   .btn-* .field .seg ...). */
+@import "../../design/handoff/tokens.css";
 @import "tailwindcss";
+@config "../../design/handoff/tailwind.config.js";
+
+/* The colours again, natively: v4 does not fill the v3 `<alpha-value>` placeholder, so opacity
+   modifiers (bg-fg/25, bg-warning/55 in ResidualStrip) would render opaque. Same names, same
+   tokens.css variables. */
+@theme {
+  --color-page: rgb(var(--pm-page));
+  --color-soft: rgb(var(--pm-soft));
+  --color-line: rgb(var(--pm-line));
+  --color-line-strong: rgb(var(--pm-line-strong));
+  --color-fg: rgb(var(--pm-fg));
+  --color-fg-2: rgb(var(--pm-fg2));
+  --color-fg-3: rgb(var(--pm-fg3));
+  --color-surround: rgb(var(--pm-surround));
+  --color-accent: rgb(var(--pm-accent));
+  --color-accent-hover: rgb(var(--pm-accent-hover));
+  --color-accent-on: rgb(var(--pm-on-accent));
+  --color-accent-weak: rgb(var(--pm-accent-weak));
+  --color-accent-fg: rgb(var(--pm-accent-fg));
+  --color-success: rgb(var(--pm-success));
+  --color-warning: rgb(var(--pm-warning));
+  --color-danger: rgb(var(--pm-danger));
+  --color-focus: rgb(var(--pm-focus));
+}

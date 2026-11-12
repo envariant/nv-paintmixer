@@ -139,6 +139,11 @@ class SolverWeights(_Model):
     metamerism: float = Field(0.05, ge=0)
 
 
+MAX_PAINTS_CAP = 64  # schema ceiling; the real bound is the model's paint count
+OBSERVER = "CIE 1931 2°"
+GEOMETRY = "45/0, UV-cut (M2-like)"
+
+
 class AppSettings(_Model):
     currency: str = "SGD"
     dispenser_channels: int = Field(10, ge=1, le=64)
@@ -155,7 +160,12 @@ class AppSettings(_Model):
     saunderson_k1: float = Field(0.0, ge=0, lt=1)
     saunderson_k2: float = Field(0.5, ge=0, lt=1)
     illuminant: Illuminant = Illuminant.D65
-    max_paints: int = Field(5, ge=1, le=8)
+    max_paints: int = Field(
+        4,
+        ge=1,
+        le=MAX_PAINTS_CAP,
+        description="Most paints per mix; at most the active model's paint count",
+    )
     min_fraction: float = Field(0.02, ge=0, lt=0.5)
     top_n: int = Field(5, ge=1, le=20)
     weights: SolverWeights = Field(default_factory=SolverWeights)
@@ -195,6 +205,19 @@ class AppSettings(_Model):
         return self
 
 
+class AppSettingsRead(AppSettings):
+    """Settings as returned by the API, with the fixed colorimetry (Settings → Advanced)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    observer: str = Field(OBSERVER, description="Standard observer; fixed, not settable")
+    geometry: str = Field(GEOMETRY, description="Measurement geometry; fixed, not settable")
+    read_only: list[str] = Field(
+        default_factory=lambda: ["observer", "geometry"],
+        description="Fields that are fixed in this version and cannot be changed by PATCH",
+    )
+
+
 class AppSettingsUpdate(_Model):
     currency: str | None = None
     dispenser_channels: int | None = Field(None, ge=1, le=64)
@@ -205,7 +228,7 @@ class AppSettingsUpdate(_Model):
     saunderson_k1: float | None = Field(None, ge=0, lt=1)
     saunderson_k2: float | None = Field(None, ge=0, lt=1)
     illuminant: Illuminant | None = None
-    max_paints: int | None = Field(None, ge=1, le=8)
+    max_paints: int | None = Field(None, ge=1, le=MAX_PAINTS_CAP)
     min_fraction: float | None = Field(None, ge=0, lt=0.5)
     top_n: int | None = Field(None, ge=1, le=20)
     weights: SolverWeights | None = None
@@ -649,7 +672,9 @@ class TargetIn(_Model):
 class SolveRequest(_Model):
     target: TargetIn
     pool: list[str] | None = Field(None, description="Paint ids; default = loaded paints")
-    max_paints: int | None = Field(None, ge=1, le=8)
+    max_paints: int | None = Field(
+        None, ge=1, le=MAX_PAINTS_CAP, description="At most the model's paint count"
+    )
     min_fraction: float | None = Field(None, ge=0, lt=0.5)
     include_white: bool | None = Field(
         None, description="null: allowed, true: required in every recipe, false: excluded"

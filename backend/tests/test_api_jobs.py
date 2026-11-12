@@ -72,3 +72,44 @@ def test_job_measured_lab_and_cap(fitted_client: TestClient) -> None:
     assert c.post(f"{API}/jobs/{job['id']}/dispense", json={}).status_code == 409
     assert c.post(f"{API}/jobs/{job['id']}/measurement", json={}).status_code == 422
     assert c.get(f"{API}/jobs/99999").status_code == 404
+
+
+def test_export_csv(fitted_client: TestClient) -> None:
+    import csv
+    import io
+
+    c = fitted_client
+    measured = _job(c, [55.0, -5.0, 10.0])
+    dispense(c, measured["id"], simulate=True)
+    resp = c.post(
+        f"{API}/jobs",
+        json={
+            "name": "=HYPERLINK(1)",  # a spreadsheet must not run it
+            "target": {"lab": [50.0, 0.0, 0.0]},
+            "components": {"titanium-white": 0.5, "carbon-black": 0.5},
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    draft = resp.json()
+    r = c.get(f"{API}/jobs/export.csv")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
+    assert "attachment" in r.headers["content-disposition"]
+    rows = list(csv.DictReader(io.StringIO(r.text)))
+    assert list(rows[0]) == [
+        "id", "name", "created", "status", "rounds", "final_de", "poured_ml", "paints"
+    ]  # fmt: skip
+    by_id = {int(row["id"]): row for row in rows}
+    assert [int(row["id"]) for row in rows] == sorted(by_id, reverse=True)  # newest first
+    d = by_id[draft["id"]]
+    assert d["name"] == "'=HYPERLINK(1)" and d["status"] == "draft"
+    assert d["rounds"] == "0" and d["final_de"] == "" and d["poured_ml"] == "0.0"
+    assert d["paints"] == "White (Titanium); Black (Carbon)"
+    assert d["created"].endswith("+00:00")
+    job = c.get(f"{API}/jobs/{measured['id']}").json()
+    row = by_id[measured["id"]]
+    rounds = [e for e in job["corrections"] if e.get("kind") == "round"]
+    assert int(row["rounds"]) == len(rounds) >= 1
+    assert float(row["final_de"]) == round(job["measured"]["de_to_target"], 2)
+    assert float(row["poured_ml"]) == round(sum(job["dispensed"]["cup_ml"].values()), 1)
+    only = c.get(f"{API}/jobs/export.csv", params={"status": "draft"}).text
+    assert {row["status"] for row in csv.DictReader(io.StringIO(only))} == {"draft"}

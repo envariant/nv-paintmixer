@@ -314,7 +314,7 @@ def solve(
     cands = select_candidates(cands, opts.top_n, opts.accept_tolerance_de)
     for i, cand in enumerate(cands):
         cand.rank = i + 1
-    nearest = cands[0].de2000 if cands else float("inf")
+    nearest = min((c.de2000 for c in cands), default=float("inf"))  # the closest, not the first
     if cands and nearest > opts.out_of_gamut_de:
         warnings.append(
             f"Out of gamut: nearest achievable colour is dE2000 {nearest:.2f} from the target."
