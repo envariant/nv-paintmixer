@@ -156,4 +156,8 @@ Progress notes per milestone are appended below as work completes.
      grade, status ok / review / needs_samples / stale / uncalibrated, calibrated_at, batch at
      fit and now, coverage; only samples the paint is a big part of can set `review`); `fitted_model.paint_batches` recorded at fit time (migration
      `0007`).
+  8. Library match cache: `color_match` (migration `0008`), background refresh
+     (`api.matches`), `GET /colors?with_match=true` (`match` per colour),
+     `GET /palettes/{id}/summary` (within / uncertain / out / pending / worst dE);
+     `PAINTMIXER_MATCH_CACHE_AUTO`. `/solve` and the cache share `default_solve_options`.
 

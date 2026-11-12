@@ -10,6 +10,7 @@ from fastapi import APIRouter, Path, Query, Request
 from fastapi.responses import Response
 from sqlmodel import Session, col, select
 
+from paintmixer.api import matches
 from paintmixer.api.compute import run_compute
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request, not_found
@@ -126,7 +127,12 @@ def get_active(session: SessionDep) -> ModelDetail:
     return get_model(str(fm.version), session)
 
 
-@router.post("/from-swatches", response_model=SwatchModelResult, status_code=201)
+@router.post(
+    "/from-swatches",
+    response_model=SwatchModelResult,
+    status_code=201,
+    dependencies=matches.REFRESH_AFTER,
+)
 async def model_from_swatch_colours(
     body: SwatchModelRequest, session: SessionDep, request: Request
 ) -> SwatchModelResult:
@@ -188,7 +194,7 @@ def update_model(ref: Annotated[str, _REF], body: ModelPatch, session: SessionDe
     return summary(session, fm)
 
 
-@router.post("/{ref}/activate", response_model=ModelSummary)
+@router.post("/{ref}/activate", response_model=ModelSummary, dependencies=matches.REFRESH_AFTER)
 def activate_model(ref: Annotated[str, _REF], session: SessionDep) -> ModelSummary:
     """Make this the one active model (used by solve, predict, ramps and jobs)."""
     fm = resolve_model(session, ref)

@@ -27,7 +27,8 @@ from paintmixer.measurement.selftest import SelftestThresholds
 from paintmixer.solver.gamut import Gamut
 from paintmixer.solver.gamut_chart import boundary_hex
 from paintmixer.solver.model import PoolModel
-from paintmixer.solver.solve import Target
+from paintmixer.solver.refine import Weights
+from paintmixer.solver.solve import SolveOptions, Target
 
 SETTINGS_KEY = "app"
 
@@ -218,6 +219,26 @@ def model_paint_errors(session: Session, fm: m.FittedModel) -> dict[str, float] 
         if (e := q.error_de) is not None
     }
     return errors or None
+
+
+def default_solve_options(session: Session, s: AppSettings, fm: m.FittedModel) -> SolveOptions:
+    """Solver options from the settings, as ``POST /solve`` uses them when the request sets
+    nothing (and the library match cache always)."""
+    w = s.weights
+    return SolveOptions(
+        max_paints=s.max_paints,
+        min_fraction=s.min_fraction,
+        illuminant=s.illuminant,
+        check_illuminants=tuple(s.check_illuminants),
+        batch_volume_ml=s.batch_volume_ml,
+        resolution_ml=s.dispenser_resolution_ml,
+        weights=Weights(de=w.de, n_paints=w.n_paints, cost=w.cost, metamerism=w.metamerism),
+        top_n=s.top_n,
+        seed=s.seed,
+        out_of_gamut_de=s.out_of_gamut_de,
+        accept_tolerance_de=s.accept_tolerance_de,
+        paint_error_de=model_paint_errors(session, fm),
+    )
 
 
 def model_strengths(session: Session, fm: m.FittedModel) -> dict[str, PaintStrength]:

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from fastapi import APIRouter, File, Query, Response, UploadFile
 from sqlmodel import Session, col, select
 
+from paintmixer.api import matches
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request, conflict, not_found
 from paintmixer.api.importers import import_paints_csv, validate_paint
@@ -89,7 +90,7 @@ def list_paints(
     return [_read(p, cal) for p in session.exec(q).all()]
 
 
-@router.post("", response_model=PaintRead, status_code=201)
+@router.post("", response_model=PaintRead, status_code=201, dependencies=matches.REFRESH_AFTER)
 def create_paint(body: PaintCreate, session: SessionDep) -> PaintRead:
     if session.get(m.Paint, body.id) is not None:
         raise conflict(f"paint {body.id!r} already exists")
@@ -109,7 +110,7 @@ def get_paint(paint_id: str, session: SessionDep) -> PaintRead:
     return _read(p, _calibrated_ids(session))
 
 
-@router.patch("/{paint_id}", response_model=PaintRead)
+@router.patch("/{paint_id}", response_model=PaintRead, dependencies=matches.REFRESH_AFTER)
 def update_paint(paint_id: str, body: PaintUpdate, session: SessionDep) -> PaintRead:
     p = session.get(m.Paint, paint_id)
     if p is None:
@@ -124,7 +125,7 @@ def update_paint(paint_id: str, body: PaintUpdate, session: SessionDep) -> Paint
     return _read(p, _calibrated_ids(session))
 
 
-@router.delete("/{paint_id}", status_code=204)
+@router.delete("/{paint_id}", status_code=204, dependencies=matches.REFRESH_AFTER)
 def delete_paint(paint_id: str, session: SessionDep) -> Response:
     p = session.get(m.Paint, paint_id)
     if p is None:
@@ -147,7 +148,7 @@ def delete_paint(paint_id: str, session: SessionDep) -> Response:
     return Response(status_code=204)
 
 
-@router.post("/import", response_model=PaintImportResult)
+@router.post("/import", response_model=PaintImportResult, dependencies=matches.REFRESH_AFTER)
 async def import_paints(session: SessionDep, file: UploadFile = File(...)) -> PaintImportResult:
     """Upsert paints from CSV (columns as in ``sample_data/paints.csv``)."""
     return import_paints_csv(session, (await file.read()).decode("utf-8-sig"))

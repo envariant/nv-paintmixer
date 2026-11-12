@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
 from paintmixer import __version__
+from paintmixer.api import matches
 from paintmixer.api.compute import make_executor
 from paintmixer.api.errors import install_error_handlers
 from paintmixer.api.routers import (
@@ -53,9 +55,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if database_is_empty(cfg.database_url):
                 seed_demo(cfg.database_url)
         app_.state.executor = make_executor(cfg.compute_workers)
+        app_.state.loop = asyncio.get_running_loop()  # for matches.request_refresh
         try:
             yield
         finally:
+            await matches.stop(app_)
+            app_.state.loop = None
             if app_.state.executor is not None:
                 app_.state.executor.shutdown(wait=False, cancel_futures=True)
 
@@ -70,6 +75,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = cfg
     app.state.executor = None
+    app.state.loop = None
+    app.state.match_task = None
+    app.state.match_failed = set()  # api.matches: inputs whose solve failed
     install_error_handlers(app)
     for r in (
         system,

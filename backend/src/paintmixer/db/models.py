@@ -84,6 +84,23 @@ class ColorLibraryEntry(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class ColorMatch(SQLModel, table=True):
+    """Cached best match of a library colour under the active model (Library tiles)."""
+
+    __tablename__ = "color_match"
+    color_id: int = Field(primary_key=True)  # one row per colour: the latest computation
+    model_version: int
+    settings_hash: str = Field(max_length=64)  # solver options + loaded paint pool
+    color_hash: str = Field(max_length=64)  # the colour's Lab / spectrum when computed
+    de: float  # dE2000 of the closest mix
+    n_paints: int
+    cost_per_250ml: float
+    reach: str  # within | uncertain | out
+    uncertainty_de: float | None = None
+    best_components: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 class Palette(SQLModel, table=True):
     """A named, ordered set of colour-library entries (Library screen)."""
 

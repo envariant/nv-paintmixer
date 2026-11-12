@@ -81,7 +81,9 @@ make dev
 
 Environment variables: `PAINTMIXER_CURRENCY` (default SGD), `PAINTMIXER_COMPUTE_WORKERS`
 (solver/fit worker processes, default 2; 0 = thread pool), `PAINTMIXER_SEED`,
-`PAINTMIXER_SEED_DEMO` (`1` = seed the demo on startup when the database is empty).
+`PAINTMIXER_SEED_DEMO` (`1` = seed the demo on startup when the database is empty),
+`PAINTMIXER_MATCH_CACHE_AUTO` (default `1`: re-solve the colour library in the background when
+a model is activated or solver inputs change; `0` = only when matches are asked for).
 
 ## Demo database
 

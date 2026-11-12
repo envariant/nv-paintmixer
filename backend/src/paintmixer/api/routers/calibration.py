@@ -8,6 +8,7 @@ import numpy as np
 from fastapi import APIRouter, BackgroundTasks, File, Query, Request, Response, UploadFile
 from sqlmodel import Session, col, delete, select
 
+from paintmixer.api import matches
 from paintmixer.api.compute import submit_background
 from paintmixer.api.deps import ConfigDep, SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request, not_found
@@ -128,8 +129,13 @@ def start_fit(
     """Start a fit in the background; poll ``GET /calibration/fits/{id}``."""
     run = create_fit_run(session, body)
     assert run.id is not None
-    if submit_background(request.app, run_fit, config.database_url, run.id) is None:
+    app = request.app
+    fut = submit_background(app, run_fit, config.database_url, run.id)
+    if fut is None:
         background.add_task(run_fit, config.database_url, run.id)
+        background.add_task(matches.request_refresh, app, proactive=True)
+    else:  # a new active model changes the library matches
+        fut.add_done_callback(lambda _f: matches.request_refresh(app, proactive=True))
     return _run_out(session, run)
 
 

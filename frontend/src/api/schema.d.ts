@@ -279,6 +279,27 @@ export interface paths {
         patch: operations["update_palette_api_v1_palettes__palette_id__patch"];
         trace?: never;
     };
+    "/api/v1/palettes/{palette_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Palette Summary
+         * @description Reach of the palette's colours under the active model (the Library's palette band),
+         *     from the cached library matches; ``pending`` counts those still being computed.
+         */
+        get: operations["palette_summary_api_v1_palettes__palette_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/worksheet": {
         parameters: {
             query?: never;
@@ -1308,6 +1329,38 @@ export interface components {
             /** Errors */
             errors: string[];
         };
+        /**
+         * ColorMatchOut
+         * @description The closest mix for a library colour under the active model (cached).
+         */
+        ColorMatchOut: {
+            /** Model Version */
+            model_version: number;
+            /**
+             * De
+             * @description dE2000 of the closest mix
+             */
+            de: number;
+            /** N Paints */
+            n_paints: number;
+            /** Cost Per 250Ml */
+            cost_per_250ml: number;
+            /**
+             * Reach
+             * @description out: outside the gamut; uncertain: nearer the gamut's edge than the mix's uncertainty; within: otherwise
+             * @enum {string}
+             */
+            reach: "within" | "uncertain" | "out";
+            /** Uncertainty De */
+            uncertainty_de: number | null;
+            /** Best Components */
+            best_components: components["schemas"]["MatchComponentOut"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** ColorRead */
         ColorRead: {
             /** Id */
@@ -1328,6 +1381,8 @@ export interface components {
             in_srgb_gamut: boolean;
             /** Notes */
             notes: string;
+            /** @description With ?with_match=true: the cached closest mix; null while it is computed (or when there is no active model or loaded paint) */
+            match?: components["schemas"]["ColorMatchOut"] | null;
         };
         /** ColorUpdate */
         ColorUpdate: {
@@ -1761,6 +1816,13 @@ export interface components {
             current_job: components["schemas"]["JobBrief"] | null;
             /** Recent */
             recent: components["schemas"]["JobBrief"][];
+        };
+        /** MatchComponentOut */
+        MatchComponentOut: {
+            /** Paint Id */
+            paint_id: string;
+            /** Fraction */
+            fraction: number;
         };
         /**
          * MeasurementIn
@@ -2510,6 +2572,30 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** PaletteSummary */
+        PaletteSummary: {
+            /**
+             * N
+             * @description Colours in the palette
+             */
+            n: number;
+            /** Within */
+            within: number;
+            /** Uncertain */
+            uncertain: number;
+            /** Out */
+            out: number;
+            /**
+             * Pending
+             * @description Colours whose match is still being computed (0 without an active model)
+             */
+            pending: number;
+            /**
+             * Worst De
+             * @description Largest closest-mix dE2000 among those computed
+             */
+            worst_de: number | null;
         };
         /** PaletteUpdate */
         PaletteUpdate: {
@@ -3661,6 +3747,8 @@ export interface operations {
                 source?: string | null;
                 limit?: number;
                 offset?: number;
+                /** @description Add each colour's cached closest mix (null while it is computed) */
+                with_match?: boolean;
             };
             header?: never;
             path?: never;
@@ -4176,6 +4264,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaletteRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    palette_summary_api_v1_palettes__palette_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                palette_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaletteSummary"];
                 };
             };
             /** @description Not found */

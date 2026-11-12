@@ -269,4 +269,32 @@ introduced it.
   the volume. The strip still shows every sample, each flagged `major` or not. On the starter
   set white is now `ok`, and the four chromatic paints stay `review`: each is a big part of at
   least one 2–4 dE2000 mixture.
+- **Library match cache** `color_match` (migration `0008`) holds one row per library colour:
+  the closest mix the solver finds with the current settings (as `POST /solve` with no
+  overrides, the default pool of loaded paints). A row is used only while three things match:
+  - the active model version;
+  - a settings hash, covering the solver options and the loaded paint pool: ids, roles, costs,
+    minimum doses and densities, since loading a paint or changing a cost changes the answer;
+  - a hash of the colour's Lab and spectrum.
+
+  So any change to a colour, the settings, the pool or the model makes the row stale with no
+  hook needed, and renaming a colour keeps its match.
+
+  The refresh is one background task per app. It solves stale colours through the compute
+  pool, as many at a time as there are workers, and plans again until nothing is stale. It
+  starts:
+  - after a model is activated (directly, or by a fit or swatch model that activates);
+  - after settings, colours or paints change;
+  - whenever `GET /colors?with_match=true` or `GET /palettes/{id}/summary` finds a stale or
+    missing row.
+
+  `PAINTMIXER_MATCH_CACHE_AUTO=0` keeps only the last trigger; the test suite uses it so
+  activating a model in a test doesn't start solving the library. A colour whose solve fails
+  is not retried until its inputs change.
+
+  `reach`: `out` when the colour is out of gamut; `uncertain` when it is inside but nearer the
+  gamut's edge than the closest mix's uncertainty (the accept tolerance without one);
+  `within` otherwise. Without an active model or loaded paint nothing is computed, `match`
+  stays null and a palette summary reports nothing pending. On the demo all 20 colours are
+  summarised about 9 s after activation with 2 worker processes (14 s in the thread pool).
 

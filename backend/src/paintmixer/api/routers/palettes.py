@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 from sqlmodel import Session, col, select
 
+from paintmixer.api import matches
 from paintmixer.api.deps import SessionDep
 from paintmixer.api.errors import ERROR_RESPONSES, bad_request, not_found
-from paintmixer.api.schemas import PaletteCreate, PaletteRead, PaletteUpdate
+from paintmixer.api.schemas import PaletteCreate, PaletteRead, PaletteSummary, PaletteUpdate
 from paintmixer.db import models as m
 from paintmixer.db.models import utcnow
 
@@ -58,6 +59,28 @@ def create_palette(body: PaletteCreate, session: SessionDep) -> PaletteRead:
 @router.get("/{palette_id}", response_model=PaletteRead)
 def get_palette(palette_id: int, session: SessionDep) -> PaletteRead:
     return _read(_get(session, palette_id), _existing(session))
+
+
+@router.get("/{palette_id}/summary", response_model=PaletteSummary)
+def palette_summary(palette_id: int, session: SessionDep, request: Request) -> PaletteSummary:
+    """Reach of the palette's colours under the active model (the Library's palette band),
+    from the cached library matches; ``pending`` counts those still being computed."""
+    p = _get(session, palette_id)
+    ex = _existing(session)
+    ids = [i for i in p.color_ids if i in ex]
+    entries = [e for i in ids if (e := session.get(m.ColorLibraryEntry, i)) is not None]
+    fresh, missing = matches.fresh_matches(session, entries)
+    if missing:
+        matches.request_refresh(request.app)
+    rows = list(fresh.values())
+    return PaletteSummary(
+        n=len(entries),
+        within=sum(r.reach == "within" for r in rows),
+        uncertain=sum(r.reach == "uncertain" for r in rows),
+        out=sum(r.reach == "out" for r in rows),
+        pending=missing,
+        worst_de=max((r.de for r in rows), default=None),
+    )
 
 
 @router.patch("/{palette_id}", response_model=PaletteRead)

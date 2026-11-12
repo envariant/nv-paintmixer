@@ -775,6 +775,18 @@
               "default": 0,
               "title": "Offset"
             }
+          },
+          {
+            "name": "with_match",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Add each colour's cached closest mix (null while it is computed)",
+              "default": false,
+              "title": "With Match"
+            },
+            "description": "Add each colour's cached closest mix (null while it is computed)"
           }
         ],
         "responses": {
@@ -1417,6 +1429,69 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/palettes/{palette_id}/summary": {
+      "get": {
+        "tags": [
+          "palettes"
+        ],
+        "summary": "Palette Summary",
+        "description": "Reach of the palette's colours under the active model (the Library's palette band),\nfrom the cached library matches; ``pending`` counts those still being computed.",
+        "operationId": "palette_summary_api_v1_palettes__palette_id__summary_get",
+        "parameters": [
+          {
+            "name": "palette_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Palette Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaletteSummary"
+                }
+              }
+            }
           },
           "404": {
             "description": "Not found",
@@ -5184,6 +5259,73 @@
         ],
         "title": "ColorImportResult"
       },
+      "ColorMatchOut": {
+        "properties": {
+          "model_version": {
+            "type": "integer",
+            "title": "Model Version"
+          },
+          "de": {
+            "type": "number",
+            "title": "De",
+            "description": "dE2000 of the closest mix"
+          },
+          "n_paints": {
+            "type": "integer",
+            "title": "N Paints"
+          },
+          "cost_per_250ml": {
+            "type": "number",
+            "title": "Cost Per 250Ml"
+          },
+          "reach": {
+            "type": "string",
+            "enum": [
+              "within",
+              "uncertain",
+              "out"
+            ],
+            "title": "Reach",
+            "description": "out: outside the gamut; uncertain: nearer the gamut's edge than the mix's uncertainty; within: otherwise"
+          },
+          "uncertainty_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncertainty De"
+          },
+          "best_components": {
+            "items": {
+              "$ref": "#/components/schemas/MatchComponentOut"
+            },
+            "type": "array",
+            "title": "Best Components"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model_version",
+          "de",
+          "n_paints",
+          "cost_per_250ml",
+          "reach",
+          "uncertainty_de",
+          "best_components",
+          "updated_at"
+        ],
+        "title": "ColorMatchOut",
+        "description": "The closest mix for a library colour under the active model (cached)."
+      },
       "ColorRead": {
         "properties": {
           "id": {
@@ -5237,6 +5379,17 @@
           "notes": {
             "type": "string",
             "title": "Notes"
+          },
+          "match": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ColorMatchOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With ?with_match=true: the cached closest mix; null while it is computed (or when there is no active model or loaded paint)"
           }
         },
         "type": "object",
@@ -6434,6 +6587,24 @@
           "recent"
         ],
         "title": "MachineStatus"
+      },
+      "MatchComponentOut": {
+        "properties": {
+          "paint_id": {
+            "type": "string",
+            "title": "Paint Id"
+          },
+          "fraction": {
+            "type": "number",
+            "title": "Fraction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paint_id",
+          "fraction"
+        ],
+        "title": "MatchComponentOut"
       },
       "MeasurementIn": {
         "properties": {
@@ -8327,6 +8498,54 @@
           "updated_at"
         ],
         "title": "PaletteRead"
+      },
+      "PaletteSummary": {
+        "properties": {
+          "n": {
+            "type": "integer",
+            "title": "N",
+            "description": "Colours in the palette"
+          },
+          "within": {
+            "type": "integer",
+            "title": "Within"
+          },
+          "uncertain": {
+            "type": "integer",
+            "title": "Uncertain"
+          },
+          "out": {
+            "type": "integer",
+            "title": "Out"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending",
+            "description": "Colours whose match is still being computed (0 without an active model)"
+          },
+          "worst_de": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worst De",
+            "description": "Largest closest-mix dE2000 among those computed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "n",
+          "within",
+          "uncertain",
+          "out",
+          "pending",
+          "worst_de"
+        ],
+        "title": "PaletteSummary"
       },
       "PaletteUpdate": {
         "properties": {

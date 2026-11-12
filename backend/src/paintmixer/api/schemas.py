@@ -251,6 +251,27 @@ class ColorUpdate(_Model):
     spectrum: Spectrum | None = Field(None, min_length=N_BANDS, max_length=N_BANDS)
 
 
+class MatchComponentOut(_Out):
+    paint_id: str
+    fraction: float
+
+
+class ColorMatchOut(_Out):
+    """The closest mix for a library colour under the active model (cached)."""
+
+    model_version: int
+    de: float = Field(description="dE2000 of the closest mix")
+    n_paints: int
+    cost_per_250ml: float
+    reach: Literal["within", "uncertain", "out"] = Field(
+        description="out: outside the gamut; uncertain: nearer the gamut's edge than the mix's "
+        "uncertainty; within: otherwise"
+    )
+    uncertainty_de: float | None
+    best_components: list[MatchComponentOut]
+    updated_at: datetime
+
+
 class ColorRead(_Out):
     id: int
     name: str
@@ -261,6 +282,11 @@ class ColorRead(_Out):
     spectrum: Spectrum | None
     in_srgb_gamut: bool
     notes: str
+    match: ColorMatchOut | None = Field(
+        None,
+        description="With ?with_match=true: the cached closest mix; null while it is computed "
+        "(or when there is no active model or loaded paint)",
+    )
 
 
 class ColorImportResult(_Out):
@@ -972,6 +998,17 @@ class PaletteCreate(_Model):
 class PaletteUpdate(_Model):
     name: str | None = Field(None, min_length=1, max_length=120)
     color_ids: list[int] | None = Field(None, max_length=500, description="Replaces the order")
+
+
+class PaletteSummary(_Out):
+    n: int = Field(description="Colours in the palette")
+    within: int
+    uncertain: int
+    out: int
+    pending: int = Field(
+        description="Colours whose match is still being computed (0 without an active model)"
+    )
+    worst_de: float | None = Field(description="Largest closest-mix dE2000 among those computed")
 
 
 class PaletteRead(_Out):
