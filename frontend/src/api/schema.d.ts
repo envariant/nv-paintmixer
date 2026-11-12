@@ -871,9 +871,47 @@ export interface paths {
         put?: never;
         /**
          * Dispense
-         * @description Dispense the recipe (or pending correction additions) with the simulated dispenser.
+         * @description Run the job on the machine in the background (the recipe, or the pending correction
+         *     additions). Returns at once with status ``queued``; poll ``GET /jobs/{id}``.
          */
         post: operations["dispense_api_v1_jobs__job_id__dispense_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause
+         * @description Pause a queued or running job before its next channel.
+         */
+        post: operations["pause_api_v1_jobs__job_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume */
+        post: operations["resume_api_v1_jobs__job_id__resume_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -911,7 +949,8 @@ export interface paths {
         put?: never;
         /**
          * Correct
-         * @description One damped Gauss-Newton correction from the latest measurement.
+         * @description One damped Gauss-Newton correction from the latest measurement ("Correct again";
+         *     then ``dispense`` pours it).
          */
         post: operations["correct_api_v1_jobs__job_id__correct_post"];
         delete?: never;
@@ -951,7 +990,8 @@ export interface paths {
         put?: never;
         /**
          * Cancel
-         * @description Abandon a job. What is already in the cup stays there and is logged.
+         * @description Abandon a job. A queued job is cancelled at once; a running one stops before its next
+         *     channel (poll for ``cancelled``). What is already in the cup stays there and is logged.
          */
         post: operations["cancel_api_v1_jobs__job_id__cancel_post"];
         delete?: never;
@@ -1003,6 +1043,19 @@ export interface components {
              * @default 0.05
              */
             dispenser_resolution_ml?: number;
+            /**
+             * Dispenser Transport
+             * @description How to reach the dispenser: tcp (Wi-Fi) or serial (USB or Bluetooth SPP); none = only the simulator
+             * @default none
+             * @enum {string}
+             */
+            dispenser_transport?: "none" | "tcp" | "serial";
+            /**
+             * Dispenser Address
+             * @description tcp: host[:port] (default port 3333); serial: port[@baud]
+             * @default
+             */
+            dispenser_address?: string;
             /**
              * Saunderson K1
              * @default 0
@@ -1127,6 +1180,10 @@ export interface components {
             batch_volume_ml?: number | null;
             /** Dispenser Resolution Ml */
             dispenser_resolution_ml?: number | null;
+            /** Dispenser Transport */
+            dispenser_transport?: ("none" | "tcp" | "serial") | null;
+            /** Dispenser Address */
+            dispenser_address?: string | null;
             /** Saunderson K1 */
             saunderson_k1?: number | null;
             /** Saunderson K2 */
@@ -1467,16 +1524,21 @@ export interface components {
              */
             ok: boolean;
         };
-        /** DispenseRequest */
+        /**
+         * DispenseRequest
+         * @description Run the job on the machine in the background: pour, then (simulated) measure. Poll
+         *     ``GET /jobs/{id}`` or ``GET /machine`` for ``status``, ``step`` and ``progress``.
+         */
         DispenseRequest: {
             /**
              * Simulate
-             * @description Only the simulated dispenser exists so far
+             * @description true: the simulated dispenser and instrument; false: the dispenser in settings (dispenser_transport), then wait for POST /measurement
              * @default true
              */
             simulate?: boolean;
             /**
              * Rel Sigma
+             * @description Simulated dosing error
              * @default 0.01
              */
             rel_sigma?: number;
@@ -1487,6 +1549,29 @@ export interface components {
             abs_sigma_ml?: number;
             /** Seed */
             seed?: number | null;
+            /**
+             * Measure
+             * @description Simulated runs: measure the cup after pouring. false: stop at 'dispensed' for a measurement entered with POST /measurement
+             * @default true
+             */
+            measure?: boolean;
+            /**
+             * Auto Correct Rounds
+             * @description Correct and pour again by itself up to this many times while the measurement is outside settings.accept_tolerance_de (0: stop for a decision)
+             * @default 0
+             */
+            auto_correct_rounds?: number;
+            /**
+             * Simulate Ml Per S
+             * @description Simulated pump speed (default: instant)
+             */
+            simulate_ml_per_s?: number | null;
+            /**
+             * Simulate Gain
+             * @description Simulated model/instrument bias of the measurement
+             * @default 1
+             */
+            simulate_gain?: number;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -1703,6 +1788,21 @@ export interface components {
             /** Poured Ml */
             poured_ml: number;
             /**
+             * Step
+             * @default
+             */
+            step?: string;
+            /**
+             * Progress
+             * @default 0
+             */
+            progress?: number;
+            /**
+             * Paused
+             * @default false
+             */
+            paused?: boolean;
+            /**
              * Updated At
              * Format: date-time
              */
@@ -1765,10 +1865,36 @@ export interface components {
             measured: {
                 [key: string]: unknown;
             } | null;
-            /** Corrections */
+            /**
+             * Corrections
+             * @description Log: correction / accept / cancel entries (result), and one entry per measured round (kind 'round': label, hex, de, added_ml, poured_ml)
+             */
             corrections: {
                 [key: string]: unknown;
             }[];
+            /**
+             * Step
+             * @description What is happening now (run screen)
+             * @default
+             */
+            step?: string;
+            /**
+             * Progress
+             * @description 0-1 through the current round
+             * @default 0
+             */
+            progress?: number;
+            /**
+             * Paused
+             * @default false
+             */
+            paused?: boolean;
+            /**
+             * Running
+             * @description The machine holds the job (queued or running). Statuses such as 'correcting' also occur between automatic rounds, so wait for this to turn false
+             * @default false
+             */
+            running?: boolean;
             /**
              * Created At
              * Format: date-time
@@ -1799,6 +1925,11 @@ export interface components {
         MachineStatus: {
             /** Name */
             name: string;
+            /**
+             * Transport
+             * @description none (simulator only), tcp or serial
+             */
+            transport: string;
             /** Channels */
             channels: number;
             /** Channels Loaded */
@@ -6130,6 +6261,104 @@ export interface operations {
                 "application/json": components["schemas"]["DispenseRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pause_api_v1_jobs__job_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resume_api_v1_jobs__job_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

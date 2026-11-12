@@ -160,4 +160,11 @@ Progress notes per milestone are appended below as work completes.
      (`api.matches`), `GET /colors?with_match=true` (`match` per colour),
      `GET /palettes/{id}/summary` (within / uncertain / out / pending / worst dE);
      `PAINTMIXER_MATCH_CACHE_AUTO`. `/solve` and the cache share `default_solve_options`.
+  9. Jobs run on the machine in the background (`api.runner`): queued → pouring → measuring
+     → done / measured / correcting (auto rounds) → needs_attention; `step`, `progress`,
+     `paused`, `running` on jobs (migration `0009`); `POST /jobs/{id}/pause` and `/resume`;
+     cancel between channels; round entries in `corrections`. Dispenser line protocol
+     (`hardware.protocol`, docs/dispenser_protocol.md) over TCP / serial (USB, Bluetooth) or
+     the simulated firmware (`hardware.firmware_sim`); settings `dispenser_transport` /
+     `dispenser_address`.
 

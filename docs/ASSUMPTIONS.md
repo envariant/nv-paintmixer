@@ -297,4 +297,29 @@ introduced it.
   `within` otherwise. Without an active model or loaded paint nothing is computed, `match`
   stays null and a palette summary reports nothing pending. On the demo all 20 colours are
   summarised about 9 s after activation with 2 worker processes (14 s in the thread pool).
+- **Running jobs on the machine** `POST /jobs/{id}/dispense` queues the job and returns at
+  once (202). One background thread runs jobs one at a time, since a dispenser pours one cup at a
+  time. A round is:
+  1. pour, channel by channel;
+  2. simulated runs measure the cup with the simulated instrument. Runs on the real dispenser
+     stop at `dispensed`, because there is no inline instrument yet; the measurement is entered
+     with `POST /measurement`;
+  3. a measurement within `accept_tolerance_de` ends the job `done`. Otherwise the runner
+     corrects and pours again while `auto_correct_rounds` last (default 0), then waits in
+     `measured` for Accept or Correct again (`POST /correct`, then dispense). After 5
+     corrections the job `needs_attention`.
+
+  Pause and cancel act between channels, so the firmware never gets a request mid-pour. A
+  cancel keeps what was poured, in the cup and in the log. `running` on the job is true while
+  the machine holds it. Statuses such as `correcting` also occur between automatic rounds, so
+  clients wait for `running` to turn false. Jobs the machine held when the server stopped are
+  marked `needs_attention` on the next start. Each measurement adds a round entry to
+  `corrections`: label (`First pour`, `Fix 1`, ...), hex, dE, `added_ml`, `poured_ml`. Events
+  are polled (`GET /jobs/{id}`, `GET /machine`); there is no SSE stream.
+- **Dispenser protocol** The backend speaks one line protocol to the dispenser over any
+  transport (docs/dispenser_protocol.md): TCP for Wi-Fi, and serial for USB and Bluetooth SPP,
+  which shows up as a serial port. Simulated runs use the same protocol code against an
+  in-memory simulated firmware, so the simulator exercises the host code the hardware will
+  use. The TCP path is tested against the simulated firmware served on a local socket. Serial
+  needs `pyserial`, which is not installed yet.
 

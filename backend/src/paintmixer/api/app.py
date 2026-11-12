@@ -26,6 +26,7 @@ from paintmixer.api.routers import (
     system,
     worksheet,
 )
+from paintmixer.api.runner import MachineRunner, recover_interrupted
 from paintmixer.config import Settings, get_settings
 from paintmixer.db.session import migrate
 
@@ -55,11 +56,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if database_is_empty(cfg.database_url):
                 seed_demo(cfg.database_url)
         app_.state.executor = make_executor(cfg.compute_workers)
+        recover_interrupted(cfg.database_url)  # jobs the machine held when the server stopped
+        app_.state.runner = MachineRunner(cfg.database_url)
         app_.state.loop = asyncio.get_running_loop()  # for matches.request_refresh
         try:
             yield
         finally:
             await matches.stop(app_)
+            app_.state.runner.stop()
             app_.state.loop = None
             if app_.state.executor is not None:
                 app_.state.executor.shutdown(wait=False, cancel_futures=True)

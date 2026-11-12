@@ -182,6 +182,11 @@ class Job(SQLModel, table=True):
     dispensed: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     measured: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     corrections: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    # live state while the machine runs it (api.runner)
+    step: str = ""  # what is happening now, e.g. "Pouring Phthalo Blue · 2 of 4"
+    progress: float = 0.0  # 0-1 through the current round
+    paused: bool = False
+    running: bool = False  # the machine holds the job (queued or running)
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
 

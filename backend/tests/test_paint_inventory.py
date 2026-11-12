@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from tests.api_helpers import dispense
+
 API = "/api/v1"
 
 
@@ -46,7 +48,7 @@ def test_model_colour_and_dispense_decrements(fitted_client: TestClient) -> None
             "batch_volume_ml": 100,
         },
     ).json()
-    c.post(f"{API}/jobs/{job['id']}/dispense", json={"simulate": True})
+    dispense(c, job["id"], simulate=True)
     after = {p["id"]: p for p in c.get(f"{API}/paints").json()}
     used = sum(500 - after[pid]["level_ml"] for pid in comps)
     assert 95 < used < 105

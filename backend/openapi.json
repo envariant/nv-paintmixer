@@ -3940,7 +3940,7 @@
           "jobs"
         ],
         "summary": "Dispense",
-        "description": "Dispense the recipe (or pending correction additions) with the simulated dispenser.",
+        "description": "Run the job on the machine in the background (the recipe, or the pending correction\nadditions). Returns at once with status ``queued``; poll ``GET /jobs/{id}``.",
         "operationId": "dispense_api_v1_jobs__job_id__dispense_post",
         "parameters": [
           {
@@ -3963,6 +3963,131 @@
             }
           }
         },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}/pause": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Pause",
+        "description": "Pause a queued or running job before its next channel.",
+        "operationId": "pause_api_v1_jobs__job_id__pause_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}/resume": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Resume",
+        "operationId": "resume_api_v1_jobs__job_id__resume_post",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4086,7 +4211,7 @@
           "jobs"
         ],
         "summary": "Correct",
-        "description": "One damped Gauss-Newton correction from the latest measurement.",
+        "description": "One damped Gauss-Newton correction from the latest measurement (\"Correct again\";\nthen ``dispense`` pours it).",
         "operationId": "correct_api_v1_jobs__job_id__correct_post",
         "parameters": [
           {
@@ -4222,7 +4347,7 @@
           "jobs"
         ],
         "summary": "Cancel",
-        "description": "Abandon a job. What is already in the cup stays there and is logged.",
+        "description": "Abandon a job. A queued job is cancelled at once; a running one stops before its next\nchannel (poll for ``cancelled``). What is already in the cup stays there and is logged.",
         "operationId": "cancel_api_v1_jobs__job_id__cancel_post",
         "parameters": [
           {
@@ -4338,6 +4463,24 @@
             "exclusiveMinimum": 0.0,
             "title": "Dispenser Resolution Ml",
             "default": 0.05
+          },
+          "dispenser_transport": {
+            "type": "string",
+            "enum": [
+              "none",
+              "tcp",
+              "serial"
+            ],
+            "title": "Dispenser Transport",
+            "description": "How to reach the dispenser: tcp (Wi-Fi) or serial (USB or Bluetooth SPP); none = only the simulator",
+            "default": "none"
+          },
+          "dispenser_address": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Dispenser Address",
+            "description": "tcp: host[:port] (default port 3333); serial: port[@baud]",
+            "default": ""
           },
           "saunderson_k1": {
             "type": "number",
@@ -4542,6 +4685,34 @@
               }
             ],
             "title": "Dispenser Resolution Ml"
+          },
+          "dispenser_transport": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "tcp",
+                  "serial"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispenser Transport"
+          },
+          "dispenser_address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispenser Address"
           },
           "saunderson_k1": {
             "anyOf": [
@@ -5646,7 +5817,7 @@
           "simulate": {
             "type": "boolean",
             "title": "Simulate",
-            "description": "Only the simulated dispenser exists so far",
+            "description": "true: the simulated dispenser and instrument; false: the dispenser in settings (dispenser_transport), then wait for POST /measurement",
             "default": true
           },
           "rel_sigma": {
@@ -5654,6 +5825,7 @@
             "maximum": 0.5,
             "minimum": 0.0,
             "title": "Rel Sigma",
+            "description": "Simulated dosing error",
             "default": 0.01
           },
           "abs_sigma_ml": {
@@ -5672,11 +5844,46 @@
               }
             ],
             "title": "Seed"
+          },
+          "measure": {
+            "type": "boolean",
+            "title": "Measure",
+            "description": "Simulated runs: measure the cup after pouring. false: stop at 'dispensed' for a measurement entered with POST /measurement",
+            "default": true
+          },
+          "auto_correct_rounds": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Auto Correct Rounds",
+            "description": "Correct and pour again by itself up to this many times while the measurement is outside settings.accept_tolerance_de (0: stop for a decision)",
+            "default": 0
+          },
+          "simulate_ml_per_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simulate Ml Per S",
+            "description": "Simulated pump speed (default: instant)"
+          },
+          "simulate_gain": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Simulate Gain",
+            "description": "Simulated model/instrument bias of the measurement",
+            "default": 1.0
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "title": "DispenseRequest"
+        "title": "DispenseRequest",
+        "description": "Run the job on the machine in the background: pour, then (simulated) measure. Poll\n``GET /jobs/{id}`` or ``GET /machine`` for ``status``, ``step`` and ``progress``."
       },
       "ErrorBody": {
         "properties": {
@@ -6319,6 +6526,21 @@
             "type": "number",
             "title": "Poured Ml"
           },
+          "step": {
+            "type": "string",
+            "title": "Step",
+            "default": ""
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress",
+            "default": 0.0
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "default": false
+          },
           "updated_at": {
             "type": "string",
             "format": "date-time",
@@ -6459,7 +6681,31 @@
               "type": "object"
             },
             "type": "array",
-            "title": "Corrections"
+            "title": "Corrections",
+            "description": "Log: correction / accept / cancel entries (result), and one entry per measured round (kind 'round': label, hex, de, added_ml, poured_ml)"
+          },
+          "step": {
+            "type": "string",
+            "title": "Step",
+            "description": "What is happening now (run screen)",
+            "default": ""
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress",
+            "description": "0-1 through the current round",
+            "default": 0.0
+          },
+          "paused": {
+            "type": "boolean",
+            "title": "Paused",
+            "default": false
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running",
+            "description": "The machine holds the job (queued or running). Statuses such as 'correcting' also occur between automatic rounds, so wait for this to turn false",
+            "default": false
           },
           "created_at": {
             "type": "string",
@@ -6534,6 +6780,11 @@
             "type": "string",
             "title": "Name"
           },
+          "transport": {
+            "type": "string",
+            "title": "Transport",
+            "description": "none (simulator only), tcp or serial"
+          },
           "channels": {
             "type": "integer",
             "title": "Channels"
@@ -6579,6 +6830,7 @@
         "type": "object",
         "required": [
           "name",
+          "transport",
           "channels",
           "channels_loaded",
           "state",

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from tests.api_helpers import dispense
+
 API = "/api/v1"
 
 
@@ -28,7 +30,7 @@ def test_job_closed_loop_with_simulators(fitted_client: TestClient) -> None:
     statuses: list[str] = []
     des: list[float] = []
     for _ in range(7):
-        j = c.post(f"{API}/jobs/{job['id']}/dispense", json={"simulate": True}).json()
+        j = dispense(c, job["id"], simulate=True, measure=False)
         assert j["status"] == "dispensed"
         # simulated instrument: the real paint is 8 % lighter than the model thinks
         j = c.post(
@@ -43,7 +45,10 @@ def test_job_closed_loop_with_simulators(fitted_client: TestClient) -> None:
     assert statuses[-1] == "done", (statuses, des)
     assert des[0] > 1.0 and des[-1] <= 0.6
     final = c.get(f"{API}/jobs/{job['id']}").json()
-    assert len(final["corrections"]) == len(des)
+    assert len([e for e in final["corrections"] if "result" in e]) == len(des)
+    rounds = [e for e in final["corrections"] if e.get("kind") == "round"]
+    assert [r["de"] for r in rounds] == [round(d, 4) for d in des]
+    assert [r["label"] for r in rounds][:2] == ["First pour", "Fix 1"]
     cups = [sum(e["actual_ml"] for e in ev["results"]) for ev in final["dispensed"]["events"]]
     assert len(cups) == len(des) and all(v >= 0 for v in cups)
     assert any(x["id"] == job["id"] for x in c.get(f"{API}/jobs", params={"status": "done"}).json())
@@ -52,14 +57,15 @@ def test_job_closed_loop_with_simulators(fitted_client: TestClient) -> None:
 def test_job_measured_lab_and_cap(fitted_client: TestClient) -> None:
     c = fitted_client
     job = _job(c, [50.0, 10.0, 10.0])
-    c.post(f"{API}/jobs/{job['id']}/dispense", json={})
+    dispense(c, job["id"], measure=False)
     j = c.post(f"{API}/jobs/{job['id']}/measurement", json={"lab": [55.0, 10.0, 10.0]}).json()
     assert 3 < j["measured"]["de_to_target"] < 6 and j["measured"]["simulated"] is False
     j = c.post(
         f"{API}/jobs/{job['id']}/correct", json={"max_iterations": 1, "mode": "remix"}
     ).json()
-    assert j["status"] == "correcting" and j["corrections"][0]["mode"] == "remix"
-    c.post(f"{API}/jobs/{job['id']}/dispense", json={})
+    fixes = [e for e in j["corrections"] if "result" in e]
+    assert j["status"] == "correcting" and fixes[0]["mode"] == "remix"
+    dispense(c, job["id"], measure=False)
     c.post(f"{API}/jobs/{job['id']}/measurement", json={"lab": [55.0, 10.0, 10.0]})
     j = c.post(f"{API}/jobs/{job['id']}/correct", json={"max_iterations": 1}).json()
     assert j["status"] == "needs_attention"

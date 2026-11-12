@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from tests.api_helpers import dispense
+
 API = "/api/v1"
 LAB = [60.0, -10.0, 15.0]
 
@@ -22,7 +24,7 @@ def test_machine_pill_accept_and_cancel(fitted_client: TestClient) -> None:
     assert c.get(f"{API}/machine").json()["label"] == "Machine ready"
 
     j = _job(c, "Plum Mist")
-    c.post(f"{API}/jobs/{j['id']}/dispense", json={"simulate": True})
+    dispense(c, j["id"], simulate=True, measure=False)
     st = c.get(f"{API}/machine").json()
     assert st["state"] == "measuring" and st["current_job"]["name"] == "Plum Mist"
     assert st["label"] == "Measuring · Plum Mist" and st["current_job"]["poured_ml"] > 95
@@ -34,7 +36,7 @@ def test_machine_pill_accept_and_cancel(fitted_client: TestClient) -> None:
     assert c.post(f"{API}/jobs/{j['id']}/accept").json()["status"] == "accepted"
 
     k = _job(c, "Harbour Fog")
-    c.post(f"{API}/jobs/{k['id']}/dispense", json={"simulate": True})
+    dispense(c, k["id"], simulate=True, measure=False)
     out = c.post(f"{API}/jobs/{k['id']}/cancel", json={"reason": "wrong cup"}).json()
     assert out["status"] == "cancelled" and out["corrections"][-1]["poured_ml"] > 95
     assert c.post(f"{API}/jobs/{k['id']}/cancel", json={}).status_code == 409
@@ -50,7 +52,7 @@ def test_correct_uses_settings_tolerance(fitted_client: TestClient) -> None:
     c.patch(f"{API}/settings", json={"accept_tolerance_de": 5})
     try:
         j = _job(c, "Loose")
-        c.post(f"{API}/jobs/{j['id']}/dispense", json={"simulate": True})
+        dispense(c, j["id"], simulate=True, measure=False)
         c.post(f"{API}/jobs/{j['id']}/measurement", json={"simulate": True, "seed": 2})
         assert c.post(f"{API}/jobs/{j['id']}/correct", json={}).json()["status"] == "done"
     finally:

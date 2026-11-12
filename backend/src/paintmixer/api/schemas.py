@@ -144,6 +144,14 @@ class AppSettings(_Model):
     dispenser_channels: int = Field(10, ge=1, le=64)
     batch_volume_ml: float = Field(100.0, gt=0)
     dispenser_resolution_ml: float = Field(0.05, gt=0)
+    dispenser_transport: Literal["none", "tcp", "serial"] = Field(
+        "none",
+        description="How to reach the dispenser: tcp (Wi-Fi) or serial (USB or Bluetooth SPP); "
+        "none = only the simulator",
+    )
+    dispenser_address: str = Field(
+        "", max_length=200, description="tcp: host[:port] (default port 3333); serial: port[@baud]"
+    )
     saunderson_k1: float = Field(0.0, ge=0, lt=1)
     saunderson_k2: float = Field(0.5, ge=0, lt=1)
     illuminant: Illuminant = Illuminant.D65
@@ -192,6 +200,8 @@ class AppSettingsUpdate(_Model):
     dispenser_channels: int | None = Field(None, ge=1, le=64)
     batch_volume_ml: float | None = Field(None, gt=0)
     dispenser_resolution_ml: float | None = Field(None, gt=0)
+    dispenser_transport: Literal["none", "tcp", "serial"] | None = None
+    dispenser_address: str | None = Field(None, max_length=200)
     saunderson_k1: float | None = Field(None, ge=0, lt=1)
     saunderson_k2: float | None = Field(None, ge=0, lt=1)
     illuminant: Illuminant | None = None
@@ -880,10 +890,35 @@ class JobCreate(_Model):
 
 
 class DispenseRequest(_Model):
-    simulate: bool = Field(True, description="Only the simulated dispenser exists so far")
-    rel_sigma: float = Field(0.01, ge=0, le=0.5)
+    """Run the job on the machine in the background: pour, then (simulated) measure. Poll
+    ``GET /jobs/{id}`` or ``GET /machine`` for ``status``, ``step`` and ``progress``."""
+
+    simulate: bool = Field(
+        True,
+        description="true: the simulated dispenser and instrument; false: the dispenser in "
+        "settings (dispenser_transport), then wait for POST /measurement",
+    )
+    rel_sigma: float = Field(0.01, ge=0, le=0.5, description="Simulated dosing error")
     abs_sigma_ml: float = Field(0.01, ge=0)
     seed: int | None = None
+    measure: bool = Field(
+        True,
+        description="Simulated runs: measure the cup after pouring. false: stop at 'dispensed' "
+        "for a measurement entered with POST /measurement",
+    )
+    auto_correct_rounds: int = Field(
+        0,
+        ge=0,
+        le=10,
+        description="Correct and pour again by itself up to this many times while the "
+        "measurement is outside settings.accept_tolerance_de (0: stop for a decision)",
+    )
+    simulate_ml_per_s: float | None = Field(
+        None, gt=0, description="Simulated pump speed (default: instant)"
+    )
+    simulate_gain: float = Field(
+        1.0, gt=0, description="Simulated model/instrument bias of the measurement"
+    )
 
 
 class MeasurementIn(_Model):
@@ -928,7 +963,18 @@ class JobRead(_Out):
     model_version: int | None
     dispensed: dict[str, Any] | None
     measured: dict[str, Any] | None
-    corrections: list[dict[str, Any]]
+    corrections: list[dict[str, Any]] = Field(
+        description="Log: correction / accept / cancel entries (result), and one entry per "
+        "measured round (kind 'round': label, hex, de, added_ml, poured_ml)"
+    )
+    step: str = Field("", description="What is happening now (run screen)")
+    progress: float = Field(0.0, description="0-1 through the current round")
+    paused: bool = False
+    running: bool = Field(
+        False,
+        description="The machine holds the job (queued or running). Statuses such as "
+        "'correcting' also occur between automatic rounds, so wait for this to turn false",
+    )
     created_at: datetime
     updated_at: datetime
 
@@ -1032,11 +1078,15 @@ class JobBrief(_Out):
     round: int
     batch_volume_ml: float
     poured_ml: float
+    step: str = ""
+    progress: float = 0.0
+    paused: bool = False
     updated_at: datetime
 
 
 class MachineStatus(_Out):
     name: str
+    transport: str = Field(description="none (simulator only), tcp or serial")
     channels: int
     channels_loaded: int
     state: Literal["ready", "pouring", "measuring", "correcting", "attention"]

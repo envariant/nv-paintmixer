@@ -13,12 +13,23 @@ from paintmixer.db import models as m
 
 router = APIRouter(tags=["machine"])
 
-RUNNING = ("dispensed", "measured", "correcting", "needs_attention")
+RUNNING = (
+    "queued",
+    "pouring",
+    "measuring",
+    "dispensed",
+    "measured",
+    "correcting",
+    "needs_attention",
+)
 FINISHED = ("done", "accepted", "cancelled")
 _STATE = {
+    "queued": "pouring",
+    "pouring": "pouring",
+    "measuring": "measuring",
     "dispensed": "measuring",
     "measured": "correcting",
-    "correcting": "pouring",
+    "correcting": "correcting",
     "needs_attention": "attention",
 }
 
@@ -40,6 +51,9 @@ def brief(j: m.Job) -> JobBrief:
         round=int(j.recipe.get("iteration", 0)),
         batch_volume_ml=j.batch_volume_ml,
         poured_ml=sum((j.dispensed or {}).get("cup_ml", {}).values()),
+        step=j.step,
+        progress=j.progress,
+        paused=j.paused,
         updated_at=j.updated_at,
     )
 
@@ -59,8 +73,14 @@ def machine_status(session: SessionDep) -> MachineStatus:
     ).all()
     state = _STATE.get(cur.status, "ready") if cur else "ready"
     label = "Machine ready" if cur is None else f"{state.capitalize()} · {cur.name}"
+    if cur is not None and cur.paused:
+        label = f"Paused · {cur.name}"
+    transport = s.dispenser_transport
     return MachineStatus(
-        name="DSP-01 (simulated)",
+        name="DSP-01 (simulated)"
+        if transport == "none"
+        else f"Dispenser ({transport} {s.dispenser_address})",
+        transport=transport,
         channels=s.dispenser_channels,
         channels_loaded=loaded,
         state=state,
